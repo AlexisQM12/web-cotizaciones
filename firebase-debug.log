@@ -1,52 +1,512 @@
-[debug] [2026-02-04T07:34:14.162Z] ----------------------------------------------------------------------
-[debug] [2026-02-04T07:34:14.166Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\LENOVO\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
-[debug] [2026-02-04T07:34:14.166Z] CLI Version:   15.5.1
-[debug] [2026-02-04T07:34:14.166Z] Platform:      win32
-[debug] [2026-02-04T07:34:14.166Z] Node Version:  v24.8.0
-[debug] [2026-02-04T07:34:14.167Z] Time:          Wed Feb 04 2026 02:34:14 GMT-0500 (hora estándar de Perú)
-[debug] [2026-02-04T07:34:14.167Z] ----------------------------------------------------------------------
+[debug] [2026-02-04T16:16:27.233Z] ----------------------------------------------------------------------
+[debug] [2026-02-04T16:16:27.235Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\LENOVO\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-02-04T16:16:27.236Z] CLI Version:   15.5.1
+[debug] [2026-02-04T16:16:27.236Z] Platform:      win32
+[debug] [2026-02-04T16:16:27.236Z] Node Version:  v24.8.0
+[debug] [2026-02-04T16:16:27.236Z] Time:          Wed Feb 04 2026 11:16:27 GMT-0500 (hora estándar de Perú)
+[debug] [2026-02-04T16:16:27.236Z] ----------------------------------------------------------------------
 [debug] 
+[debug] [2026-02-04T16:16:28.660Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-04T16:16:28.661Z] > authorizing via signed-in user (alexismost11@gmail.com)
+[debug] [2026-02-04T16:16:28.661Z] [iam] checking project web-cot-aya for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-02-04T16:16:28.662Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:28.662Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:28.663Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions [none]
+[debug] [2026-02-04T16:16:28.663Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions  x-goog-user-project=web-cot-aya
+[debug] [2026-02-04T16:16:28.663Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-04T16:16:30.364Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions 200
+[debug] [2026-02-04T16:16:30.364Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-04T16:16:30.364Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:30.364Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:30.364Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya [none]
+[debug] [2026-02-04T16:16:30.866Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya 200
+[debug] [2026-02-04T16:16:30.866Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya {"projectId":"web-cot-aya","projectNumber":"58467911514","displayName":"WEB COT AYA","name":"projects/web-cot-aya","resources":{"hostingSite":"web-cot-aya"},"state":"ACTIVE","etag":"1_7baad6dd-11a9-4217-a7f1-8e00f2fe4ab9"}
+[debug] [2026-02-04T16:16:32.407Z] defaultcredentials: writing to file C:\Users\LENOVO\AppData\Roaming\firebase\alexismost11_gmail_com_application_default_credentials.json
+[debug] [2026-02-04T16:16:32.408Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:32.408Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:32.408Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites pageToken=&pageSize=10
+[debug] [2026-02-04T16:16:33.848Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[debug] [2026-02-04T16:16:33.848Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-02-04T16:16:33.849Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:33.849Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:33.849Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 
+[debug] [2026-02-04T16:16:34.167Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[debug] [2026-02-04T16:16:34.168Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-02-04T16:16:34.168Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:34.168Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:34.168Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config [none]
+[debug] [2026-02-04T16:16:34.737Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config 200
+[debug] [2026-02-04T16:16:34.738Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config {"projectId":"web-cot-aya","storageBucket":"web-cot-aya.firebasestorage.app","apiKey":"AIzaSyAZ4t2IgeCSBCA_7Di9HvE3KC1WzrsH3q0","authDomain":"web-cot-aya.firebaseapp.com","messagingSenderId":"58467911514","projectNumber":"58467911514","version":"2"}
 [info] 
-     ######## #### ########  ######## ########     ###     ######  ########
-     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
-     ######    ##  ########  ######   ########  #########  ######  ######
-     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
-     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
 
-You're about to initialize a Firebase project in this directory:
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
 
-  C:\Users\LENOVO\Documents\WEB DE cotizaciones
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
 
-Before we get started, keep in mind:
+[debug] [2026-02-04T16:16:40.852Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:40.852Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:40.852Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[debug] [2026-02-04T16:16:42.250Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[debug] [2026-02-04T16:16:42.250Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.2 (Turbopack)
 
-  * You are initializing within an existing Firebase project directory
+[info] - Environments: .env
+
+
+[info] ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 7.7s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 19 workers ...
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+.env file exists at this path.
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+--- FIREBASE DEBUG ---
+.env file exists at this path.
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+
+[info] .env file exists at this path.
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+Dotenv loaded successfully.
+
+[info] Project ID in process.env: web-cot-aya
+----------------------
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info]   Generating static pages using 19 workers (0/10) ...
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] Firebase initialized successfully!
+
+[info]   Generating static pages using 19 workers (2/10) 
+
+[info]   Generating static pages using 19 workers (4/10) 
+
+[info]   Generating static pages using 19 workers (7/10) 
+
+[info] ✓ Generating static pages using 19 workers (10/10) in 674.1ms
+
+[info]   Finalizing page optimization ...
 
 [info] 
-=== Project Setup
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/client-profiles
+├ ƒ /api/client-profiles/[id]
+├ ƒ /api/company-profiles
+├ ƒ /api/company-profiles/[id]
+├ ƒ /api/general-conditions
+├ ƒ /api/quotations
+├ ƒ /api/quotations/[id]
+├ ƒ /api/users
+├ ○ /login
+├ ƒ /quotations/[id]
+└ ○ /settings
+
+
+ƒ Proxy (Middleware)
+
 [info] 
-[info] First, let's associate this project directory with a Firebase project.
-[info] You can create multiple project aliases by running firebase use --add, 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • middleware
+[info]  • non-static component /api/client-profiles/[id]/route
+[info]  • non-static component /api/client-profiles/route
+[info]  • non-static component /api/company-profiles/[id]/route
+[info]  • non-static component /api/company-profiles/route
+[debug] [2026-02-04T16:16:55.198Z]  • non-static component /api/general-conditions/route
+[debug] [2026-02-04T16:16:55.198Z]  • non-static component /api/quotations/[id]/route
+[debug] [2026-02-04T16:16:55.199Z]  • non-static component /api/quotations/route
+[debug] [2026-02-04T16:16:55.199Z]  • non-static component /api/users/route
+[debug] [2026-02-04T16:16:55.199Z]  • non-static component /quotations/[id]/page
+[info]  • and 5 other reasons, use --debug to see more
 [info] 
-[debug] [2026-02-04T07:34:31.409Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-02-04T07:34:31.409Z] > authorizing via signed-in user (alexismost11@gmail.com)
-[debug] [2026-02-04T07:34:31.410Z] Checked if tokens are valid: true, expires at: 1770193586135
-[debug] [2026-02-04T07:34:31.410Z] Checked if tokens are valid: true, expires at: 1770193586135
-[debug] [2026-02-04T07:34:31.412Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya [none]
-[debug] [2026-02-04T07:34:32.382Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya 200
-[debug] [2026-02-04T07:34:32.382Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya {"projectId":"web-cot-aya","projectNumber":"58467911514","displayName":"WEB COT AYA","name":"projects/web-cot-aya","resources":{"hostingSite":"web-cot-aya"},"state":"ACTIVE","etag":"1_7baad6dd-11a9-4217-a7f1-8e00f2fe4ab9"}
-[info] i  Using project web-cot-aya (WEB COT AYA) . 
+[debug] [2026-02-04T16:16:55.809Z] skipping /_global-error due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping /_not-found due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping /login due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping / due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping /settings due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping /404 due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:55.809Z] skipping /500 due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:16:58.572Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:58.572Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:16:58.572Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[debug] [2026-02-04T16:16:59.943Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[debug] [2026-02-04T16:16:59.943Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-02-04T16:17:00.498Z] Error: EPERM: operation not permitted, symlink 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\node_modules\firebase-admin' -> 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\.firebase\web-cot-aya\functions\.next\node_modules\firebase-admin-a14c8a5423a75469'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-02-04T16:20:42.281Z] ----------------------------------------------------------------------
+[debug] [2026-02-04T16:20:42.284Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\LENOVO\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2026-02-04T16:20:42.284Z] CLI Version:   15.5.1
+[debug] [2026-02-04T16:20:42.284Z] Platform:      win32
+[debug] [2026-02-04T16:20:42.284Z] Node Version:  v24.8.0
+[debug] [2026-02-04T16:20:42.284Z] Time:          Wed Feb 04 2026 11:20:42 GMT-0500 (hora estándar de Perú)
+[debug] [2026-02-04T16:20:42.284Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-02-04T16:20:43.427Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-04T16:20:43.427Z] > authorizing via signed-in user (alexismost11@gmail.com)
+[debug] [2026-02-04T16:20:43.427Z] [iam] checking project web-cot-aya for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-02-04T16:20:43.428Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:43.428Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:43.429Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions [none]
+[debug] [2026-02-04T16:20:43.429Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions  x-goog-user-project=web-cot-aya
+[debug] [2026-02-04T16:20:43.429Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-04T16:20:45.107Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions 200
+[debug] [2026-02-04T16:20:45.107Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-04T16:20:45.108Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:45.108Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:45.108Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya [none]
+[debug] [2026-02-04T16:20:45.732Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya 200
+[debug] [2026-02-04T16:20:45.732Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya {"projectId":"web-cot-aya","projectNumber":"58467911514","displayName":"WEB COT AYA","name":"projects/web-cot-aya","resources":{"hostingSite":"web-cot-aya"},"state":"ACTIVE","etag":"1_7baad6dd-11a9-4217-a7f1-8e00f2fe4ab9"}
+[debug] [2026-02-04T16:20:47.409Z] defaultcredentials: writing to file C:\Users\LENOVO\AppData\Roaming\firebase\alexismost11_gmail_com_application_default_credentials.json
+[debug] [2026-02-04T16:20:47.410Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:47.410Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:47.410Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites pageToken=&pageSize=10
+[debug] [2026-02-04T16:20:49.095Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[debug] [2026-02-04T16:20:49.095Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-02-04T16:20:49.096Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:49.096Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:49.096Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 
+[debug] [2026-02-04T16:20:49.411Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[debug] [2026-02-04T16:20:49.411Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-02-04T16:20:49.411Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:49.411Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:49.411Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config [none]
+[debug] [2026-02-04T16:20:49.919Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config 200
+[debug] [2026-02-04T16:20:49.919Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config {"projectId":"web-cot-aya","storageBucket":"web-cot-aya.firebasestorage.app","apiKey":"AIzaSyAZ4t2IgeCSBCA_7Di9HvE3KC1WzrsH3q0","authDomain":"web-cot-aya.firebaseapp.com","messagingSenderId":"58467911514","projectNumber":"58467911514","version":"2"}
 [info] 
-=== Hosting Setup
-[debug] [2026-02-04T07:34:32.475Z] Checked if tokens are valid: true, expires at: 1770193586135
-[debug] [2026-02-04T07:34:32.475Z] Checked if tokens are valid: true, expires at: 1770193586135
-[debug] [2026-02-04T07:34:32.475Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya [none]
-[debug] [2026-02-04T07:34:32.880Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya 200
-[debug] [2026-02-04T07:34:32.880Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya {"projectId":"web-cot-aya","projectNumber":"58467911514","displayName":"WEB COT AYA","name":"projects/web-cot-aya","resources":{"hostingSite":"web-cot-aya"},"state":"ACTIVE","etag":"1_7baad6dd-11a9-4217-a7f1-8e00f2fe4ab9"}
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-02-04T16:20:53.538Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:53.539Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:20:53.539Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[debug] [2026-02-04T16:20:53.827Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[debug] [2026-02-04T16:20:53.828Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.2 (Turbopack)
+
+[info] - Environments: .env
+
+
+[info] ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 3.1s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 19 workers ...
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] --- FIREBASE DEBUG ---
+Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+.env file exists at this path.
+
+[info] Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+
+[info] .env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] --- FIREBASE DEBUG ---
+Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info] Firebase initialized successfully!
+
+[info]   Generating static pages using 19 workers (0/10) ...
+
+[info] --- FIREBASE DEBUG ---
+
+[info] Project Root: C:\Users\LENOVO\Documents\WEB DE cotizaciones\
+Dotenv Path: C:\Users\LENOVO\Documents\WEB DE cotizaciones\.env
+.env file exists at this path.
+
+[info] [dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+
+[info] Dotenv loaded successfully.
+Project ID in process.env: web-cot-aya
+----------------------
+
+[info] Firebase initialized successfully!
+
+[info]   Generating static pages using 19 workers (2/10) 
+
+[info]   Generating static pages using 19 workers (4/10) 
+
+[info]   Generating static pages using 19 workers (7/10) 
+
+[info] ✓ Generating static pages using 19 workers (10/10) in 761.9ms
+
+[info]   Finalizing page optimization ...
+
 [info] 
-[info] i  Didn't detect a .git folder. Assuming C:\Users\LENOVO\Documents\WEB DE cotizaciones is the project root. 
-[info] i  Authorizing with GitHub to upload your service account to a GitHub repository's secrets store. 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/client-profiles
+├ ƒ /api/client-profiles/[id]
+├ ƒ /api/company-profiles
+├ ƒ /api/company-profiles/[id]
+├ ƒ /api/general-conditions
+├ ƒ /api/quotations
+├ ƒ /api/quotations/[id]
+├ ƒ /api/users
+├ ○ /login
+├ ƒ /quotations/[id]
+└ ○ /settings
+
+
+ƒ Proxy (Middleware)
+
 [info] 
-[info] Visit this URL on this device to log in:
-[info] https://github.com/login/oauth/authorize?client_id=89cf50f02ac6aaed3484&state=820278987&redirect_uri=http%3A%2F%2Flocalhost%3A9005&scope=read%3Auser%20repo%20public_repo
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • middleware
+[info]  • non-static component /api/client-profiles/[id]/route
+[info]  • non-static component /api/client-profiles/route
+[info]  • non-static component /api/company-profiles/[id]/route
+[info]  • non-static component /api/company-profiles/route
+[debug] [2026-02-04T16:21:01.979Z]  • non-static component /api/general-conditions/route
+[debug] [2026-02-04T16:21:01.979Z]  • non-static component /api/quotations/[id]/route
+[debug] [2026-02-04T16:21:01.979Z]  • non-static component /api/quotations/route
+[debug] [2026-02-04T16:21:01.979Z]  • non-static component /api/users/route
+[debug] [2026-02-04T16:21:01.979Z]  • non-static component /quotations/[id]/page
+[info]  • and 5 other reasons, use --debug to see more
 [info] 
-[info] Waiting for authentication...
+[debug] [2026-02-04T16:21:02.584Z] skipping /_global-error due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.584Z] skipping /_not-found due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.585Z] skipping /login due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.585Z] skipping / due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.585Z] skipping /settings due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.585Z] skipping /404 due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:02.585Z] skipping /500 due to it matching an unsupported rewrite/redirect/header or middlware
+[debug] [2026-02-04T16:21:05.832Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:21:05.832Z] Checked if tokens are valid: true, expires at: 1770225259508
+[debug] [2026-02-04T16:21:05.832Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[debug] [2026-02-04T16:21:07.243Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[debug] [2026-02-04T16:21:07.243Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-02-04T16:21:07.808Z] Error: EPERM: operation not permitted, symlink 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\node_modules\firebase-admin' -> 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\.firebase\web-cot-aya\functions\.next\node_modules\firebase-admin-a14c8a5423a75469'
+[error] 
+[error] Error: An unexpected error has occurred.

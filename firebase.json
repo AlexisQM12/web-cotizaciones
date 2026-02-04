@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "web-cot-aya",
     "source": ".",
     "ignore": [
       "firebase.json",
