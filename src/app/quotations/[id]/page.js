@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { QuotationDocument } from '@/components/QuotationDocument';
-import { getSocket } from '@/lib/socket';
 import { useAuth } from '@/contexts/AuthContext';
 import { ActiveUsers } from '@/components/ActiveUsers';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavBar } from '@/components/NavBar';
+import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 
 // Import PDFViewer dynamically to avoid SSR issues
 const PDFViewer = dynamic(
@@ -19,8 +19,10 @@ export default function QuotationEditor() {
     const params = useParams();
     const router = useRouter();
     const { id } = params;
-    const socket = getSocket();
     const { user } = useAuth();
+
+    // Use Firestore realtime hook
+    const { quotation, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
 
     const [data, setData] = useState({
         clientName: '',
@@ -34,88 +36,33 @@ export default function QuotationEditor() {
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
 
+    // Update local data when Firestore quotation changes
     useEffect(() => {
-        // Wait for user to load
-        if (!user || !id) return;
-
-        // Connect socket
-        socket.connect();
-
-        // Join room with user data
-        socket.emit('join_quotation', {
-            quotationId: id,
-            user: {
-                uid: user.uid,
-                firstName: user.firstName,
-                photoURL: user.photoURL,
-                email: user.email
-            }
-        });
-
-        // Fetch initial data
-        fetch(`/api/quotations/${id}`)
-            .then(res => res.json())
-            .then(apiData => {
-                setData({
-                    ...apiData,
-                    clientName: apiData.clientName || '',
-                    clientRuc: apiData.clientRuc || '',
-                    clientAddress: apiData.clientAddress || '',
-                    items: apiData.items && apiData.items.length > 0 ? apiData.items : [{ description: '', quantity: 1, price: 0 }]
-                });
-            });
-
-        // Listen for updates
-        socket.on('quotation_updated', (updatedData) => {
-            console.log('Received update:', updatedData);
+        if (quotation) {
             isRemoteUpdate.current = true;
-            setData(prev => ({
-                ...prev,
-                ...updatedData
-            }));
-        });
-
-        // Listen for focus changes
-        socket.on('user_focus_change', ({ field, user, isFocused }) => {
-            setRemoteFocus(prev => {
-                const newFocus = { ...prev };
-                if (isFocused) {
-                    newFocus[field] = user;
-                } else {
-                    // Only remove if it's the same user
-                    if (newFocus[field]?.uid === user.uid) {
-                        delete newFocus[field];
-                    }
-                }
-                return newFocus;
+            setData({
+                ...quotation,
+                clientName: quotation.clientName || '',
+                clientRuc: quotation.clientRuc || '',
+                clientAddress: quotation.clientAddress || '',
+                items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }]
             });
-        });
+        }
+    }, [quotation]);
 
-        // Listen for active users
-        socket.on('users_in_quotation', (users) => {
-            console.log('Active users:', users);
-            setActiveUsers(users);
-        });
-
-        return () => {
-            if (id) socket.emit('leave_quotation', id);
-            socket.off('quotation_updated');
-            socket.off('user_focus_change');
-            socket.off('users_in_quotation');
-            socket.disconnect();
-        };
-    }, [id, user]);
+    // Update active users from Firestore
+    useEffect(() => {
+        if (realtimeUsers) {
+            setActiveUsers(realtimeUsers);
+        }
+    }, [realtimeUsers]);
 
     const handleFocus = (field) => {
-        if (id && user) {
-            socket.emit('user_focus', { quotationId: id, field, user });
-        }
+        // Focus tracking removed - not needed with Firestore
     };
 
     const handleBlur = (field) => {
-        if (id && user) {
-            socket.emit('user_blur', { quotationId: id, field, user });
-        }
+        // Blur tracking removed - not needed with Firestore
     };
 
     const getInputStyle = (field, baseStyle = {}) => {
@@ -160,20 +107,21 @@ export default function QuotationEditor() {
         return null;
     };
 
-    const handleChange = (field, value) => {
+    const handleChange = async (field, value) => {
         const newData = { ...data, [field]: value };
         setData(newData);
 
-        // Emit change
-        if (id) {
-            socket.emit('update_quotation', {
-                quotationId: id,
-                [field]: value
-            });
+        // Update Firestore directly
+        if (id && updateQuotation) {
+            try {
+                await updateQuotation({ [field]: value });
+            } catch (err) {
+                console.error('Error updating quotation:', err);
+            }
         }
     };
 
-    const handleClientProfileChange = (clientProfileId) => {
+    const handleClientProfileChange = async (clientProfileId) => {
         const selectedClient = data.clientProfiles?.find(p => p.id === parseInt(clientProfileId));
         const newData = {
             ...data,
@@ -184,52 +132,59 @@ export default function QuotationEditor() {
         };
         setData(newData);
 
-        if (id) {
-            socket.emit('update_quotation', {
-                quotationId: id,
-                clientProfileId: newData.clientProfileId,
-                clientName: newData.clientName,
-                clientRuc: newData.clientRuc,
-                clientAddress: newData.clientAddress
-            });
+        // Update Firestore directly
+        if (id && updateQuotation) {
+            try {
+                await updateQuotation({
+                    clientProfileId: newData.clientProfileId,
+                    clientName: newData.clientName,
+                    clientRuc: newData.clientRuc,
+                    clientAddress: newData.clientAddress
+                });
+            } catch (err) {
+                console.error('Error updating client profile:', err);
+            }
         }
     };
 
-    const handleItemChange = (index, field, value) => {
+    const handleItemChange = async (index, field, value) => {
         const newItems = [...data.items];
         newItems[index][field] = value;
         const newData = { ...data, items: newItems };
         setData(newData);
 
-        if (id) {
-            socket.emit('update_quotation', {
-                quotationId: id,
-                items: newItems
-            });
+        // Update Firestore directly
+        if (id && updateQuotation) {
+            try {
+                await updateQuotation({ items: newItems });
+            } catch (err) {
+                console.error('Error updating items:', err);
+            }
         }
     };
 
-    const addItem = () => {
+    const addItem = async () => {
         const newItems = [...data.items, { description: '', quantity: 1, price: 0 }];
         const newData = { ...data, items: newItems };
         setData(newData);
 
-        if (id) {
-            socket.emit('update_quotation', {
-                quotationId: id,
-                items: newItems
-            });
+        // Update Firestore directly
+        if (id && updateQuotation) {
+            try {
+                await updateQuotation({ items: newItems });
+            } catch (err) {
+                console.error('Error adding item:', err);
+            }
         }
     };
 
     const saveQuotation = async () => {
         setSaving(true);
         try {
-            await fetch(`/api/quotations/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            // Use Firestore updateQuotation instead of API
+            if (updateQuotation) {
+                await updateQuotation(data);
+            }
             setSaving(false);
         } catch (e) {
             console.error(e);
