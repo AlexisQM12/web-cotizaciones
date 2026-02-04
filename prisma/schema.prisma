@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("user") // admin, user
+  createdAt DateTime @default(now())
+  quotations Quotation[]
+}
+
+model Template {
+  id        Int      @id @default(autoincrement())
+  name      String
+  content   String   // JSON string storing structure/defaults
+  createdAt DateTime @default(now())
+  quotations Quotation[]
+}
+
+model CompanyProfile {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  email     String?
+  phone     String?
+  ruc       String?
+  website   String?
+  // Old fields removed: bankAccount, cci
+  accounts  BankAccount[]
+  logoUrl   String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  quotations Quotation[]
+}
+
+model BankAccount {
+  id               Int            @id @default(autoincrement())
+  bankName         String
+  accountNumber    String
+  cci              String?
+  companyProfileId Int
+  companyProfile   CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+}
+
+model ClientProfile {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ruc       String?
+  address   String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  quotations Quotation[]
+}
+
+model GeneralConditions {
+  id        Int      @id @default(1)
+  text      String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model Quotation {
+  id              Int             @id @default(autoincrement())
+  code            String          @unique // e.g., COT-001
+  clientName      String?
+  clientRuc       String?
+  clientAddress   String?
+  total           Float           @default(0)
+  status          String          @default("draft") // draft, sent, approved, rejected
+  data            String?         // JSON string for dynamic fields
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  authorId        Int
+  author          User            @relation(fields: [authorId], references: [id])
+  templateId      Int?
+  template        Template?       @relation(fields: [templateId], references: [id])
+  companyProfileId Int?
+  companyProfile  CompanyProfile? @relation(fields: [companyProfileId], references: [id])
+  clientProfileId Int?
+  clientProfile   ClientProfile?  @relation(fields: [clientProfileId], references: [id])
+  items           QuotationItem[]
+}
+
+model QuotationItem {
+  id               Int      @id @default(autoincrement())
+  description      String
+  quantity         Int
+  price            Float
+  basePrice        Float?   // Internal base cost
+  profitPercentage Float?   // Internal profit percentage
+  otherCosts       Float?   // Internal other costs
+  quotationId      Int
+  quotation        Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+}

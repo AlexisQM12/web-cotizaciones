@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "web-cot-aya"
+  },
+  "targets": {
+    "web-cot-aya": {
+      "hosting": {
+        "app": [
+          "web-cot-aya"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

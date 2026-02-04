@@ -1,0 +1,16 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/client-profiles/[id]/route": "/api/client-profiles/[id]",
+  "/api/client-profiles/route": "/api/client-profiles",
+  "/api/company-profiles/[id]/route": "/api/company-profiles/[id]",
+  "/api/company-profiles/route": "/api/company-profiles",
+  "/api/general-conditions/route": "/api/general-conditions",
+  "/api/quotations/[id]/route": "/api/quotations/[id]",
+  "/api/quotations/route": "/api/quotations",
+  "/api/users/route": "/api/users",
+  "/login/page": "/login",
+  "/page": "/",
+  "/quotations/[id]/page": "/quotations/[id]",
+  "/settings/page": "/settings"
+}
