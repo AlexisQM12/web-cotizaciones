@@ -16,20 +16,28 @@ __turbopack_context__.s([
 ]);
 // Firebase Client Configuration for Authentication
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$firebase$2f$app$2f$dist$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/firebase/app/dist/index.mjs [app-ssr] (ecmascript) <locals>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$app$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@firebase/app/dist/esm/index.esm.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$firebase$2f$auth$2f$dist$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/firebase/auth/dist/index.mjs [app-ssr] (ecmascript) <locals>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$auth$2f$dist$2f$node$2d$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@firebase/auth/dist/node-esm/index.js [app-ssr] (ecmascript)");
 ;
 ;
 const firebaseConfig = {
     apiKey: ("TURBOPACK compile-time value", "AIzaSyAZ4t2IgeCSBCA_7Di9HvE3KC1WzrsH3q0"),
     authDomain: ("TURBOPACK compile-time value", "web-cot-aya.firebaseapp.com"),
     projectId: ("TURBOPACK compile-time value", "web-cot-aya") || 'web-cot-aya',
-    storageBucket: ("TURBOPACK compile-time value", "web-cot-aya.firebasestorage.app") || 'web-cot-aya.firebasestorage.app'
+    storageBucket: ("TURBOPACK compile-time value", "web-cot-aya.firebasestorage.app") || 'web-cot-aya.firebasestorage.app',
+    messagingSenderId: ("TURBOPACK compile-time value", "58467911514"),
+    appId: ("TURBOPACK compile-time value", "1:58467911514:web:1c96e90359f42befac5563")
 };
-// Initialize Firebase (only once)
-const app = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$app$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getApps"])().length === 0 ? (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$app$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["initializeApp"])(firebaseConfig) : (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$app$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getApps"])()[0];
-const auth = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$auth$2f$dist$2f$node$2d$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getAuth"])(app);
+// Initialize Firebase (only in browser, not during build)
+let app;
+let auth;
+if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+;
+else {
+    // Server-side: create dummy exports to prevent errors during build
+    app = null;
+    auth = null;
+}
+;
 const __TURBOPACK__default__export__ = app;
 }),
 "[project]/src/contexts/AuthContext.js [app-ssr] (ecmascript)", ((__turbopack_context__) => {

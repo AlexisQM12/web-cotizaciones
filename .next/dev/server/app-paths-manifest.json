@@ -1,4 +1,10 @@
 {
+  "/api/client-profiles/route": "app/api/client-profiles/route.js",
+  "/api/company-profiles/route": "app/api/company-profiles/route.js",
+  "/api/quotations/[id]/route": "app/api/quotations/[id]/route.js",
   "/api/quotations/route": "app/api/quotations/route.js",
-  "/page": "app/page.js"
+  "/api/users/route": "app/api/users/route.js",
+  "/page": "app/page.js",
+  "/quotations/[id]/page": "app/quotations/[id]/page.js",
+  "/settings/page": "app/settings/page.js"
 }

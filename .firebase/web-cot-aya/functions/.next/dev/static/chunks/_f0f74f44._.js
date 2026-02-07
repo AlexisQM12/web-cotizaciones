@@ -126,7 +126,7 @@ function NavBar() {
             children: [
                 user.photoURL && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
                     src: user.photoURL,
-                    alt: user.firstName || 'User',
+                    alt: user.displayName || user.firstName || 'User',
                     style: {
                         width: '32px',
                         height: '32px',
@@ -144,7 +144,7 @@ function NavBar() {
                         fontWeight: '600',
                         color: '#101828'
                     },
-                    children: user.firstName || 'Usuario'
+                    children: (user.displayName || user.firstName || 'Usuario').split(' ')[0]
                 }, void 0, false, {
                     fileName: "[project]/src/components/NavBar.js",
                     lineNumber: 49,
@@ -572,8 +572,8 @@ function Dashboard() {
                                                         color: '#101828'
                                                     },
                                                     children: [
-                                                        "$",
-                                                        q.total.toFixed(2)
+                                                        "S/ ",
+                                                        (q.total || 0).toFixed(2)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/page.js",

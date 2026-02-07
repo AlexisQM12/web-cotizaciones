@@ -37,7 +37,7 @@ export function NavBar() {
                 {user.photoURL && (
                     <img
                         src={user.photoURL}
-                        alt={user.firstName || 'User'}
+                        alt={user.displayName || user.firstName || 'User'}
                         style={{
                             width: '32px',
                             height: '32px',
@@ -51,7 +51,7 @@ export function NavBar() {
                     fontWeight: '600',
                     color: '#101828'
                 }}>
-                    {user.firstName || 'Usuario'}
+                    {(user.displayName || user.firstName || 'Usuario').split(' ')[0]}
                 </span>
                 <button
                     onClick={handleSignOut}

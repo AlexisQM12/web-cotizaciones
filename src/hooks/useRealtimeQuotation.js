@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { doc, onSnapshot, updateDoc, collection, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useEffect, useState, useRef } from 'react';
+import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { clientDb } from '@/lib/firestoreClient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -44,42 +44,55 @@ export function useRealtimeQuotation(quotationId) {
             setActiveUsers(users);
         });
 
-        // Add current user to active users
+        // Add current user to active users with proper cleanup
         let userDocRef;
+        let heartbeatInterval;
+        let isCleanedUp = false;
+
         if (user) {
             addDoc(activeUsersRef, {
                 uid: user.uid,
                 displayName: user.displayName || user.email,
+                firstName: user.firstName,
                 photoURL: user.photoURL,
+                email: user.email,
                 joinedAt: serverTimestamp(),
                 lastSeen: serverTimestamp()
             }).then(docRef => {
                 userDocRef = docRef;
 
                 // Heartbeat to update lastSeen
-                const heartbeat = setInterval(() => {
-                    if (userDocRef) {
-                        updateDoc(userDocRef, {
+                heartbeatInterval = setInterval(() => {
+                    if (userDocRef && !isCleanedUp) {
+                        setDoc(userDocRef, {
                             lastSeen: serverTimestamp()
-                        }).catch(err => console.error('Heartbeat error:', err));
+                        }, { merge: true }).catch(err => {
+                            // Silently ignore if document doesn't exist (user left)
+                            if (err.code !== 'not-found') {
+                                console.error('Heartbeat error:', err);
+                            }
+                        });
                     }
                 }, 30000); // Every 30 seconds
-
-                // Cleanup on unmount
-                return () => {
-                    clearInterval(heartbeat);
-                    if (userDocRef) {
-                        deleteDoc(userDocRef).catch(err => console.error('Error removing user:', err));
-                    }
-                };
+            }).catch(err => {
+                console.error('Error adding user to active users:', err);
             });
         }
 
         return () => {
+            isCleanedUp = true;
             unsubscribeQuotation();
             unsubscribeUsers();
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+            }
             if (userDocRef) {
-                deleteDoc(userDocRef).catch(err => console.error('Error removing user:', err));
+                deleteDoc(userDocRef).catch(err => {
+                    // Silently ignore if document doesn't exist
+                    if (err.code !== 'not-found') {
+                        console.error('Error removing user:', err);
+                    }
+                });
             }
         };
     }, [quotationId, user]);

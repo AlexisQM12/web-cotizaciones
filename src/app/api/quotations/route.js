@@ -4,10 +4,27 @@ export async function GET(req) {
     try {
         const snapshot = await firestore.collection('quotations').get();
 
-        let quotations = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        let quotations = snapshot.docs.map(doc => {
+            const data = doc.data();
+
+            // Calculate total from items if items exist
+            let total = data.total || 0;
+            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                const subtotal = data.items.reduce((sum, item) => {
+                    const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
+                    return sum + itemTotal;
+                }, 0);
+                // Add IGV (18%) to get the total
+                const igv = subtotal * 0.18;
+                total = subtotal + igv;
+            }
+
+            return {
+                id: doc.id,
+                ...data,
+                total
+            };
+        });
 
         // Sort by updatedAt desc
         quotations.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));

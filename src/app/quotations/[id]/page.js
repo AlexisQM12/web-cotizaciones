@@ -4,9 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { QuotationDocument } from '@/components/QuotationDocument';
 import { useAuth } from '@/contexts/AuthContext';
-import { ActiveUsers } from '@/components/ActiveUsers';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { NavBar } from '@/components/NavBar';
+import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 
 // Import PDFViewer dynamically to avoid SSR issues
@@ -29,12 +28,19 @@ export default function QuotationEditor() {
         clientRuc: '',
         clientAddress: '',
         code: '',
-        items: [{ description: 'Servicio Ejemplo', quantity: 1, price: 100 }]
+        items: [{ description: 'Servicio Ejemplo', quantity: 1, price: 100 }],
+        globalProfitPercentage: '',
+        globalOtherCosts: ''
     });
     const [saving, setSaving] = useState(false);
+    const [autoSaving, setAutoSaving] = useState(false);
     const [activeUsers, setActiveUsers] = useState([]);
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
+
+    // Separate state for PDF to prevent constant re-rendering
+    const [pdfData, setPdfData] = useState(data);
+    const pdfUpdateTimeout = useRef(null);
 
     // Update local data when Firestore quotation changes
     useEffect(() => {
@@ -45,7 +51,9 @@ export default function QuotationEditor() {
                 clientName: quotation.clientName || '',
                 clientRuc: quotation.clientRuc || '',
                 clientAddress: quotation.clientAddress || '',
-                items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }]
+                items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
+                globalProfitPercentage: quotation.globalProfitPercentage || '',
+                globalOtherCosts: quotation.globalOtherCosts || ''
             });
         }
     }, [quotation]);
@@ -56,6 +64,26 @@ export default function QuotationEditor() {
             setActiveUsers(realtimeUsers);
         }
     }, [realtimeUsers]);
+
+    // Debounce PDF updates to prevent flickering
+    useEffect(() => {
+        // Clear existing timeout
+        if (pdfUpdateTimeout.current) {
+            clearTimeout(pdfUpdateTimeout.current);
+        }
+
+        // Set new timeout to update PDF after 1 second of no changes
+        pdfUpdateTimeout.current = setTimeout(() => {
+            setPdfData(data);
+        }, 1000);
+
+        // Cleanup on unmount
+        return () => {
+            if (pdfUpdateTimeout.current) {
+                clearTimeout(pdfUpdateTimeout.current);
+            }
+        };
+    }, [data]);
 
     const handleFocus = (field) => {
         // Focus tracking removed - not needed with Firestore
@@ -111,12 +139,15 @@ export default function QuotationEditor() {
         const newData = { ...data, [field]: value };
         setData(newData);
 
-        // Update Firestore directly
+        // Update Firestore directly with auto-save indicator
         if (id && updateQuotation) {
             try {
+                setAutoSaving(true);
                 await updateQuotation({ [field]: value });
+                setAutoSaving(false);
             } catch (err) {
                 console.error('Error updating quotation:', err);
+                setAutoSaving(false);
             }
         }
     };
@@ -153,12 +184,15 @@ export default function QuotationEditor() {
         const newData = { ...data, items: newItems };
         setData(newData);
 
-        // Update Firestore directly
+        // Update Firestore directly with auto-save indicator
         if (id && updateQuotation) {
             try {
+                setAutoSaving(true);
                 await updateQuotation({ items: newItems });
+                setAutoSaving(false);
             } catch (err) {
                 console.error('Error updating items:', err);
+                setAutoSaving(false);
             }
         }
     };
@@ -198,29 +232,33 @@ export default function QuotationEditor() {
     const selectedCompany = data.companyProfiles?.find(p => p.id === data.companyProfileId) ||
         data.companyProfiles?.find(p => p.isDefault) || {};
 
+    // Use pdfData for PDF rendering to prevent flickering
+    const pdfTotal = pdfData.items ? pdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
+    const pdfSelectedCompany = pdfData.companyProfiles?.find(p => p.id === pdfData.companyProfileId) ||
+        pdfData.companyProfiles?.find(p => p.isDefault) || {};
+
     const dataForPdf = {
-        ...data,
-        total,
-        company: selectedCompany,
-        notes: data.notes !== undefined ? data.notes : (data.generalConditions?.text || '')
+        ...pdfData,
+        total: pdfTotal,
+        company: pdfSelectedCompany,
+        notes: pdfData.notes !== undefined ? pdfData.notes : (pdfData.generalConditions?.text || '')
     };
 
     return (
         <ProtectedRoute>
-            <NavBar />
-            <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+            <UserSidebar activeUsers={activeUsers} />
+            <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', marginLeft: '80px' }}>
                 {/* Left: Editor Form */}
                 <div style={{ width: '50%', padding: '2rem', overflowY: 'auto', borderRight: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <h1 style={{ color: '#1e293b' }}>Editor de Cotización</h1>
                         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                            <ActiveUsers users={activeUsers} currentUser={user} />
                             <button className="btn" style={{ background: '#64748b', color: 'white' }} onClick={() => router.push('/')}>
                                 ← Menú Principal
                             </button>
-                            <span style={{ fontSize: '0.8rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></span>
-                                Sincronizado
+                            <span style={{ fontSize: '0.8rem', color: autoSaving ? '#f59e0b' : '#22c55e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: autoSaving ? '#f59e0b' : '#22c55e' }}></span>
+                                {autoSaving ? 'Guardando...' : 'Guardado'}
                             </span>
                             <button className="btn btn-primary" onClick={saveQuotation} disabled={saving}>
                                 {saving ? 'Guardando...' : 'Guardar Cambios'}

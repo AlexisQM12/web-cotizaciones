@@ -114,7 +114,7 @@ export default function Dashboard() {
                                     </p>
                                     <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                         <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Total</span>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>${q.total.toFixed(2)}</span>
+                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>S/ {(q.total || 0).toFixed(2)}</span>
                                     </div>
                                 </div>
                             ))}

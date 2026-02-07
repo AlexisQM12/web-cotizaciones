@@ -150,10 +150,25 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2d$ad
 async function GET(req) {
     try {
         const snapshot = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2d$admin$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["firestore"].collection('quotations').get();
-        let quotations = snapshot.docs.map((doc)=>({
+        let quotations = snapshot.docs.map((doc)=>{
+            const data = doc.data();
+            // Calculate total from items if items exist
+            let total = data.total || 0;
+            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                const subtotal = data.items.reduce((sum, item)=>{
+                    const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
+                    return sum + itemTotal;
+                }, 0);
+                // Add IGV (18%) to get the total
+                const igv = subtotal * 0.18;
+                total = subtotal + igv;
+            }
+            return {
                 id: doc.id,
-                ...doc.data()
-            }));
+                ...data,
+                total
+            };
+        });
         // Sort by updatedAt desc
         quotations.sort((a, b)=>new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
         return Response.json(quotations);
