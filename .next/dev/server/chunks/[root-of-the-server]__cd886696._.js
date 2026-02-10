@@ -175,9 +175,7 @@ async function GET(req) {
     } catch (error) {
         console.error('Quotations GET Error:', error);
         return Response.json({
-            error: 'Failed to fetch quotations',
-            details: error.message,
-            stack: ("TURBOPACK compile-time truthy", 1) ? error.stack : "TURBOPACK unreachable"
+            error: 'Failed to get quotations'
         }, {
             status: 500
         });
@@ -186,22 +184,22 @@ async function GET(req) {
 async function POST(req) {
     try {
         const { clientName } = await req.json();
-        // Generate professional code: COT-YYYY-NNNN
-        const currentYear = new Date().getFullYear();
-        // Query quotations from current year
-        const yearStart = new Date(currentYear, 0, 1).toISOString();
-        const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59).toISOString();
-        const snapshot = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2d$admin$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["firestore"].collection('quotations').where('createdAt', '>=', yearStart).where('createdAt', '<=', yearEnd).get();
-        // Count quotations in current year
-        const countThisYear = snapshot.size;
-        const nextNumber = countThisYear + 1;
-        // Format: COT-2026-0001
-        const code = `COT-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
+        // Fetch default profiles
+        const [companySnap, clientSnap] = await Promise.all([
+            __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2d$admin$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["firestore"].collection('company_profiles').where('isDefault', '==', true).limit(1).get(),
+            __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2d$admin$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["firestore"].collection('client_profiles').where('isDefault', '==', true).limit(1).get()
+        ]);
+        const defaultCompany = companySnap.docs[0];
+        const defaultClient = clientSnap.docs[0];
+        // Create draft quotation without code
         const newQuote = {
-            code,
+            code: null,
             clientName: clientName || 'Nuevo Cliente',
             status: 'draft',
+            isPublished: false,
             authorId: '1',
+            companyProfileId: defaultCompany?.id || null,
+            clientProfileId: defaultClient?.id || null,
             items: [],
             total: 0,
             createdAt: new Date().toISOString(),

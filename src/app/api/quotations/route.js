@@ -32,11 +32,7 @@ export async function GET(req) {
         return Response.json(quotations);
     } catch (error) {
         console.error('Quotations GET Error:', error);
-        return Response.json({
-            error: 'Failed to fetch quotations',
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }, { status: 500 });
+        return Response.json({ error: 'Failed to get quotations' }, { status: 500 });
     }
 }
 
@@ -44,30 +40,24 @@ export async function POST(req) {
     try {
         const { clientName } = await req.json();
 
-        // Generate professional code: COT-YYYY-NNNN
-        const currentYear = new Date().getFullYear();
+        // Fetch default profiles
+        const [companySnap, clientSnap] = await Promise.all([
+            firestore.collection('company_profiles').where('isDefault', '==', true).limit(1).get(),
+            firestore.collection('client_profiles').where('isDefault', '==', true).limit(1).get()
+        ]);
 
-        // Query quotations from current year
-        const yearStart = new Date(currentYear, 0, 1).toISOString();
-        const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59).toISOString();
+        const defaultCompany = companySnap.docs[0];
+        const defaultClient = clientSnap.docs[0];
 
-        const snapshot = await firestore.collection('quotations')
-            .where('createdAt', '>=', yearStart)
-            .where('createdAt', '<=', yearEnd)
-            .get();
-
-        // Count quotations in current year
-        const countThisYear = snapshot.size;
-        const nextNumber = countThisYear + 1;
-
-        // Format: COT-2026-0001
-        const code = `COT-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
-
+        // Create draft quotation without code
         const newQuote = {
-            code,
+            code: null,  // No code for drafts
             clientName: clientName || 'Nuevo Cliente',
             status: 'draft',
-            authorId: '1', // Dummy author id until auth is migrated
+            isPublished: false,  // New field to track draft/published state
+            authorId: '1',
+            companyProfileId: defaultCompany?.id || null,
+            clientProfileId: defaultClient?.id || null,
             items: [],
             total: 0,
             createdAt: new Date().toISOString(),

@@ -198,9 +198,8 @@ function Settings() {
             if (res.ok) {
                 setClientFormData({
                     name: '',
+                    ruc: '',
                     address: '',
-                    email: '',
-                    phone: '',
                     isDefault: false
                 });
                 setEditingClientId(null);
@@ -383,7 +382,7 @@ function Settings() {
                                                                     className: "input",
                                                                     type: "text",
                                                                     required: true,
-                                                                    value: companyFormData.name,
+                                                                    value: companyFormData.name || '',
                                                                     onChange: (e)=>setCompanyFormData({
                                                                             ...companyFormData,
                                                                             name: e.target.value
@@ -421,7 +420,7 @@ function Settings() {
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                             className: "input",
                                                                             type: "text",
-                                                                            value: companyFormData.ruc,
+                                                                            value: companyFormData.ruc || '',
                                                                             onChange: (e)=>setCompanyFormData({
                                                                                     ...companyFormData,
                                                                                     ruc: e.target.value
@@ -452,7 +451,7 @@ function Settings() {
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                             className: "input",
                                                                             type: "text",
-                                                                            value: companyFormData.website,
+                                                                            value: companyFormData.website || '',
                                                                             onChange: (e)=>setCompanyFormData({
                                                                                     ...companyFormData,
                                                                                     website: e.target.value
@@ -504,7 +503,7 @@ function Settings() {
                                                                                 children: [
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
                                                                                         className: "input",
-                                                                                        value: acc.bankName,
+                                                                                        value: acc.bankName || '',
                                                                                         onChange: (e)=>handleAccountChange(index, 'bankName', e.target.value),
                                                                                         style: {
                                                                                             flex: 1
@@ -561,7 +560,7 @@ function Settings() {
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                                         className: "input",
                                                                                         type: "text",
-                                                                                        value: acc.accountNumber,
+                                                                                        value: acc.accountNumber || '',
                                                                                         onChange: (e)=>handleAccountChange(index, 'accountNumber', e.target.value),
                                                                                         placeholder: "Nº de Cuenta"
                                                                                     }, void 0, false, {
@@ -572,7 +571,7 @@ function Settings() {
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                                         className: "input",
                                                                                         type: "text",
-                                                                                        value: acc.cci,
+                                                                                        value: acc.cci || '',
                                                                                         onChange: (e)=>handleAccountChange(index, 'cci', e.target.value),
                                                                                         placeholder: "CCI (Opcional)"
                                                                                     }, void 0, false, {
@@ -626,7 +625,7 @@ function Settings() {
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                     className: "input",
                                                                     type: "text",
-                                                                    value: companyFormData.address,
+                                                                    value: companyFormData.address || '',
                                                                     onChange: (e)=>setCompanyFormData({
                                                                             ...companyFormData,
                                                                             address: e.target.value
@@ -664,7 +663,7 @@ function Settings() {
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                             className: "input",
                                                                             type: "email",
-                                                                            value: companyFormData.email,
+                                                                            value: companyFormData.email || '',
                                                                             onChange: (e)=>setCompanyFormData({
                                                                                     ...companyFormData,
                                                                                     email: e.target.value
@@ -695,7 +694,7 @@ function Settings() {
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                             className: "input",
                                                                             type: "text",
-                                                                            value: companyFormData.phone,
+                                                                            value: companyFormData.phone || '',
                                                                             onChange: (e)=>setCompanyFormData({
                                                                                     ...companyFormData,
                                                                                     phone: e.target.value
@@ -1168,7 +1167,7 @@ function Settings() {
                                                                     className: "input",
                                                                     type: "text",
                                                                     required: true,
-                                                                    value: clientFormData.name,
+                                                                    value: clientFormData.name || '',
                                                                     onChange: (e)=>setClientFormData({
                                                                             ...clientFormData,
                                                                             name: e.target.value
@@ -1199,7 +1198,7 @@ function Settings() {
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                     className: "input",
                                                                     type: "text",
-                                                                    value: clientFormData.ruc,
+                                                                    value: clientFormData.ruc || '',
                                                                     onChange: (e)=>setClientFormData({
                                                                             ...clientFormData,
                                                                             ruc: e.target.value
@@ -1230,7 +1229,7 @@ function Settings() {
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                                     className: "input",
                                                                     type: "text",
-                                                                    value: clientFormData.address,
+                                                                    value: clientFormData.address || '',
                                                                     onChange: (e)=>setClientFormData({
                                                                             ...clientFormData,
                                                                             address: e.target.value

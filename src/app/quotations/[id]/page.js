@@ -21,7 +21,7 @@ export default function QuotationEditor() {
     const { user } = useAuth();
 
     // Use Firestore realtime hook
-    const { quotation, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
+    const { quotation, companyProfiles, clientProfiles, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
 
     const [data, setData] = useState({
         clientName: '',
@@ -30,7 +30,9 @@ export default function QuotationEditor() {
         code: '',
         items: [{ description: 'Servicio Ejemplo', quantity: 1, price: 100 }],
         globalProfitPercentage: '',
-        globalOtherCosts: ''
+        globalOtherCosts: '',
+        companyProfiles: [],
+        clientProfiles: []
     });
     const [saving, setSaving] = useState(false);
     const [autoSaving, setAutoSaving] = useState(false);
@@ -41,22 +43,38 @@ export default function QuotationEditor() {
     // Separate state for PDF to prevent constant re-rendering
     const [pdfData, setPdfData] = useState(data);
     const pdfUpdateTimeout = useRef(null);
+    const autoSaveTimeout = useRef(null);
 
     // Update local data when Firestore quotation changes
     useEffect(() => {
-        if (quotation) {
+        if (quotation && companyProfiles && clientProfiles) {
             isRemoteUpdate.current = true;
-            setData({
+
+            // Auto-select default company profile if none is selected
+            const selectedCompanyProfileId = quotation.companyProfileId ||
+                companyProfiles.find(cp => cp.isDefault)?.id || null;
+
+            // Auto-select default client profile if none is selected
+            const selectedClientProfileId = quotation.clientProfileId ||
+                clientProfiles.find(cp => cp.isDefault)?.id || null;
+
+            setData(prevData => ({
                 ...quotation,
-                clientName: quotation.clientName || '',
-                clientRuc: quotation.clientRuc || '',
-                clientAddress: quotation.clientAddress || '',
+                companyProfiles,
+                clientProfiles,
+                companyProfileId: selectedCompanyProfileId,
+                clientProfileId: selectedClientProfileId,
+                // Only update client fields from Firestore if they're empty locally
+                // This prevents overwriting freshly changed data
+                clientName: quotation.clientName || prevData.clientName || '',
+                clientRuc: quotation.clientRuc || prevData.clientRuc || '',
+                clientAddress: quotation.clientAddress || prevData.clientAddress || '',
                 items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
                 globalProfitPercentage: quotation.globalProfitPercentage || '',
                 globalOtherCosts: quotation.globalOtherCosts || ''
-            });
+            }));
         }
-    }, [quotation]);
+    }, [quotation, companyProfiles, clientProfiles]);
 
     // Update active users from Firestore
     useEffect(() => {
@@ -139,28 +157,50 @@ export default function QuotationEditor() {
         const newData = { ...data, [field]: value };
         setData(newData);
 
-        // Update Firestore directly with auto-save indicator
-        if (id && updateQuotation) {
-            try {
-                setAutoSaving(true);
-                await updateQuotation({ [field]: value });
-                setAutoSaving(false);
-            } catch (err) {
-                console.error('Error updating quotation:', err);
-                setAutoSaving(false);
-            }
+        // Clear existing timeout
+        if (autoSaveTimeout.current) {
+            clearTimeout(autoSaveTimeout.current);
         }
+
+        // Set auto-saving indicator immediately
+        setAutoSaving(true);
+
+        // Debounce Firestore update - only save after user stops typing for 500ms
+        autoSaveTimeout.current = setTimeout(async () => {
+            if (id && updateQuotation) {
+                try {
+                    await updateQuotation({ [field]: value });
+                    setAutoSaving(false);
+                } catch (err) {
+                    console.error('Error updating quotation:', err);
+                    setAutoSaving(false);
+                }
+            }
+        }, 500);
     };
 
     const handleClientProfileChange = async (clientProfileId) => {
-        const selectedClient = data.clientProfiles?.find(p => p.id === parseInt(clientProfileId));
+        console.log('🔍 Client Profile Change:', clientProfileId);
+        console.log('Available profiles:', data.clientProfiles);
+
+        // Don't use parseInt - IDs can be Firestore strings or numbers
+        const selectedClient = data.clientProfiles?.find(p => String(p.id) === String(clientProfileId));
+        console.log('Selected client:', selectedClient);
+
         const newData = {
             ...data,
-            clientProfileId: clientProfileId ? parseInt(clientProfileId) : null,
+            clientProfileId: clientProfileId,
             clientName: selectedClient ? selectedClient.name || '' : '',
             clientRuc: selectedClient ? selectedClient.ruc || '' : '',
             clientAddress: selectedClient ? selectedClient.address || '' : ''
         };
+
+        console.log('New data:', {
+            clientName: newData.clientName,
+            clientRuc: newData.clientRuc,
+            clientAddress: newData.clientAddress
+        });
+
         setData(newData);
 
         // Update Firestore directly
@@ -174,6 +214,38 @@ export default function QuotationEditor() {
                 });
             } catch (err) {
                 console.error('Error updating client profile:', err);
+            }
+        }
+    };
+
+    const handleCompanyProfileChange = async (companyProfileId) => {
+        console.log('🏢 Company Profile Change:', companyProfileId);
+        console.log('Available company profiles:', data.companyProfiles);
+
+        // Don't use parseInt - IDs can be Firestore strings or numbers
+        const selectedCompany = data.companyProfiles?.find(p => String(p.id) === String(companyProfileId));
+        console.log('Selected company:', selectedCompany);
+
+        const newData = {
+            ...data,
+            companyProfileId: companyProfileId,
+            // Copy company conditions to notes field
+            notes: selectedCompany?.conditions || data.notes || ''
+        };
+
+        console.log('New notes:', newData.notes);
+
+        setData(newData);
+
+        // Update Firestore directly
+        if (id && updateQuotation) {
+            try {
+                await updateQuotation({
+                    companyProfileId: newData.companyProfileId,
+                    notes: newData.notes
+                });
+            } catch (err) {
+                console.error('Error updating company profile:', err);
             }
         }
     };
@@ -215,10 +287,26 @@ export default function QuotationEditor() {
     const saveQuotation = async () => {
         setSaving(true);
         try {
-            // Use Firestore updateQuotation instead of API
+            // First update the quotation data
             if (updateQuotation) {
                 await updateQuotation(data);
             }
+
+            // If not published, publish it and assign code
+            if (!data.isPublished && !quotation.isPublished) {
+                const res = await fetch('/api/quotations/publish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quotationId: id })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    // Refresh page to get the new code
+                    window.location.reload();
+                }
+            }
+
             setSaving(false);
         } catch (e) {
             console.error(e);
@@ -229,18 +317,29 @@ export default function QuotationEditor() {
     const total = data.items ? data.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
 
     // Find the selected company profile data
-    const selectedCompany = data.companyProfiles?.find(p => p.id === data.companyProfileId) ||
+    const selectedCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) ||
         data.companyProfiles?.find(p => p.isDefault) || {};
+
+    // Find the selected client profile data
+    const selectedClient = data.clientProfiles?.find(p => String(p.id) === String(data.clientProfileId)) ||
+        data.clientProfiles?.find(p => p.isDefault) || {};
 
     // Use pdfData for PDF rendering to prevent flickering
     const pdfTotal = pdfData.items ? pdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
-    const pdfSelectedCompany = pdfData.companyProfiles?.find(p => p.id === pdfData.companyProfileId) ||
+    const pdfSelectedCompany = pdfData.companyProfiles?.find(p => String(p.id) === String(pdfData.companyProfileId)) ||
         pdfData.companyProfiles?.find(p => p.isDefault) || {};
+
+    const pdfSelectedClient = pdfData.clientProfiles?.find(p => String(p.id) === String(pdfData.clientProfileId)) ||
+        pdfData.clientProfiles?.find(p => p.isDefault) || {};
 
     const dataForPdf = {
         ...pdfData,
         total: pdfTotal,
         company: pdfSelectedCompany,
+        // Populate client data from selected profile
+        clientName: pdfSelectedClient.name || pdfData.clientName || '',
+        clientRuc: pdfSelectedClient.ruc || pdfData.clientRuc || '',
+        clientAddress: pdfSelectedClient.address || pdfData.clientAddress || '',
         notes: pdfData.notes !== undefined ? pdfData.notes : (pdfData.generalConditions?.text || '')
     };
 
@@ -271,7 +370,7 @@ export default function QuotationEditor() {
                         {renderRemoteCursorLabel('companyProfileId')}
                         <select
                             value={data.companyProfileId || ''}
-                            onChange={(e) => handleChange('companyProfileId', parseInt(e.target.value))}
+                            onChange={(e) => handleCompanyProfileChange(e.target.value)}
                             onFocus={() => handleFocus('companyProfileId')}
                             onBlur={() => handleBlur('companyProfileId')}
                             style={getInputStyle('companyProfileId')}

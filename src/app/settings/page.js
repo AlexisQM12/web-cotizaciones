@@ -156,7 +156,7 @@ export default function Settings() {
                 body: JSON.stringify(clientFormData)
             });
             if (res.ok) {
-                setClientFormData({ name: '', address: '', email: '', phone: '', isDefault: false });
+                setClientFormData({ name: '', ruc: '', address: '', isDefault: false });
                 setEditingClientId(null);
                 fetchClientProfiles();
             }
@@ -244,7 +244,7 @@ export default function Settings() {
                                             className="input"
                                             type="text"
                                             required
-                                            value={companyFormData.name}
+                                            value={companyFormData.name || ''}
                                             onChange={(e) => setCompanyFormData({ ...companyFormData, name: e.target.value })}
                                             placeholder="Ej: Mi Empresa S.A."
                                         />
@@ -255,7 +255,7 @@ export default function Settings() {
                                             <input
                                                 className="input"
                                                 type="text"
-                                                value={companyFormData.ruc}
+                                                value={companyFormData.ruc || ''}
                                                 onChange={(e) => setCompanyFormData({ ...companyFormData, ruc: e.target.value })}
                                                 placeholder="20123456789"
                                             />
@@ -265,7 +265,7 @@ export default function Settings() {
                                             <input
                                                 className="input"
                                                 type="text"
-                                                value={companyFormData.website}
+                                                value={companyFormData.website || ''}
                                                 onChange={(e) => setCompanyFormData({ ...companyFormData, website: e.target.value })}
                                                 placeholder="www.miempresa.com"
                                             />
@@ -278,7 +278,7 @@ export default function Settings() {
                                                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                                     <select
                                                         className="input"
-                                                        value={acc.bankName}
+                                                        value={acc.bankName || ''}
                                                         onChange={(e) => handleAccountChange(index, 'bankName', e.target.value)}
                                                         style={{ flex: 1 }}
                                                     >
@@ -293,14 +293,14 @@ export default function Settings() {
                                                     <input
                                                         className="input"
                                                         type="text"
-                                                        value={acc.accountNumber}
+                                                        value={acc.accountNumber || ''}
                                                         onChange={(e) => handleAccountChange(index, 'accountNumber', e.target.value)}
                                                         placeholder="Nº de Cuenta"
                                                     />
                                                     <input
                                                         className="input"
                                                         type="text"
-                                                        value={acc.cci}
+                                                        value={acc.cci || ''}
                                                         onChange={(e) => handleAccountChange(index, 'cci', e.target.value)}
                                                         placeholder="CCI (Opcional)"
                                                     />
@@ -316,7 +316,7 @@ export default function Settings() {
                                         <input
                                             className="input"
                                             type="text"
-                                            value={companyFormData.address}
+                                            value={companyFormData.address || ''}
                                             onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
                                             placeholder="Calle Falsa 123"
                                         />
@@ -327,7 +327,7 @@ export default function Settings() {
                                             <input
                                                 className="input"
                                                 type="email"
-                                                value={companyFormData.email}
+                                                value={companyFormData.email || ''}
                                                 onChange={(e) => setCompanyFormData({ ...companyFormData, email: e.target.value })}
                                                 placeholder="contacto@empresa.com"
                                             />
@@ -337,7 +337,7 @@ export default function Settings() {
                                             <input
                                                 className="input"
                                                 type="text"
-                                                value={companyFormData.phone}
+                                                value={companyFormData.phone || ''}
                                                 onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
                                                 placeholder="+51 987 654 321"
                                             />
@@ -454,7 +454,7 @@ export default function Settings() {
                                             className="input"
                                             type="text"
                                             required
-                                            value={clientFormData.name}
+                                            value={clientFormData.name || ''}
                                             onChange={(e) => setClientFormData({ ...clientFormData, name: e.target.value })}
                                             placeholder="Ej: Juan Pérez"
                                         />
@@ -464,7 +464,7 @@ export default function Settings() {
                                         <input
                                             className="input"
                                             type="text"
-                                            value={clientFormData.ruc}
+                                            value={clientFormData.ruc || ''}
                                             onChange={(e) => setClientFormData({ ...clientFormData, ruc: e.target.value })}
                                             placeholder="12345678901"
                                         />
@@ -474,7 +474,7 @@ export default function Settings() {
                                         <input
                                             className="input"
                                             type="text"
-                                            value={clientFormData.address}
+                                            value={clientFormData.address || ''}
                                             onChange={(e) => setClientFormData({ ...clientFormData, address: e.target.value })}
                                             placeholder="Calle Falsa 123"
                                         />

@@ -7,6 +7,7 @@ import { NavBar } from '@/components/NavBar'
 
 export default function Dashboard() {
     const [quotations, setQuotations] = useState([])
+    const [activeTab, setActiveTab] = useState('published') // 'published' or 'drafts'
     const [loading, setLoading] = useState(true)
     const router = useRouter()
 
@@ -59,6 +60,11 @@ export default function Dashboard() {
         }
     }
 
+    // Filter quotations based on active tab
+    const publishedQuotations = quotations.filter(q => q.isPublished === true);
+    const draftQuotations = quotations.filter(q => q.isPublished === false || q.isPublished === undefined);
+    const displayList = activeTab === 'published' ? publishedQuotations : draftQuotations;
+
     return (
         <ProtectedRoute>
             <NavBar />
@@ -78,21 +84,67 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* Tabs */}
+                <div style={{ marginBottom: '2rem', borderBottom: '2px solid #f1f5f9' }}>
+                    <button
+                        onClick={() => setActiveTab('published')}
+                        style={{
+                            padding: '1rem 2rem',
+                            border: 'none',
+                            background: 'none',
+                            borderBottom: activeTab === 'published' ? '3px solid #3b82f6' : 'none',
+                            fontWeight: activeTab === 'published' ? 'bold' : 'normal',
+                            color: activeTab === 'published' ? '#3b82f6' : '#667085',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Cotizaciones ({publishedQuotations.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('drafts')}
+                        style={{
+                            padding: '1rem 2rem',
+                            border: 'none',
+                            background: 'none',
+                            borderBottom: activeTab === 'drafts' ? '3px solid #3b82f6' : 'none',
+                            fontWeight: activeTab === 'drafts' ? 'bold' : 'normal',
+                            color: activeTab === 'drafts' ? '#3b82f6' : '#667085',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Borradores ({draftQuotations.length})
+                    </button>
+                </div>
+
                 <div className="content-frame" style={{ padding: '3.5rem' }}>
                     {loading ? (
                         <div style={{ color: '#101828', textAlign: 'center', padding: '4rem', fontSize: '1.1rem' }}>Cargando cotizaciones...</div>
-                    ) : quotations.length === 0 ? (
+                    ) : displayList.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
-                            <h3 style={{ fontSize: '1.5rem', color: '#101828' }}>Aún no tienes cotizaciones</h3>
-                            <p style={{ color: '#667085', margin: '1.5rem 0', fontSize: '1rem' }}>Crea tu primera cotización para comenzar a trabajar.</p>
-                            <button className="btn btn-primary" style={{ padding: '0.875rem 2rem' }} onClick={createNewQuotation}>Comenzar ahora</button>
+                            <h3 style={{ fontSize: '1.5rem', color: '#101828' }}>
+                                {activeTab === 'published' ? 'Aún no tienes cotizaciones publicadas' : 'No hay borradores'}
+                            </h3>
+                            <p style={{ color: '#667085', margin: '1.5rem 0', fontSize: '1rem' }}>
+                                {activeTab === 'published'
+                                    ? 'Crea y guarda tu primera cotización para verla aquí.'
+                                    : 'Tus cotizaciones en borrador aparecerán aquí.'}
+                            </p>
+                            {activeTab === 'drafts' && (
+                                <button className="btn btn-primary" style={{ padding: '0.875rem 2rem' }} onClick={createNewQuotation}>Crear borrador</button>
+                            )}
                         </div>
                     ) : (
                         <div className="grid-list">
-                            {quotations.map(q => (
+                            {displayList.map(q => (
                                 <div key={q.id} className="card" style={{ cursor: 'pointer', padding: '2rem', border: '1px solid #f1f5f9' }} onClick={() => router.push(`/quotations/${q.id}`)}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: '700', color: '#101828', fontSize: '0.9rem', letterSpacing: '0.05em' }}>{q.code}</span>
+                                        <span style={{ fontWeight: '700', color: '#101828', fontSize: '0.9rem', letterSpacing: '0.05em' }}>
+                                            {q.code || 'BORRADOR'}
+                                        </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <span className={`status-badge status-${q.status}`} style={{ background: '#f8fafc', color: '#475569', border: '1px solid #f1f5f9' }}>{q.status}</span>
                                             <button

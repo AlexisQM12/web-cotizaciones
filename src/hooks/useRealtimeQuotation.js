@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function useRealtimeQuotation(quotationId) {
     const [quotation, setQuotation] = useState(null);
+    const [companyProfiles, setCompanyProfiles] = useState([]);
+    const [clientProfiles, setClientProfiles] = useState([]);
     const [activeUsers, setActiveUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -31,6 +33,52 @@ export function useRealtimeQuotation(quotationId) {
                 console.error('Error listening to quotation:', err);
                 setError(err.message);
                 setLoading(false);
+            }
+        );
+
+        // Listen to company profiles
+        const companyProfilesRef = collection(clientDb, 'company_profiles');
+        const unsubscribeCompanyProfiles = onSnapshot(
+            companyProfilesRef,
+            (snapshot) => {
+                const profiles = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                // Sort: defaults first, then alphabetically by name
+                profiles.sort((a, b) => {
+                    if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+                console.log('🏢 Company Profiles Loaded:', profiles.length);
+                setCompanyProfiles(profiles);
+            },
+            (error) => {
+                console.error('Error loading company profiles:', error);
+                setCompanyProfiles([]);
+            }
+        );
+
+        // Listen to client profiles
+        const clientProfilesRef = collection(clientDb, 'client_profiles');
+        const unsubscribeClientProfiles = onSnapshot(
+            clientProfilesRef,
+            (snapshot) => {
+                const profiles = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                // Sort: defaults first, then alphabetically by name
+                profiles.sort((a, b) => {
+                    if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+                console.log('👤 Client Profiles Loaded:', profiles.length);
+                setClientProfiles(profiles);
+            },
+            (error) => {
+                console.error('Error loading client profiles:', error);
+                setClientProfiles([]);
             }
         );
 
@@ -82,6 +130,8 @@ export function useRealtimeQuotation(quotationId) {
         return () => {
             isCleanedUp = true;
             unsubscribeQuotation();
+            unsubscribeCompanyProfiles();
+            unsubscribeClientProfiles();
             unsubscribeUsers();
             if (heartbeatInterval) {
                 clearInterval(heartbeatInterval);
@@ -114,6 +164,8 @@ export function useRealtimeQuotation(quotationId) {
 
     return {
         quotation,
+        companyProfiles,
+        clientProfiles,
         activeUsers,
         loading,
         error,
