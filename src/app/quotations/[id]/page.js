@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { QuotationDocument } from '@/components/QuotationDocument';
@@ -13,6 +13,23 @@ const PDFViewer = dynamic(
     () => import('@react-pdf/renderer').then((mod) => mod.PDFViewer),
     { ssr: false, loading: () => <p>Cargando previsualización...</p> }
 );
+
+// Memoized PDF component — only re-renders when dataForPdf reference changes
+const PdfPreview = memo(function PdfPreview({ dataForPdf }) {
+    if (!dataForPdf) {
+        return (
+            <div style={{ color: '#94a3b8', textAlign: 'center' }}>
+                <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</p>
+                <p>Cargando vista previa...</p>
+            </div>
+        );
+    }
+    return (
+        <PDFViewer width="100%" height="100%" style={{ border: 'none' }} showToolbar={true}>
+            <QuotationDocument data={dataForPdf} />
+        </PDFViewer>
+    );
+});
 
 export default function QuotationEditor() {
     const params = useParams();
@@ -40,10 +57,11 @@ export default function QuotationEditor() {
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
 
-    // Separate state for PDF to prevent constant re-rendering
-    const [pdfData, setPdfData] = useState(data);
+    // Separate state for PDF - only updated manually via button
+    const [pdfData, setPdfData] = useState(null);
     const pdfUpdateTimeout = useRef(null);
     const autoSaveTimeout = useRef(null);
+    const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
 
     // Update local data when Firestore quotation changes
     useEffect(() => {
@@ -58,50 +76,29 @@ export default function QuotationEditor() {
             const selectedClientProfileId = quotation.clientProfileId ||
                 clientProfiles.find(cp => cp.isDefault)?.id || null;
 
-            setData(prevData => ({
+            const newData = (prevData) => ({
                 ...quotation,
                 companyProfiles,
                 clientProfiles,
                 companyProfileId: selectedCompanyProfileId,
                 clientProfileId: selectedClientProfileId,
-                // Only update client fields from Firestore if they're empty locally
-                // This prevents overwriting freshly changed data
                 clientName: quotation.clientName || prevData.clientName || '',
                 clientRuc: quotation.clientRuc || prevData.clientRuc || '',
                 clientAddress: quotation.clientAddress || prevData.clientAddress || '',
                 items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
                 globalProfitPercentage: quotation.globalProfitPercentage || '',
                 globalOtherCosts: quotation.globalOtherCosts || ''
-            }));
+            });
+
+            setData(newData);
+            // Initialize pdfData automatically on first load only
+            if (!pdfInitialized.current) {
+                pdfInitialized.current = true;
+                setPdfData(newData({ clientName: '', clientRuc: '', clientAddress: '' }));
+            }
         }
     }, [quotation, companyProfiles, clientProfiles]);
 
-    // Update active users from Firestore
-    useEffect(() => {
-        if (realtimeUsers) {
-            setActiveUsers(realtimeUsers);
-        }
-    }, [realtimeUsers]);
-
-    // Debounce PDF updates to prevent flickering
-    useEffect(() => {
-        // Clear existing timeout
-        if (pdfUpdateTimeout.current) {
-            clearTimeout(pdfUpdateTimeout.current);
-        }
-
-        // Set new timeout to update PDF after 1 second of no changes
-        pdfUpdateTimeout.current = setTimeout(() => {
-            setPdfData(data);
-        }, 1000);
-
-        // Cleanup on unmount
-        return () => {
-            if (pdfUpdateTimeout.current) {
-                clearTimeout(pdfUpdateTimeout.current);
-            }
-        };
-    }, [data]);
 
     const handleFocus = (field) => {
         // Focus tracking removed - not needed with Firestore
@@ -177,6 +174,18 @@ export default function QuotationEditor() {
                 }
             }
         }, 500);
+
+        // Debounce PDF update - auto-refresh 2s after user stops typing
+        // Uses current data state, NOT triggered by Firestore (avoids flickering)
+        if (pdfUpdateTimeout.current) {
+            clearTimeout(pdfUpdateTimeout.current);
+        }
+        pdfUpdateTimeout.current = setTimeout(() => {
+            setData(currentData => {
+                setPdfData({ ...currentData, [field]: value });
+                return currentData;
+            });
+        }, 2000);
     };
 
     const handleClientProfileChange = async (clientProfileId) => {
@@ -324,24 +333,30 @@ export default function QuotationEditor() {
     const selectedClient = data.clientProfiles?.find(p => String(p.id) === String(data.clientProfileId)) ||
         data.clientProfiles?.find(p => p.isDefault) || {};
 
-    // Use pdfData for PDF rendering to prevent flickering
-    const pdfTotal = pdfData.items ? pdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
-    const pdfSelectedCompany = pdfData.companyProfiles?.find(p => String(p.id) === String(pdfData.companyProfileId)) ||
-        pdfData.companyProfiles?.find(p => p.isDefault) || {};
+    // Memoize dataForPdf so it ONLY recomputes when pdfData changes (via button click)
+    // This prevents PDFViewer from re-rendering on every keystroke
+    const dataForPdf = useMemo(() => {
+        const safePdfData = pdfData || {};
+        const pdfTotal = safePdfData.items
+            ? safePdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0)
+            : 0;
+        const pdfSelectedCompany =
+            safePdfData.companyProfiles?.find(p => String(p.id) === String(safePdfData.companyProfileId)) ||
+            safePdfData.companyProfiles?.find(p => p.isDefault) || {};
+        const pdfSelectedClient =
+            safePdfData.clientProfiles?.find(p => String(p.id) === String(safePdfData.clientProfileId)) ||
+            safePdfData.clientProfiles?.find(p => p.isDefault) || {};
+        return {
+            ...safePdfData,
+            total: pdfTotal,
+            company: pdfSelectedCompany,
+            clientName: pdfSelectedClient.name || safePdfData.clientName || '',
+            clientRuc: pdfSelectedClient.ruc || safePdfData.clientRuc || '',
+            clientAddress: pdfSelectedClient.address || safePdfData.clientAddress || '',
+            notes: safePdfData.notes !== undefined ? safePdfData.notes : (safePdfData.generalConditions?.text || '')
+        };
+    }, [pdfData]); // ONLY recomputes when user presses the refresh button
 
-    const pdfSelectedClient = pdfData.clientProfiles?.find(p => String(p.id) === String(pdfData.clientProfileId)) ||
-        pdfData.clientProfiles?.find(p => p.isDefault) || {};
-
-    const dataForPdf = {
-        ...pdfData,
-        total: pdfTotal,
-        company: pdfSelectedCompany,
-        // Populate client data from selected profile
-        clientName: pdfSelectedClient.name || pdfData.clientName || '',
-        clientRuc: pdfSelectedClient.ruc || pdfData.clientRuc || '',
-        clientAddress: pdfSelectedClient.address || pdfData.clientAddress || '',
-        notes: pdfData.notes !== undefined ? pdfData.notes : (pdfData.generalConditions?.text || '')
-    };
 
     return (
         <ProtectedRoute>
@@ -643,10 +658,21 @@ export default function QuotationEditor() {
                 </div>
 
                 {/* Right: PDF Preview */}
-                <div style={{ width: '50%', backgroundColor: '#525659', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <PDFViewer width="100%" height="100%" style={{ border: 'none' }} showToolbar={true}>
-                        <QuotationDocument data={dataForPdf} />
-                    </PDFViewer>
+                <div style={{ width: '50%', backgroundColor: '#525659', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '0.75rem 1rem', backgroundColor: '#3a3c3e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '500' }}>Vista Previa del PDF</span>
+                        <button
+                            onClick={() => setPdfData({ ...data })}
+                            style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
+                        >
+                            🔄 Actualizar Vista Previa
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <PdfPreview dataForPdf={dataForPdf} />
+                    </div>
                 </div>
             </div>
         </ProtectedRoute>

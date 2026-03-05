@@ -401,6 +401,7 @@ const QuotationDocument = ({ data })=>{
     const igv = subtotal * igvRate;
     const total = subtotal + igv;
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$externals$5d2f40$react$2d$pdf$2f$renderer__$5b$external$5d$__$2840$react$2d$pdf$2f$renderer$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$renderer$29$__["Document"], {
+        title: code || 'cotizacion',
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$externals$5d2f40$react$2d$pdf$2f$renderer__$5b$external$5d$__$2840$react$2d$pdf$2f$renderer$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$renderer$29$__["Page"], {
             size: "A4",
             style: styles.page,
@@ -1803,7 +1804,10 @@ function useRealtimeQuotation(quotationId) {
         let heartbeatInterval;
         let isCleanedUp = false;
         if (user) {
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["addDoc"])(activeUsersRef, {
+            // Use user.uid as document ID so re-mounting overwrites instead of creating duplicates
+            const userDocFixed = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["doc"])(activeUsersRef, user.uid);
+            userDocRef = userDocFixed;
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["setDoc"])(userDocFixed, {
                 uid: user.uid,
                 displayName: user.displayName || user.email,
                 firstName: user.firstName,
@@ -1811,23 +1815,23 @@ function useRealtimeQuotation(quotationId) {
                 email: user.email,
                 joinedAt: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["serverTimestamp"])(),
                 lastSeen: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["serverTimestamp"])()
-            }).then((docRef)=>{
-                userDocRef = docRef;
+            }, {
+                merge: true
+            }).then(()=>{
                 // Heartbeat to update lastSeen
                 heartbeatInterval = setInterval(()=>{
                     if (userDocRef && !isCleanedUp) {
-                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["setDoc"])(userDocRef, {
+                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["setDoc"])(userDocFixed, {
                             lastSeen: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["serverTimestamp"])()
                         }, {
                             merge: true
                         }).catch((err)=>{
-                            // Silently ignore if document doesn't exist (user left)
                             if (err.code !== 'not-found') {
                                 console.error('Heartbeat error:', err);
                             }
                         });
                     }
-                }, 30000); // Every 30 seconds
+                }, 30000);
             }).catch((err)=>{
                 console.error('Error adding user to active users:', err);
             });
@@ -1927,6 +1931,60 @@ const PDFViewer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modul
             columnNumber: 34
         }, ("TURBOPACK compile-time value", void 0))
 });
+// Memoized PDF component — only re-renders when dataForPdf reference changes
+const PdfPreview = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["memo"])(function PdfPreview({ dataForPdf }) {
+    if (!dataForPdf) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            style: {
+                color: '#94a3b8',
+                textAlign: 'center'
+            },
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                    style: {
+                        fontSize: '2rem',
+                        marginBottom: '0.5rem'
+                    },
+                    children: "📄"
+                }, void 0, false, {
+                    fileName: "[project]/src/app/quotations/[id]/page.js",
+                    lineNumber: 22,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                    children: "Cargando vista previa..."
+                }, void 0, false, {
+                    fileName: "[project]/src/app/quotations/[id]/page.js",
+                    lineNumber: 23,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "[project]/src/app/quotations/[id]/page.js",
+            lineNumber: 21,
+            columnNumber: 13
+        }, this);
+    }
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PDFViewer, {
+        width: "100%",
+        height: "100%",
+        style: {
+            border: 'none'
+        },
+        showToolbar: true,
+        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$QuotationDocument$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["QuotationDocument"], {
+            data: dataForPdf
+        }, void 0, false, {
+            fileName: "[project]/src/app/quotations/[id]/page.js",
+            lineNumber: 29,
+            columnNumber: 13
+        }, this)
+    }, void 0, false, {
+        fileName: "[project]/src/app/quotations/[id]/page.js",
+        lineNumber: 28,
+        columnNumber: 9
+    }, this);
+});
 function QuotationEditor() {
     const params = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useParams"])();
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRouter"])();
@@ -1956,10 +2014,11 @@ function QuotationEditor() {
     const [activeUsers, setActiveUsers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
     const [remoteFocus, setRemoteFocus] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({}); // { fieldName: userObject }
     const isRemoteUpdate = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(false);
-    // Separate state for PDF to prevent constant re-rendering
-    const [pdfData, setPdfData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(data);
+    // Separate state for PDF - only updated manually via button
+    const [pdfData, setPdfData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const pdfUpdateTimeout = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const autoSaveTimeout = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const pdfInitialized = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(false); // tracks if PDF was loaded at least once
     // Update local data when Firestore quotation changes
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         if (quotation && companyProfiles && clientProfiles) {
@@ -1968,14 +2027,12 @@ function QuotationEditor() {
             const selectedCompanyProfileId = quotation.companyProfileId || companyProfiles.find((cp)=>cp.isDefault)?.id || null;
             // Auto-select default client profile if none is selected
             const selectedClientProfileId = quotation.clientProfileId || clientProfiles.find((cp)=>cp.isDefault)?.id || null;
-            setData((prevData)=>({
+            const newData = (prevData)=>({
                     ...quotation,
                     companyProfiles,
                     clientProfiles,
                     companyProfileId: selectedCompanyProfileId,
                     clientProfileId: selectedClientProfileId,
-                    // Only update client fields from Firestore if they're empty locally
-                    // This prevents overwriting freshly changed data
                     clientName: quotation.clientName || prevData.clientName || '',
                     clientRuc: quotation.clientRuc || prevData.clientRuc || '',
                     clientAddress: quotation.clientAddress || prevData.clientAddress || '',
@@ -1988,39 +2045,22 @@ function QuotationEditor() {
                     ],
                     globalProfitPercentage: quotation.globalProfitPercentage || '',
                     globalOtherCosts: quotation.globalOtherCosts || ''
+                });
+            setData(newData);
+            // Initialize pdfData automatically on first load only
+            if (!pdfInitialized.current) {
+                pdfInitialized.current = true;
+                setPdfData(newData({
+                    clientName: '',
+                    clientRuc: '',
+                    clientAddress: ''
                 }));
+            }
         }
     }, [
         quotation,
         companyProfiles,
         clientProfiles
-    ]);
-    // Update active users from Firestore
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        if (realtimeUsers) {
-            setActiveUsers(realtimeUsers);
-        }
-    }, [
-        realtimeUsers
-    ]);
-    // Debounce PDF updates to prevent flickering
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        // Clear existing timeout
-        if (pdfUpdateTimeout.current) {
-            clearTimeout(pdfUpdateTimeout.current);
-        }
-        // Set new timeout to update PDF after 1 second of no changes
-        pdfUpdateTimeout.current = setTimeout(()=>{
-            setPdfData(data);
-        }, 1000);
-        // Cleanup on unmount
-        return ()=>{
-            if (pdfUpdateTimeout.current) {
-                clearTimeout(pdfUpdateTimeout.current);
-            }
-        };
-    }, [
-        data
     ]);
     const handleFocus = (field)=>{
     // Focus tracking removed - not needed with Firestore
@@ -2065,7 +2105,7 @@ function QuotationEditor() {
                 children: focusUser.firstName
             }, void 0, false, {
                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                lineNumber: 138,
+                lineNumber: 135,
                 columnNumber: 17
             }, this);
         }
@@ -2097,6 +2137,20 @@ function QuotationEditor() {
                 }
             }
         }, 500);
+        // Debounce PDF update - auto-refresh 2s after user stops typing
+        // Uses current data state, NOT triggered by Firestore (avoids flickering)
+        if (pdfUpdateTimeout.current) {
+            clearTimeout(pdfUpdateTimeout.current);
+        }
+        pdfUpdateTimeout.current = setTimeout(()=>{
+            setData((currentData)=>{
+                setPdfData({
+                    ...currentData,
+                    [field]: value
+                });
+                return currentData;
+            });
+        }, 2000);
     };
     const handleClientProfileChange = async (clientProfileId)=>{
         console.log('🔍 Client Profile Change:', clientProfileId);
@@ -2241,27 +2295,32 @@ function QuotationEditor() {
     const selectedCompany = data.companyProfiles?.find((p)=>String(p.id) === String(data.companyProfileId)) || data.companyProfiles?.find((p)=>p.isDefault) || {};
     // Find the selected client profile data
     const selectedClient = data.clientProfiles?.find((p)=>String(p.id) === String(data.clientProfileId)) || data.clientProfiles?.find((p)=>p.isDefault) || {};
-    // Use pdfData for PDF rendering to prevent flickering
-    const pdfTotal = pdfData.items ? pdfData.items.reduce((acc, item)=>acc + item.quantity * item.price, 0) : 0;
-    const pdfSelectedCompany = pdfData.companyProfiles?.find((p)=>String(p.id) === String(pdfData.companyProfileId)) || pdfData.companyProfiles?.find((p)=>p.isDefault) || {};
-    const pdfSelectedClient = pdfData.clientProfiles?.find((p)=>String(p.id) === String(pdfData.clientProfileId)) || pdfData.clientProfiles?.find((p)=>p.isDefault) || {};
-    const dataForPdf = {
-        ...pdfData,
-        total: pdfTotal,
-        company: pdfSelectedCompany,
-        // Populate client data from selected profile
-        clientName: pdfSelectedClient.name || pdfData.clientName || '',
-        clientRuc: pdfSelectedClient.ruc || pdfData.clientRuc || '',
-        clientAddress: pdfSelectedClient.address || pdfData.clientAddress || '',
-        notes: pdfData.notes !== undefined ? pdfData.notes : pdfData.generalConditions?.text || ''
-    };
+    // Memoize dataForPdf so it ONLY recomputes when pdfData changes (via button click)
+    // This prevents PDFViewer from re-rendering on every keystroke
+    const dataForPdf = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useMemo"])(()=>{
+        const safePdfData = pdfData || {};
+        const pdfTotal = safePdfData.items ? safePdfData.items.reduce((acc, item)=>acc + item.quantity * item.price, 0) : 0;
+        const pdfSelectedCompany = safePdfData.companyProfiles?.find((p)=>String(p.id) === String(safePdfData.companyProfileId)) || safePdfData.companyProfiles?.find((p)=>p.isDefault) || {};
+        const pdfSelectedClient = safePdfData.clientProfiles?.find((p)=>String(p.id) === String(safePdfData.clientProfileId)) || safePdfData.clientProfiles?.find((p)=>p.isDefault) || {};
+        return {
+            ...safePdfData,
+            total: pdfTotal,
+            company: pdfSelectedCompany,
+            clientName: pdfSelectedClient.name || safePdfData.clientName || '',
+            clientRuc: pdfSelectedClient.ruc || safePdfData.clientRuc || '',
+            clientAddress: pdfSelectedClient.address || safePdfData.clientAddress || '',
+            notes: safePdfData.notes !== undefined ? safePdfData.notes : safePdfData.generalConditions?.text || ''
+        };
+    }, [
+        pdfData
+    ]); // ONLY recomputes when user presses the refresh button
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ProtectedRoute$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ProtectedRoute"], {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$UserSidebar$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["UserSidebar"], {
                 activeUsers: activeUsers
             }, void 0, false, {
                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                lineNumber: 348,
+                lineNumber: 363,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2296,7 +2355,7 @@ function QuotationEditor() {
                                         children: "Editor de Cotización"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 353,
+                                        lineNumber: 368,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2316,7 +2375,7 @@ function QuotationEditor() {
                                                 children: "← Menú Principal"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 355,
+                                                lineNumber: 370,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2337,14 +2396,14 @@ function QuotationEditor() {
                                                         }
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 359,
+                                                        lineNumber: 374,
                                                         columnNumber: 33
                                                     }, this),
                                                     autoSaving ? 'Guardando...' : 'Guardado'
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 358,
+                                                lineNumber: 373,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2354,19 +2413,19 @@ function QuotationEditor() {
                                                 children: saving ? 'Guardando...' : 'Guardar Cambios'
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 362,
+                                                lineNumber: 377,
                                                 columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 354,
+                                        lineNumber: 369,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 352,
+                                lineNumber: 367,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2386,7 +2445,7 @@ function QuotationEditor() {
                                         children: "Empresa Emisora"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 369,
+                                        lineNumber: 384,
                                         columnNumber: 25
                                     }, this),
                                     renderRemoteCursorLabel('companyProfileId'),
@@ -2402,7 +2461,7 @@ function QuotationEditor() {
                                                 children: "Seleccionar Empresa..."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 378,
+                                                lineNumber: 393,
                                                 columnNumber: 29
                                             }, this),
                                             data.companyProfiles && data.companyProfiles.map((p)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2414,19 +2473,19 @@ function QuotationEditor() {
                                                     ]
                                                 }, p.id, true, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 380,
+                                                    lineNumber: 395,
                                                     columnNumber: 33
                                                 }, this))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 371,
+                                        lineNumber: 386,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 368,
+                                lineNumber: 383,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2446,7 +2505,7 @@ function QuotationEditor() {
                                         children: "Perfil de Cliente"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 386,
+                                        lineNumber: 401,
                                         columnNumber: 25
                                     }, this),
                                     renderRemoteCursorLabel('clientProfileId'),
@@ -2462,7 +2521,7 @@ function QuotationEditor() {
                                                 children: "Seleccionar Cliente..."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 395,
+                                                lineNumber: 410,
                                                 columnNumber: 29
                                             }, this),
                                             data.clientProfiles && data.clientProfiles.map((p)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2474,19 +2533,19 @@ function QuotationEditor() {
                                                     ]
                                                 }, p.id, true, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 397,
+                                                    lineNumber: 412,
                                                     columnNumber: 33
                                                 }, this))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 388,
+                                        lineNumber: 403,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 385,
+                                lineNumber: 400,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2516,7 +2575,7 @@ function QuotationEditor() {
                                                     children: "Nombre de Cliente"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 405,
+                                                    lineNumber: 420,
                                                     columnNumber: 33
                                                 }, this),
                                                 renderRemoteCursorLabel('clientName'),
@@ -2530,13 +2589,13 @@ function QuotationEditor() {
                                                     placeholder: "Juan Pérez"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 407,
+                                                    lineNumber: 422,
                                                     columnNumber: 33
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotations/[id]/page.js",
-                                            lineNumber: 404,
+                                            lineNumber: 419,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2554,7 +2613,7 @@ function QuotationEditor() {
                                                     children: "RUC"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 418,
+                                                    lineNumber: 433,
                                                     columnNumber: 33
                                                 }, this),
                                                 renderRemoteCursorLabel('clientRuc'),
@@ -2568,13 +2627,13 @@ function QuotationEditor() {
                                                     placeholder: "12345678901"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 420,
+                                                    lineNumber: 435,
                                                     columnNumber: 33
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotations/[id]/page.js",
-                                            lineNumber: 417,
+                                            lineNumber: 432,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2592,7 +2651,7 @@ function QuotationEditor() {
                                                     children: "Dirección"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 431,
+                                                    lineNumber: 446,
                                                     columnNumber: 33
                                                 }, this),
                                                 renderRemoteCursorLabel('clientAddress'),
@@ -2606,13 +2665,13 @@ function QuotationEditor() {
                                                     placeholder: "Calle Falsa 123"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 433,
+                                                    lineNumber: 448,
                                                     columnNumber: 33
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotations/[id]/page.js",
-                                            lineNumber: 430,
+                                            lineNumber: 445,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2632,7 +2691,7 @@ function QuotationEditor() {
                                                     children: "2. Descripción del Servicio o Producto"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 444,
+                                                    lineNumber: 459,
                                                     columnNumber: 33
                                                 }, this),
                                                 renderRemoteCursorLabel('serviceDescription'),
@@ -2647,24 +2706,24 @@ function QuotationEditor() {
                                                     placeholder: "Describa brevemente el servicio o producto a cotizar..."
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                    lineNumber: 446,
+                                                    lineNumber: 461,
                                                     columnNumber: 33
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotations/[id]/page.js",
-                                            lineNumber: 443,
+                                            lineNumber: 458,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                    lineNumber: 403,
+                                    lineNumber: 418,
                                     columnNumber: 25
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 402,
+                                lineNumber: 417,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2674,7 +2733,7 @@ function QuotationEditor() {
                                 children: "Configuración Global de Precios (Interno)"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 458,
+                                lineNumber: 473,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2709,7 +2768,7 @@ function QuotationEditor() {
                                                         children: "% Ganancia Global"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 462,
+                                                        lineNumber: 477,
                                                         columnNumber: 33
                                                     }, this),
                                                     renderRemoteCursorLabel('globalProfitPercentage'),
@@ -2723,13 +2782,13 @@ function QuotationEditor() {
                                                         placeholder: "0"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 464,
+                                                        lineNumber: 479,
                                                         columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 461,
+                                                lineNumber: 476,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2748,7 +2807,7 @@ function QuotationEditor() {
                                                         children: "% Otros Global"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 475,
+                                                        lineNumber: 490,
                                                         columnNumber: 33
                                                     }, this),
                                                     renderRemoteCursorLabel('globalOtherCosts'),
@@ -2762,13 +2821,13 @@ function QuotationEditor() {
                                                         placeholder: "0"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 477,
+                                                        lineNumber: 492,
                                                         columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 474,
+                                                lineNumber: 489,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2796,13 +2855,13 @@ function QuotationEditor() {
                                                 children: "Aplicar a todos los ítems"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 487,
+                                                lineNumber: 502,
                                                 columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 460,
+                                        lineNumber: 475,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2814,13 +2873,13 @@ function QuotationEditor() {
                                         children: "* Esto actualizará los porcentajes y recalculará el Precio U. de cada ítem basado en su Costo Base."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 509,
+                                        lineNumber: 524,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 459,
+                                lineNumber: 474,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2830,7 +2889,7 @@ function QuotationEditor() {
                                 children: "Ítems"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 514,
+                                lineNumber: 529,
                                 columnNumber: 21
                             }, this),
                             data.items && data.items.map((item, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2868,13 +2927,13 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_description`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 520,
+                                                        lineNumber: 535,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 518,
+                                                lineNumber: 533,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2892,7 +2951,7 @@ function QuotationEditor() {
                                                         children: "Cant."
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 531,
+                                                        lineNumber: 546,
                                                         columnNumber: 37
                                                     }, this),
                                                     renderRemoteCursorLabel(`item_${index}_quantity`),
@@ -2910,13 +2969,13 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_quantity`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 533,
+                                                        lineNumber: 548,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 530,
+                                                lineNumber: 545,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2934,7 +2993,7 @@ function QuotationEditor() {
                                                         children: "Costo Base"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 544,
+                                                        lineNumber: 559,
                                                         columnNumber: 37
                                                     }, this),
                                                     renderRemoteCursorLabel(`item_${index}_basePrice`),
@@ -2960,13 +3019,13 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_basePrice`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 546,
+                                                        lineNumber: 561,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 543,
+                                                lineNumber: 558,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2984,7 +3043,7 @@ function QuotationEditor() {
                                                         children: "% Gan."
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 566,
+                                                        lineNumber: 581,
                                                         columnNumber: 37
                                                     }, this),
                                                     renderRemoteCursorLabel(`item_${index}_profitPercentage`),
@@ -3010,13 +3069,13 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_profitPercentage`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 568,
+                                                        lineNumber: 583,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 565,
+                                                lineNumber: 580,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3034,7 +3093,7 @@ function QuotationEditor() {
                                                         children: "% Otros"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 588,
+                                                        lineNumber: 603,
                                                         columnNumber: 37
                                                     }, this),
                                                     renderRemoteCursorLabel(`item_${index}_otherCosts`),
@@ -3060,13 +3119,13 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_otherCosts`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 590,
+                                                        lineNumber: 605,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 587,
+                                                lineNumber: 602,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3084,7 +3143,7 @@ function QuotationEditor() {
                                                         children: "Precio U."
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 610,
+                                                        lineNumber: 625,
                                                         columnNumber: 37
                                                     }, this),
                                                     renderRemoteCursorLabel(`item_${index}_price`),
@@ -3104,24 +3163,24 @@ function QuotationEditor() {
                                                         onBlur: ()=>handleBlur(`item_${index}_price`)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                        lineNumber: 612,
+                                                        lineNumber: 627,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                                lineNumber: 609,
+                                                lineNumber: 624,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 517,
+                                        lineNumber: 532,
                                         columnNumber: 29
                                     }, this)
                                 }, index, false, {
                                     fileName: "[project]/src/app/quotations/[id]/page.js",
-                                    lineNumber: 516,
+                                    lineNumber: 531,
                                     columnNumber: 25
                                 }, this)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3135,7 +3194,7 @@ function QuotationEditor() {
                                 children: "+ Agregar Ítem"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 625,
+                                lineNumber: 640,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -3145,7 +3204,7 @@ function QuotationEditor() {
                                 children: "Notas / Condiciones"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 629,
+                                lineNumber: 644,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3171,19 +3230,19 @@ function QuotationEditor() {
                                         placeholder: "Notas adicionales para esta cotización..."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                                        lineNumber: 632,
+                                        lineNumber: 647,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 630,
+                                lineNumber: 645,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                        lineNumber: 351,
+                        lineNumber: 366,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3191,43 +3250,96 @@ function QuotationEditor() {
                             width: '50%',
                             backgroundColor: '#525659',
                             display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center'
+                            flexDirection: 'column'
                         },
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PDFViewer, {
-                            width: "100%",
-                            height: "100%",
-                            style: {
-                                border: 'none'
-                            },
-                            showToolbar: true,
-                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$QuotationDocument$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["QuotationDocument"], {
-                                data: dataForPdf
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                style: {
+                                    padding: '0.75rem 1rem',
+                                    backgroundColor: '#3a3c3e',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        style: {
+                                            color: '#cbd5e1',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '500'
+                                        },
+                                        children: "Vista Previa del PDF"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/app/quotations/[id]/page.js",
+                                        lineNumber: 663,
+                                        columnNumber: 25
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: ()=>setPdfData({
+                                                ...data
+                                            }),
+                                        style: {
+                                            background: '#3b82f6',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '0.4rem 1rem',
+                                            fontSize: '0.8rem',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.4rem'
+                                        },
+                                        onMouseOver: (e)=>e.currentTarget.style.background = '#2563eb',
+                                        onMouseOut: (e)=>e.currentTarget.style.background = '#3b82f6',
+                                        children: "🔄 Actualizar Vista Previa"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/app/quotations/[id]/page.js",
+                                        lineNumber: 664,
+                                        columnNumber: 25
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/app/quotations/[id]/page.js",
+                                lineNumber: 662,
+                                columnNumber: 21
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                style: {
+                                    flex: 1,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                },
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PdfPreview, {
+                                    dataForPdf: dataForPdf
+                                }, void 0, false, {
+                                    fileName: "[project]/src/app/quotations/[id]/page.js",
+                                    lineNumber: 674,
+                                    columnNumber: 25
+                                }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                                lineNumber: 648,
-                                columnNumber: 25
+                                lineNumber: 673,
+                                columnNumber: 21
                             }, this)
-                        }, void 0, false, {
-                            fileName: "[project]/src/app/quotations/[id]/page.js",
-                            lineNumber: 647,
-                            columnNumber: 21
-                        }, this)
-                    }, void 0, false, {
+                        ]
+                    }, void 0, true, {
                         fileName: "[project]/src/app/quotations/[id]/page.js",
-                        lineNumber: 646,
+                        lineNumber: 661,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/quotations/[id]/page.js",
-                lineNumber: 349,
+                lineNumber: 364,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/quotations/[id]/page.js",
-        lineNumber: 347,
+        lineNumber: 362,
         columnNumber: 9
     }, this);
 }

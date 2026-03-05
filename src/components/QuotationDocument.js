@@ -274,7 +274,7 @@ export const QuotationDocument = ({ data }) => {
     const total = subtotal + igv;
 
     return (
-        <Document>
+        <Document title={code || 'cotizacion'}>
             <Page size="A4" style={styles.page}>
 
                 {/* 1. Header Section */}

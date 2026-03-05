@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
-import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, setDoc, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { clientDb } from '@/lib/firestoreClient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -98,7 +98,11 @@ export function useRealtimeQuotation(quotationId) {
         let isCleanedUp = false;
 
         if (user) {
-            addDoc(activeUsersRef, {
+            // Use user.uid as document ID so re-mounting overwrites instead of creating duplicates
+            const userDocFixed = doc(activeUsersRef, user.uid);
+            userDocRef = userDocFixed;
+
+            setDoc(userDocFixed, {
                 uid: user.uid,
                 displayName: user.displayName || user.email,
                 firstName: user.firstName,
@@ -106,22 +110,19 @@ export function useRealtimeQuotation(quotationId) {
                 email: user.email,
                 joinedAt: serverTimestamp(),
                 lastSeen: serverTimestamp()
-            }).then(docRef => {
-                userDocRef = docRef;
-
+            }, { merge: true }).then(() => {
                 // Heartbeat to update lastSeen
                 heartbeatInterval = setInterval(() => {
                     if (userDocRef && !isCleanedUp) {
-                        setDoc(userDocRef, {
+                        setDoc(userDocFixed, {
                             lastSeen: serverTimestamp()
                         }, { merge: true }).catch(err => {
-                            // Silently ignore if document doesn't exist (user left)
                             if (err.code !== 'not-found') {
                                 console.error('Heartbeat error:', err);
                             }
                         });
                     }
-                }, 30000); // Every 30 seconds
+                }, 30000);
             }).catch(err => {
                 console.error('Error adding user to active users:', err);
             });

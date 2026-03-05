@@ -23,6 +23,22 @@ export default function Dashboard() {
         }
     };
 
+    const updateStatus = async (id, newStatus, e) => {
+        e.stopPropagation();
+        try {
+            await fetch(`/api/quotations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quotationStatus: newStatus })
+            });
+            setQuotations(quotations.map(q =>
+                q.id === id ? { ...q, quotationStatus: newStatus } : q
+            ));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         fetch('/api/quotations')
             .then(res => {
@@ -146,21 +162,53 @@ export default function Dashboard() {
                                             {q.code || 'BORRADOR'}
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <span className={`status-badge status-${q.status}`} style={{ background: '#f8fafc', color: '#475569', border: '1px solid #f1f5f9' }}>{q.status}</span>
+                                            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                                                <select
+                                                    value={q.quotationStatus || 'pendiente'}
+                                                    onChange={(e) => updateStatus(q.id, e.target.value, e)}
+                                                    style={{
+                                                        backgroundColor: (q.quotationStatus || 'pendiente') === 'completado' ? '#dcfce7' : '#fef9c3',
+                                                        color: (q.quotationStatus || 'pendiente') === 'completado' ? '#16a34a' : '#a16207',
+                                                        border: `1px solid ${(q.quotationStatus || 'pendiente') === 'completado' ? '#bbf7d0' : '#fde68a'}`,
+                                                        borderRadius: '20px',
+                                                        padding: '0.2rem 0.75rem',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <option value="completado">✓ Completado</option>
+                                                    <option value="pendiente">⏳ Pendiente</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); router.push(`/quotations/${q.id}`); }}
+                                                style={{ background: '#3b82f6', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
+                                                onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
+                                                title="Abrir y descargar PDF"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                            </button>
                                             <button
                                                 onClick={(e) => deleteQuotation(q.id, e)}
-                                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1rem', transition: 'color 0.2s' }}
-                                                onMouseOver={(e) => e.currentTarget.style.color = '#dc2626'}
-                                                onMouseOut={(e) => e.currentTarget.style.color = '#94a3b8'}
-                                                title="Eliminar"
+                                                style={{ background: '#dc2626', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = '#b91c1c'}
+                                                onMouseOut={(e) => e.currentTarget.style.background = '#dc2626'}
+                                                title="Eliminar cotización"
                                             >
-                                                Borrar
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
                                             </button>
                                         </div>
                                     </div>
                                     <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#101828', fontWeight: '600' }}>
                                         {q.clientName || 'Sin Cliente'}
                                     </h3>
+                                    {q.serviceDescription && (
+                                        <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '0.25rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {q.serviceDescription}
+                                        </p>
+                                    )}
                                     <p style={{ fontSize: '0.875rem', color: '#667085' }}>
                                         Última edición: {new Date(q.updatedAt).toLocaleDateString()}
                                     </p>
