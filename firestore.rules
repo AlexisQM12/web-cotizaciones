@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: only authenticated users
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Quotations: authenticated users can read/write
+    match /quotations/{quotationId} {
+      allow read, write: if isAuth();
+
+      // ActiveUsers subcollection: authenticated users can read/write their own doc
+      match /activeUsers/{userId} {
+        allow read: if isAuth();
+        allow write: if isAuth() && request.auth.uid == userId;
+        allow delete: if isAuth() && request.auth.uid == userId;
+      }
+    }
+
+    // Company profiles
+    match /company_profiles/{profileId} {
+      allow read, write: if isAuth();
+    }
+
+    // Client profiles
+    match /client_profiles/{profileId} {
+      allow read, write: if isAuth();
+    }
+
+    // Settings (general conditions, etc.)
+    match /settings/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == userId;
+    }
+  }
+}

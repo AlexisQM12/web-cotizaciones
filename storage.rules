@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Logos must be publicly readable — react-pdf renders images
+    // in a background worker without Firebase auth headers
+    match /logos/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    // Everything else requires authentication
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}

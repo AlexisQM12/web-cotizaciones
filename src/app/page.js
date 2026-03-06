@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
+import { QuotationDocument } from '@/components/QuotationDocument'
 
 export default function Dashboard() {
     const [quotations, setQuotations] = useState([])
     const [activeTab, setActiveTab] = useState('published') // 'published' or 'drafts'
     const [loading, setLoading] = useState(true)
+    const [downloadingId, setDownloadingId] = useState(null) // tracks which card is downloading
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -36,6 +38,49 @@ export default function Dashboard() {
             ));
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const downloadPdf = async (q, e) => {
+        e.stopPropagation();
+        if (downloadingId) return;
+        setDownloadingId(q.id);
+        try {
+            // Fetch full quotation data (includes company/client profiles)
+            const res = await fetch(`/api/quotations/${q.id}`);
+            const fullData = await res.json();
+
+            // Build dataForPdf same as the editor does
+            const company = fullData.companyProfiles?.find(p => String(p.id) === String(fullData.companyProfileId))
+                || fullData.companyProfiles?.find(p => p.isDefault) || {};
+            const client = fullData.clientProfiles?.find(p => String(p.id) === String(fullData.clientProfileId))
+                || fullData.clientProfiles?.find(p => p.isDefault) || {};
+            const items = fullData.items || [];
+            const total = items.reduce((acc, item) => acc + (parseFloat(item.quantity || 0) * parseFloat(item.price || 0)), 0);
+
+            const dataForPdf = {
+                ...fullData,
+                total,
+                company,
+                clientName: client.name || fullData.clientName || '',
+                clientRuc: client.ruc || fullData.clientRuc || '',
+                clientAddress: client.address || fullData.clientAddress || '',
+                notes: fullData.notes !== undefined ? fullData.notes : (fullData.generalConditions?.text || '')
+            };
+
+            // Dynamically import pdf() to avoid SSR
+            const { pdf } = await import('@react-pdf/renderer');
+            const blob = await pdf(<QuotationDocument data={dataForPdf} />).toBlob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${fullData.code || 'cotizacion'}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error downloading PDF:', err);
+        } finally {
+            setDownloadingId(null);
         }
     };
 
@@ -182,13 +227,17 @@ export default function Dashboard() {
                                                 </select>
                                             </div>
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); router.push(`/quotations/${q.id}`); }}
-                                                style={{ background: '#3b82f6', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
-                                                onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
-                                                onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
-                                                title="Abrir y descargar PDF"
+                                                onClick={(e) => downloadPdf(q, e)}
+                                                disabled={downloadingId === q.id}
+                                                style={{ background: downloadingId === q.id ? '#93c5fd' : '#3b82f6', border: 'none', color: 'white', cursor: downloadingId === q.id ? 'wait' : 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                                                onMouseOver={(e) => { if (downloadingId !== q.id) e.currentTarget.style.background = '#2563eb'; }}
+                                                onMouseOut={(e) => { if (downloadingId !== q.id) e.currentTarget.style.background = '#3b82f6'; }}
+                                                title="Descargar PDF"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                                {downloadingId === q.id
+                                                    ? <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                                                    : <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                                }
                                             </button>
                                             <button
                                                 onClick={(e) => deleteQuotation(q.id, e)}

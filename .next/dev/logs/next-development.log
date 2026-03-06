@@ -1,73 +1,106 @@
-[00:05:19.306] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:06:22.231] Browser WARN    [2026-03-05T02:29:54.491Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:06:23.937] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:06:23.937] Browser LOG     👤 Client Profiles Loaded: 2
-[00:07:06.322] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:07:06.322] Browser LOG     👤 Client Profiles Loaded: 2
-[00:09:39.113] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:09:39.113] Browser LOG     👤 Client Profiles Loaded: 2
-[00:09:45.723] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:09:45.723] Browser LOG     👤 Client Profiles Loaded: 2
-[00:19:16.103] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:19:16.103] Browser LOG     👤 Client Profiles Loaded: 2
-[00:21:21.713] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundImage
-[00:21:21.713] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundPosition
-[00:21:21.713] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundRepeat
-[00:21:21.713] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundSize
-[00:21:26.913] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundImage
-[00:21:26.913] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundPosition
-[00:21:26.913] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundRepeat
-[00:21:26.913] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundSize
-[00:21:31.172] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:35.813] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundImage
-[00:21:35.814] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundPosition
-[00:21:35.814] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundRepeat
-[00:21:35.814] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundSize
-[00:21:38.270] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundImage
-[00:21:38.270] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundPosition
-[00:21:38.270] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundRepeat
-[00:21:38.270] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundSize
-[00:21:50.509] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:21:55.538] Browser WARN    [2026-03-05T02:45:27.746Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:21:56.245] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:21:56.426] Browser LOG     👤 Client Profiles Loaded: 2
-[00:22:05.856] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundImage
-[00:22:05.856] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundPosition
-[00:22:05.856] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundRepeat
-[00:22:05.856] Browser ERROR   %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values. Updating background backgroundSize
-[00:23:13.301] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:23:26.597] Browser WARN    [2026-03-05T02:46:58.810Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:23:26.951] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:23:27.102] Browser LOG     👤 Client Profiles Loaded: 2
-[00:23:38.883] Browser LOG     🏢 Company Profile Change: 6
-[00:23:38.883] Browser LOG     Available company profiles: [{"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}]
-[00:23:38.883] Browser LOG     Selected company: {"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}
-[00:23:38.883] Browser LOG     New notes: Costo total incluye IGV 
+[00:01:25.142] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:37.623] Browser WARN    [2026-03-06T19:22:41.443Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[00:01:37.623] Browser LOG     🏢 Company Profiles Loaded: 1
+[00:01:37.623] Browser LOG     👤 Client Profiles Loaded: 2
+[00:01:38.449] Browser ERROR   Error adding user to active users: {"code":"permission-denied","name":"FirebaseError"}
+[00:01:39.138] Browser ERROR   Error loading company profiles: {"code":"permission-denied","name":"FirebaseError"}
+[00:01:39.138] Browser ERROR   Error loading client profiles: {"code":"permission-denied","name":"FirebaseError"}
+[00:01:39.138] Browser ERROR   Error listening to quotation: {"code":"permission-denied","name":"FirebaseError"}
+[00:01:39.138] Browser ERROR   [2026-03-06T19:22:43.071Z]  @firebase/firestore: Firestore (12.8.0): Uncaught Error in snapshot listener: FirebaseError: [code=permission-denied]: Missing or insufficient permissions.
+[00:05:55.147] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:55.342] Browser WARN    [2026-03-06T19:26:59.276Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[00:05:55.800] Browser LOG     🏢 Company Profiles Loaded: 1
+[00:05:55.800] Browser LOG     👤 Client Profiles Loaded: 2
+[00:06:01.050] Browser LOG     🏢 Company Profile Change: 6
+[00:06:01.050] Browser LOG     Available company profiles: [{"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}]
+[00:06:01.050] Browser LOG     Selected company: {"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}
+[00:06:01.050] Browser LOG     New notes: Costo total incluye IGV 
 Plazo de entrega: 1 semanas desde la emisión de la orden de servicio.  
 El servicio se desarrollará en las instalaciones del cliente. 
 Moneda: Nuevos soles peruanos. 
 
-[00:23:41.494] Browser LOG     🔍 Client Profile Change: 1
-[00:23:41.494] Browser LOG     Available profiles: [{"address":"Acalee","createdAt":"2026-02-10T20:46:49.826Z","id":"2HUFb1BYx890rscSitsm","isDefault":false,"name":"Sentinel","ruc":"123456789"},{"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}]
-[00:23:41.494] Browser LOG     Selected client: {"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}
-[00:23:41.494] Browser LOG     New data: {"clientAddress":"Calle Quinta Vivanco S/N","clientName":"Universidad Católica San Pablo","clientRuc":"20327998413 "}
-[00:31:50.052] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:31:50.256] Browser WARN    [2026-03-05T02:55:22.505Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:31:50.583] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:31:50.583] Browser LOG     👤 Client Profiles Loaded: 2
-[00:33:57.306] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:33:57.306] Browser LOG     👤 Client Profiles Loaded: 2
-[00:37:40.123] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:37:40.284] Browser LOG     👤 Client Profiles Loaded: 2
-[00:38:12.511] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
+[00:06:26.393] Browser WARN    Not valid image extension
+[00:06:26.393] Browser WARN    Not valid image extension
+[03:13:15.665] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:13:15.921] Browser WARN    [2026-03-06T22:34:19.830Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:13:18.062] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:13:18.062] Browser LOG     👤 Client Profiles Loaded: 2
+[03:13:26.075] Browser WARN    Not valid image extension
+[03:13:26.076] Browser WARN    Not valid image extension
+[03:15:19.909] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:15:20.235] Browser WARN    [2026-03-06T22:36:24.143Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:15:27.589] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:15:27.589] Browser LOG     👤 Client Profiles Loaded: 2
+[03:15:39.019] Browser LOG     🔍 Client Profile Change: 1
+[03:15:39.019] Browser LOG     Available profiles: [{"address":"Acalee","createdAt":"2026-02-10T20:46:49.826Z","id":"2HUFb1BYx890rscSitsm","isDefault":false,"name":"Sentinel","ruc":"123456789"},{"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}]
+[03:15:39.019] Browser LOG     Selected client: {"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}
+[03:15:39.019] Browser LOG     New data: {"clientAddress":"Calle Quinta Vivanco S/N","clientName":"Universidad Católica San Pablo","clientRuc":"20327998413 "}
+[03:17:04.422] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:17:04.728] Browser WARN    [2026-03-06T22:38:08.639Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:17:11.270] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:17:11.270] Browser LOG     👤 Client Profiles Loaded: 2
+[03:21:07.926] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:21:07.926] Browser LOG     👤 Client Profiles Loaded: 2
+[03:24:35.575] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:24:35.575] Browser LOG     👤 Client Profiles Loaded: 2
+[03:27:20.988] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:27:20.989] Browser LOG     👤 Client Profiles Loaded: 2
+[03:27:23.496] Browser LOG     🏢 Company Profile Change: 6
+[03:27:23.496] Browser LOG     Available company profiles: [{"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}]
+[03:27:23.497] Browser LOG     Selected company: {"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}
+[03:27:23.497] Browser LOG     New notes: Costo total incluye IGV 
+Plazo de entrega: 1 semanas desde la emisión de la orden de servicio.  
+El servicio se desarrollará en las instalaciones del cliente. 
+Moneda: Nuevos soles peruanos. 
 
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+[03:27:25.850] Browser LOG     🔍 Client Profile Change: 1
+[03:27:25.850] Browser LOG     Available profiles: [{"address":"Acalee","createdAt":"2026-02-10T20:46:49.826Z","id":"2HUFb1BYx890rscSitsm","isDefault":false,"name":"Sentinel","ruc":"123456789"},{"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}]
+[03:27:25.850] Browser LOG     Selected client: {"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}
+[03:27:25.850] Browser LOG     New data: {"clientAddress":"Calle Quinta Vivanco S/N","clientName":"Universidad Católica San Pablo","clientRuc":"20327998413 "}
+[03:35:56.454] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:35:56.755] Browser WARN    [2026-03-06T22:57:00.662Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:36:03.117] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:36:03.118] Browser LOG     👤 Client Profiles Loaded: 2
+[03:37:00.919] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:37:00.919] Browser LOG     👤 Client Profiles Loaded: 2
+[03:38:50.949] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:38:50.949] Browser LOG     👤 Client Profiles Loaded: 2
+[03:39:15.874] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:39:15.874] Browser LOG     👤 Client Profiles Loaded: 2
+[03:39:18.416] Browser LOG     🏢 Company Profile Change: 6
+[03:39:18.416] Browser LOG     Available company profiles: [{"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}]
+[03:39:18.416] Browser LOG     Selected company: {"accounts":[{"accountNumber":"300-3007378098","bankName":"Interbank","cci":"003-300-003007378098-10","companyProfileId":6,"id":8}],"address":"CAL.JORGE CHAVEZ NRO. 317 . MIRAFLORES - AREQUIPA - AREQUIPA","conditions":"Costo total incluye IGV \r\nPlazo de entrega: 1 semanas desde la emisión de la orden de servicio.  \r\nEl servicio se desarrollará en las instalaciones del cliente. \r\nMoneda: Nuevos soles peruanos. \r\n","createdAt":"2026-01-20 04:25:03","email":"ventas@ayatech.com.pe","id":6,"isDefault":false,"logoUrl":"https://firebasestorage.googleapis.com/v0/b/web-cot-aya.firebasestorage.app/o/logos%2F1770176125260-g2log.jpg?alt=media","migratedAt":"2026-02-04T05:37:52.191Z","name":"AYA Technologies SACS.","phone":"930705591 – 952487700 ","ruc":" 20614135949 ","updatedAt":"2026-02-10T21:02:40.336Z","website":"www.ayatech.com.pe"}
+[03:39:18.416] Browser LOG     New notes: Costo total incluye IGV 
+Plazo de entrega: 1 semanas desde la emisión de la orden de servicio.  
+El servicio se desarrollará en las instalaciones del cliente. 
+Moneda: Nuevos soles peruanos. 
+
+[03:39:20.500] Browser LOG     🔍 Client Profile Change: 1
+[03:39:20.500] Browser LOG     Available profiles: [{"address":"Acalee","createdAt":"2026-02-10T20:46:49.826Z","id":"2HUFb1BYx890rscSitsm","isDefault":false,"name":"Sentinel","ruc":"123456789"},{"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}]
+[03:39:20.500] Browser LOG     Selected client: {"address":"Calle Quinta Vivanco S/N","createdAt":"2026-01-20 04:50:50","id":1,"isDefault":false,"migratedAt":"2026-02-04T05:37:53.792Z","name":"Universidad Católica San Pablo","ruc":"20327998413 ","updatedAt":"2026-02-10T21:02:48.988Z"}
+[03:39:20.500] Browser LOG     New data: {"clientAddress":"Calle Quinta Vivanco S/N","clientName":"Universidad Católica San Pablo","clientRuc":"20327998413 "}
+[03:39:23.848] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:39:24.141] Browser WARN    [2026-03-06T23:00:28.052Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:39:28.678] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:39:28.678] Browser LOG     👤 Client Profiles Loaded: 2
+[03:44:34.123] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:44:34.123] Browser LOG     👤 Client Profiles Loaded: 2
+[03:45:21.612] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:45:21.612] Browser LOG     👤 Client Profiles Loaded: 2
+[03:45:53.569] Browser ERROR   ./src/app/quotations/[id]/page.js:751:26
+Parsing ecmascript source code failed
+  749 |                         </div>
+  750 |                     </div>
+> 751 |                 </button>
+      |                          ^
+> 752 |             </div>
+      | ^^^^^^^^^^^^^
+  753 |             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+  754 |                 <PdfPreview dataForPdf={dataForPdf} />
+  755 |             </div>
+
+Expected '</', got 'jsx text (
+            )'
 
 Import traces:
   Client Component Browser:
@@ -77,7 +110,7 @@ Import traces:
   Client Component SSR:
     ./src/app/quotations/[id]/page.js [Client Component SSR]
     ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:12.511] Browser ERROR   ./src/app/quotations/[id]/page.js
+[03:45:53.569] Browser ERROR   ./src/app/quotations/[id]/page.js
 Code generation for chunk item errored
 An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
 
@@ -98,15 +131,16 @@ Import traces:
   Client Component SSR:
     ./src/app/quotations/[id]/page.js [Client Component SSR]
     ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.175] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
+[03:46:21.575] Browser ERROR   ./src/app/quotations/[id]/page.js:759:5
 Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
+  757 |     )
+  758 | }
+> 759 |     )
+      |     ^
+  760 | }
+  761 |
 
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+Expression expected
 
 Import traces:
   Client Component Browser:
@@ -116,7 +150,7 @@ Import traces:
   Client Component SSR:
     ./src/app/quotations/[id]/page.js [Client Component SSR]
     ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.175] Browser ERROR   ./src/app/quotations/[id]/page.js
+[03:46:21.575] Browser ERROR   ./src/app/quotations/[id]/page.js
 Code generation for chunk item errored
 An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
 
@@ -137,323 +171,22 @@ Import traces:
   Client Component SSR:
     ./src/app/quotations/[id]/page.js [Client Component SSR]
     ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.738] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.738] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.925] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:37.925] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:38.418] Browser ERROR   uncaughtError: Error: ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-
-[00:38:38.593] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:38.593] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:38.593] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:38.593] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:42.858] Browser ERROR   uncaughtError: Error: ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-
-[00:38:43.014] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:43.014] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:43.014] Browser ERROR   ./src/app/quotations/[id]/page.js:642:1
-Parsing ecmascript source code failed
-  640 |         </ProtectedRoute>
-  641 |     )
-> 642 | }
-      | ^
-  643 |
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:38:43.014] Browser ERROR   ./src/app/quotations/[id]/page.js
-Code generation for chunk item errored
-An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-
-Caused by:
-- CJS module can't be async.
-
-Debug info:
-- An error occurred while generating the chunk item [project]/src/app/quotations/[id]/page.js [app-ssr] (ecmascript)
-- Execution of <ModuleChunkItem as EcmascriptChunkItem>::content_with_async_module_info failed
-- Execution of EcmascriptChunkItemContent::new failed
-- CJS module can't be async.
-
-Import traces:
-  Client Component Browser:
-    ./src/app/quotations/[id]/page.js [Client Component Browser]
-    ./src/app/quotations/[id]/page.js [Server Component]
-
-  Client Component SSR:
-    ./src/app/quotations/[id]/page.js [Client Component SSR]
-    ./src/app/quotations/[id]/page.js [Server Component]
-[00:39:25.766] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:39:25.952] Browser WARN    [2026-03-05T03:02:58.212Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:39:26.412] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:39:26.412] Browser LOG     👤 Client Profiles Loaded: 2
-[00:45:55.953] Browser ERROR   uncaughtError: TypeError: Cannot read properties of null (reading 'items')
-[00:46:37.032] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:46:37.247] Browser WARN    [2026-03-05T03:10:09.505Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:46:37.691] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:46:37.691] Browser LOG     👤 Client Profiles Loaded: 2
-[00:48:22.951] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:48:22.951] Browser LOG     👤 Client Profiles Loaded: 2
-[00:49:23.356] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:49:23.554] Browser WARN    [2026-03-05T03:12:55.806Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[00:49:23.853] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:49:23.853] Browser LOG     👤 Client Profiles Loaded: 2
-[00:50:19.060] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:50:19.060] Browser LOG     👤 Client Profiles Loaded: 2
-[00:50:39.735] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:50:39.735] Browser LOG     👤 Client Profiles Loaded: 2
-[00:50:57.030] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:50:57.030] Browser LOG     👤 Client Profiles Loaded: 2
-[00:51:21.691] Browser LOG     🏢 Company Profiles Loaded: 1
-[00:51:21.691] Browser LOG     👤 Client Profiles Loaded: 2
-[00:56:30.441] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:00:01.256] Browser WARN    [2026-03-05T03:23:33.513Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[01:00:01.495] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:00:01.495] Browser LOG     👤 Client Profiles Loaded: 2
-[01:00:13.459] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:00:13.459] Browser LOG     👤 Client Profiles Loaded: 2
-[01:00:33.551] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:00:33.551] Browser LOG     👤 Client Profiles Loaded: 2
-[01:00:35.238] Browser ERROR   Error adding user to active users: {"code":"already-exists","name":"FirebaseError"}
-[01:00:45.717] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:00:45.717] Browser LOG     👤 Client Profiles Loaded: 2
-[01:01:18.655] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:01:18.655] Browser LOG     👤 Client Profiles Loaded: 2
-[01:23:14.902] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:23:14.902] Browser LOG     👤 Client Profiles Loaded: 2
-[01:26:25.961] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:26:25.961] Browser LOG     👤 Client Profiles Loaded: 2
-[01:36:39.649] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[01:36:44.227] Browser WARN    [2026-03-05T04:00:16.413Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
-[01:36:44.352] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:36:44.352] Browser LOG     👤 Client Profiles Loaded: 2
-[01:36:48.772] Browser LOG     🏢 Company Profiles Loaded: 1
-[01:36:48.772] Browser LOG     👤 Client Profiles Loaded: 2
+[03:46:42.011] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:46:42.813] Browser LOG     👤 Client Profiles Loaded: 2
+[03:47:08.464] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:47:08.798] Browser WARN    [2026-03-06T23:08:12.698Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:47:17.020] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:47:17.020] Browser LOG     👤 Client Profiles Loaded: 2
+[03:49:54.188] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:55:02.632] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:55:15.348] Browser WARN    [2026-03-06T23:16:19.258Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[03:55:16.104] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:55:16.509] Browser LOG     👤 Client Profiles Loaded: 2
+[03:59:10.647] Browser LOG     🏢 Company Profiles Loaded: 1
+[03:59:10.868] Browser LOG     👤 Client Profiles Loaded: 2
+[04:00:53.481] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[04:01:02.606] Browser WARN    [2026-03-06T23:22:06.503Z]  @firebase/firestore: Firestore (12.8.0): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+[04:01:02.976] Browser LOG     🏢 Company Profiles Loaded: 1
+[04:01:03.132] Browser LOG     👤 Client Profiles Loaded: 2
+[04:03:44.414] Browser LOG     🏢 Company Profiles Loaded: 1
+[04:03:44.853] Browser LOG     👤 Client Profiles Loaded: 2

@@ -14,6 +14,11 @@ const PDFViewer = dynamic(
     { ssr: false, loading: () => <p>Cargando previsualización...</p> }
 );
 
+const PDFDownloadLink = dynamic(
+    () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+    { ssr: false }
+);
+
 // Memoized PDF component — only re-renders when dataForPdf reference changes
 const PdfPreview = memo(function PdfPreview({ dataForPdf }) {
     if (!dataForPdf) {
@@ -63,6 +68,12 @@ export default function QuotationEditor() {
     const autoSaveTimeout = useRef(null);
     const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
 
+    // Reset PDF state whenever we navigate to a different quotation
+    useEffect(() => {
+        pdfInitialized.current = false;
+        setPdfData(null);
+    }, [id]);
+
     // Update local data when Firestore quotation changes
     useEffect(() => {
         if (quotation && companyProfiles && clientProfiles) {
@@ -91,8 +102,9 @@ export default function QuotationEditor() {
             });
 
             setData(newData);
-            // Initialize pdfData automatically on first load only
-            if (!pdfInitialized.current) {
+            // Only initialize pdfData once companyProfiles has actual data loaded
+            // companyProfiles starts as [] (truthy but empty), which caused company to be missing
+            if (!pdfInitialized.current && companyProfiles.length > 0) {
                 pdfInitialized.current = true;
                 setPdfData(newData({ clientName: '', clientRuc: '', clientAddress: '' }));
             }
@@ -290,6 +302,32 @@ export default function QuotationEditor() {
             } catch (err) {
                 console.error('Error adding item:', err);
             }
+        }
+    };
+
+    const removeItem = async (index) => {
+        if (data.items.length <= 1) return; // keep at least one item
+        const newItems = data.items.filter((_, i) => i !== index);
+        const newData = { ...data, items: newItems };
+        setData(newData);
+        if (id && updateQuotation) {
+            try { await updateQuotation({ items: newItems }); }
+            catch (err) { console.error('Error removing item:', err); }
+        }
+    };
+
+    const duplicateItem = async (index) => {
+        const itemToCopy = { ...data.items[index] };
+        const newItems = [
+            ...data.items.slice(0, index + 1),
+            itemToCopy,
+            ...data.items.slice(index + 1)
+        ];
+        const newData = { ...data, items: newItems };
+        setData(newData);
+        if (id && updateQuotation) {
+            try { await updateQuotation({ items: newItems }); }
+            catch (err) { console.error('Error duplicating item:', err); }
         }
     };
 
@@ -529,6 +567,33 @@ export default function QuotationEditor() {
                     <h3 style={{ color: '#1e293b' }}>Ítems</h3>
                     {data.items && data.items.map((item, index) => (
                         <div key={index} className="card-editor" style={{ marginBottom: '1rem', padding: '1.25rem' }}>
+                            {/* Item header with index and action buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ítem #{index + 1}</span>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    {/* Duplicate button */}
+                                    <button
+                                        onClick={() => duplicateItem(index)}
+                                        title="Duplicar ítem"
+                                        style={{ background: '#e0f2fe', border: 'none', color: '#0369a1', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#bae6fd'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = '#e0f2fe'}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                    </button>
+                                    {/* Delete button */}
+                                    <button
+                                        onClick={() => removeItem(index)}
+                                        title="Eliminar ítem"
+                                        disabled={data.items.length <= 1}
+                                        style={{ background: data.items.length <= 1 ? '#f1f5f9' : '#fee2e2', border: 'none', color: data.items.length <= 1 ? '#cbd5e1' : '#dc2626', cursor: data.items.length <= 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fecaca'; }}
+                                        onMouseOut={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fee2e2'; }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
+                                    </button>
+                                </div>
+                            </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                 <div style={{ gridColumn: 'span 5', position: 'relative' }}>
                                     {renderRemoteCursorLabel(`item_${index}_description`)}
@@ -661,14 +726,34 @@ export default function QuotationEditor() {
                 <div style={{ width: '50%', backgroundColor: '#525659', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '0.75rem 1rem', backgroundColor: '#3a3c3e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '500' }}>Vista Previa del PDF</span>
-                        <button
-                            onClick={() => setPdfData({ ...data })}
-                            style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
-                            onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
-                        >
-                            🔄 Actualizar Vista Previa
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                                onClick={() => setPdfData({ ...data })}
+                                style={{ background: '#475569', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#334155'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#475569'}
+                            >
+                                🔄 Actualizar
+                            </button>
+                            {dataForPdf && (
+                                <PDFDownloadLink
+                                    document={<QuotationDocument data={dataForPdf} />}
+                                    fileName={`${dataForPdf.code || 'cotizacion'}.pdf`}
+                                    style={{ textDecoration: 'none' }}
+                                >
+                                    {({ loading }) => (
+                                        <button
+                                            style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: '600', cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: loading ? 0.7 : 1 }}
+                                            onMouseOver={(e) => { if (!loading) e.currentTarget.style.background = '#15803d'; }}
+                                            onMouseOut={(e) => { if (!loading) e.currentTarget.style.background = '#16a34a'; }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                            {loading ? 'Generando...' : 'Descargar PDF'}
+                                        </button>
+                                    )}
+                                </PDFDownloadLink>
+                            )}
+                        </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <PdfPreview dataForPdf={dataForPdf} />
