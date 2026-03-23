@@ -2,6 +2,88 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { numberToSpanishWords } from '@/lib/numberToWords';
 
+// Helper function to parse and render formatted text
+// Supports: **bold**, • bullets, and newlines
+const renderFormattedText = (text, baseStyle = {}) => {
+    if (!text) return null;
+    
+    const lines = text.split('\n');
+    const elements = [];
+    
+    lines.forEach((line, lineIndex) => {
+        if (!line.trim()) {
+            // Empty line - add a small spacer
+            elements.push(
+                <Text key={`empty-${lineIndex}`} style={{ ...baseStyle, height: 4 }}> </Text>
+            );
+            return;
+        }
+        
+        // Check if line starts with bullet
+        const hasBullet = line.startsWith('•');
+        let lineContent = hasBullet ? line.substring(1) : line;
+        
+        // Check for bold text (**text**)
+        const boldRegex = /\*\*(.+?)\*\*/g;
+        const boldMatches = [];
+        let match;
+        while ((match = boldRegex.exec(lineContent)) !== null) {
+            boldMatches.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                text: match[1]
+            });
+        }
+        
+        if (boldMatches.length > 0) {
+            // Line has bold text - build array of parts
+            const parts = [];
+            let currentIndex = 0;
+            
+            boldMatches.forEach((bold) => {
+                // Add text before bold
+                if (bold.start > currentIndex) {
+                    const beforeText = lineContent.substring(currentIndex, bold.start);
+                    parts.push({ text: beforeText, bold: false });
+                }
+                // Add bold text
+                parts.push({ text: bold.text, bold: true });
+                currentIndex = bold.end;
+            });
+            
+            // Add remaining text after last bold
+            if (currentIndex < lineContent.length) {
+                parts.push({ text: lineContent.substring(currentIndex), bold: false });
+            }
+            
+            // Render the line with bullet prefix if applicable
+            elements.push(
+                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
+                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
+                    {parts.map((part, partIndex) => (
+                        <Text
+                            key={partIndex}
+                            style={part.bold ? { ...baseStyle, fontWeight: 'bold' } : baseStyle}
+                        >
+                            {part.text}
+                        </Text>
+                    ))}
+                </Text>
+            );
+        } else {
+            // No bold text - render simply
+            elements.push(
+                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
+                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
+                    <Text style={{ ...baseStyle }}>{lineContent}</Text>
+                </Text>
+            );
+        }
+    });
+    
+    return elements;
+};
+
 // Register fonts if needed (we'll stick to standard ones for now to ensure speed)
 // Ideally, we would register a bold font, but Helvetica-Bold is standard.
 
@@ -381,7 +463,9 @@ export const QuotationDocument = ({ data }) => {
                                         <View style={styles.itemTextContainer}>
                                             <Text style={styles.itemTitle}>{item.name || item.description}</Text>
                                             {item.details && item.details !== (item.name || item.description) && (
-                                                <Text style={styles.itemDescText}>{item.details}</Text>
+                                                <Text style={styles.itemDescText}>
+                                                    {item.details}
+                                                </Text>
                                             )}
                                         </View>
                                     </View>

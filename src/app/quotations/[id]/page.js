@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
+import { SubItemsModal } from '@/components/SubItemsModal';
 
 // Import PDFViewer dynamically to avoid SSR issues
 const PDFViewer = dynamic(
@@ -57,16 +58,14 @@ export default function QuotationEditor() {
         clientProfiles: []
     });
     const [saving, setSaving] = useState(false);
-    const [autoSaving, setAutoSaving] = useState(false);
     const [activeUsers, setActiveUsers] = useState([]);
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
 
     // Separate state for PDF - only updated manually via button
     const [pdfData, setPdfData] = useState(null);
-    const pdfUpdateTimeout = useRef(null);
-    const autoSaveTimeout = useRef(null);
     const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
+    const [subItemsModalData, setSubItemsModalData] = useState(null);
 
     // Reset PDF state whenever we navigate to a different quotation
     useEffect(() => {
@@ -134,7 +133,8 @@ export default function QuotationEditor() {
         return {
             ...baseStyle,
             width: '100%',
-            padding: '0.75rem',
+            padding: '0.4rem 0.6rem',
+            fontSize: '0.85rem',
             borderRadius: '6px',
             border: '1px solid #ccc'
         };
@@ -162,42 +162,9 @@ export default function QuotationEditor() {
         return null;
     };
 
-    const handleChange = async (field, value) => {
+    const handleChange = (field, value) => {
         const newData = { ...data, [field]: value };
         setData(newData);
-
-        // Clear existing timeout
-        if (autoSaveTimeout.current) {
-            clearTimeout(autoSaveTimeout.current);
-        }
-
-        // Set auto-saving indicator immediately
-        setAutoSaving(true);
-
-        // Debounce Firestore update - only save after user stops typing for 500ms
-        autoSaveTimeout.current = setTimeout(async () => {
-            if (id && updateQuotation) {
-                try {
-                    await updateQuotation({ [field]: value });
-                    setAutoSaving(false);
-                } catch (err) {
-                    console.error('Error updating quotation:', err);
-                    setAutoSaving(false);
-                }
-            }
-        }, 500);
-
-        // Debounce PDF update - auto-refresh 2s after user stops typing
-        // Uses current data state, NOT triggered by Firestore (avoids flickering)
-        if (pdfUpdateTimeout.current) {
-            clearTimeout(pdfUpdateTimeout.current);
-        }
-        pdfUpdateTimeout.current = setTimeout(() => {
-            setData(currentData => {
-                setPdfData({ ...currentData, [field]: value });
-                return currentData;
-            });
-        }, 2000);
     };
 
     const handleClientProfileChange = async (clientProfileId) => {
@@ -223,20 +190,6 @@ export default function QuotationEditor() {
         });
 
         setData(newData);
-
-        // Update Firestore directly
-        if (id && updateQuotation) {
-            try {
-                await updateQuotation({
-                    clientProfileId: newData.clientProfileId,
-                    clientName: newData.clientName,
-                    clientRuc: newData.clientRuc,
-                    clientAddress: newData.clientAddress
-                });
-            } catch (err) {
-                console.error('Error updating client profile:', err);
-            }
-        }
     };
 
     const handleCompanyProfileChange = async (companyProfileId) => {
@@ -257,18 +210,6 @@ export default function QuotationEditor() {
         console.log('New notes:', newData.notes);
 
         setData(newData);
-
-        // Update Firestore directly
-        if (id && updateQuotation) {
-            try {
-                await updateQuotation({
-                    companyProfileId: newData.companyProfileId,
-                    notes: newData.notes
-                });
-            } catch (err) {
-                console.error('Error updating company profile:', err);
-            }
-        }
     };
 
     const handleItemChange = async (index, field, value) => {
@@ -276,32 +217,14 @@ export default function QuotationEditor() {
         newItems[index][field] = value;
         const newData = { ...data, items: newItems };
         setData(newData);
-
-        // Update Firestore directly with auto-save indicator
-        if (id && updateQuotation) {
-            try {
-                setAutoSaving(true);
-                await updateQuotation({ items: newItems });
-                setAutoSaving(false);
-            } catch (err) {
-                console.error('Error updating items:', err);
-                setAutoSaving(false);
-            }
-        }
     };
 
     const addItem = async () => {
         const newItems = [...data.items, { description: '', quantity: 1, price: 0 }];
         const newData = { ...data, items: newItems };
         setData(newData);
-
-        // Update Firestore directly
-        if (id && updateQuotation) {
-            try {
-                await updateQuotation({ items: newItems });
-            } catch (err) {
-                console.error('Error adding item:', err);
-            }
+        if (updateQuotation) {
+            await updateQuotation(newData);
         }
     };
 
@@ -310,10 +233,6 @@ export default function QuotationEditor() {
         const newItems = data.items.filter((_, i) => i !== index);
         const newData = { ...data, items: newItems };
         setData(newData);
-        if (id && updateQuotation) {
-            try { await updateQuotation({ items: newItems }); }
-            catch (err) { console.error('Error removing item:', err); }
-        }
     };
 
     const duplicateItem = async (index) => {
@@ -325,10 +244,31 @@ export default function QuotationEditor() {
         ];
         const newData = { ...data, items: newItems };
         setData(newData);
-        if (id && updateQuotation) {
-            try { await updateQuotation({ items: newItems }); }
-            catch (err) { console.error('Error duplicating item:', err); }
-        }
+    };
+
+    const moveItemUp = async (index) => {
+        if (index <= 0) return;
+        const newItems = [...data.items];
+        const temp = newItems[index];
+        newItems[index] = newItems[index - 1];
+        newItems[index - 1] = temp;
+        setData({ ...data, items: newItems });
+    };
+
+    const moveItemDown = async (index) => {
+        if (index >= data.items.length - 1) return;
+        const newItems = [...data.items];
+        const temp = newItems[index];
+        newItems[index] = newItems[index + 1];
+        newItems[index + 1] = temp;
+        setData({ ...data, items: newItems });
+    };
+
+    const toggleItemExpanded = (index) => {
+        const newItems = [...data.items];
+        const current = newItems[index].isExpanded;
+        newItems[index].isExpanded = current === undefined ? false : !current;
+        setData({ ...data, items: newItems });
     };
 
     const saveQuotation = async () => {
@@ -395,67 +335,96 @@ export default function QuotationEditor() {
         };
     }, [pdfData]); // ONLY recomputes when user presses the refresh button
 
+    const pdfDocument = useMemo(() => {
+        if (!dataForPdf) return null;
+        return <QuotationDocument data={dataForPdf} />;
+    }, [dataForPdf]);
+
+    const handleSaveSubItems = (newSubItems, totalCost) => {
+        if (!subItemsModalData) return;
+        const { index } = subItemsModalData;
+        
+        const newItems = [...data.items];
+        const item = { ...newItems[index] };
+        
+        const oldSubItemsTotal = (item.subItems || []).reduce((acc, si) => acc + (parseFloat(si.quantity) || 0) * (parseFloat(si.basePrice) || 0), 0);
+        const diff = totalCost - oldSubItemsTotal;
+        
+        item.subItems = newSubItems;
+        item.basePrice = (parseFloat(item.basePrice) || 0) + diff;
+        
+        // Recalculate final price based on the new basePrice and percentages
+        const profit = parseFloat(item.profitPercentage || 0);
+        const others = parseFloat(item.otherCosts || 0);
+        const bp = parseFloat(item.basePrice || 0);
+        const finalPrice = bp * (1 + (profit + others) / 100);
+        
+        item.price = finalPrice.toFixed(2);
+        newItems[index] = item;
+        
+        setData({ ...data, items: newItems });
+        setSubItemsModalData(null);
+    };
 
     return (
         <ProtectedRoute>
             <UserSidebar activeUsers={activeUsers} />
             <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', marginLeft: '80px' }}>
                 {/* Left: Editor Form */}
-                <div style={{ width: '50%', padding: '2rem', overflowY: 'auto', borderRight: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <h1 style={{ color: '#1e293b' }}>Editor de Cotización</h1>
-                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                            <button className="btn" style={{ background: '#64748b', color: 'white' }} onClick={() => router.push('/')}>
+                <div style={{ width: '50%', padding: '1.25rem', overflowY: 'auto', borderRight: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h1 style={{ color: '#1e293b', fontSize: '1.4rem' }}>Editor de Cotización</h1>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/')}>
                                 ← Menú Principal
                             </button>
-                            <span style={{ fontSize: '0.8rem', color: autoSaving ? '#f59e0b' : '#22c55e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: autoSaving ? '#f59e0b' : '#22c55e' }}></span>
-                                {autoSaving ? 'Guardando...' : 'Guardado'}
-                            </span>
-                            <button className="btn btn-primary" onClick={saveQuotation} disabled={saving}>
+                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={saveQuotation} disabled={saving}>
                                 {saving ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
                         </div>
                     </div>
 
-                    <div className="card-editor" style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>Empresa Emisora</label>
-                        {renderRemoteCursorLabel('companyProfileId')}
-                        <select
-                            value={data.companyProfileId || ''}
-                            onChange={(e) => handleCompanyProfileChange(e.target.value)}
-                            onFocus={() => handleFocus('companyProfileId')}
-                            onBlur={() => handleBlur('companyProfileId')}
-                            style={getInputStyle('companyProfileId')}
-                        >
-                            <option value="">Seleccionar Empresa...</option>
-                            {data.companyProfiles && data.companyProfiles.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminada)' : ''}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="card-editor" style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>Perfil de Cliente</label>
-                        {renderRemoteCursorLabel('clientProfileId')}
-                        <select
-                            value={data.clientProfileId || ''}
-                            onChange={(e) => handleClientProfileChange(e.target.value)}
-                            onFocus={() => handleFocus('clientProfileId')}
-                            onBlur={() => handleBlur('clientProfileId')}
-                            style={getInputStyle('clientProfileId')}
-                        >
-                            <option value="">Seleccionar Cliente...</option>
-                            {data.clientProfiles && data.clientProfiles.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminado)' : ''}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="card-editor" style={{ marginBottom: '2rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>Nombre de Cliente</label>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
+                                {renderRemoteCursorLabel('companyProfileId')}
+                                <select
+                                    value={data.companyProfileId || ''}
+                                    onChange={(e) => handleCompanyProfileChange(e.target.value)}
+                                    onFocus={() => handleFocus('companyProfileId')}
+                                    onBlur={() => handleBlur('companyProfileId')}
+                                    style={getInputStyle('companyProfileId')}
+                                >
+                                    <option value="">Seleccionar Empresa...</option>
+                                    {data.companyProfiles && data.companyProfiles.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminada)' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Perfil de Cliente</label>
+                                {renderRemoteCursorLabel('clientProfileId')}
+                                <select
+                                    value={data.clientProfileId || ''}
+                                    onChange={(e) => handleClientProfileChange(e.target.value)}
+                                    onFocus={() => handleFocus('clientProfileId')}
+                                    onBlur={() => handleBlur('clientProfileId')}
+                                    style={getInputStyle('clientProfileId')}
+                                >
+                                    <option value="">Seleccionar Cliente...</option>
+                                    {data.clientProfiles && data.clientProfiles.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminado)' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Nombre de Cliente</label>
                                 {renderRemoteCursorLabel('clientName')}
                                 <input
                                     type="text"
@@ -468,7 +437,7 @@ export default function QuotationEditor() {
                                 />
                             </div>
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>RUC</label>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>RUC</label>
                                 {renderRemoteCursorLabel('clientRuc')}
                                 <input
                                     type="text"
@@ -481,7 +450,7 @@ export default function QuotationEditor() {
                                 />
                             </div>
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>Dirección</label>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Dirección</label>
                                 {renderRemoteCursorLabel('clientAddress')}
                                 <input
                                     type="text"
@@ -493,26 +462,26 @@ export default function QuotationEditor() {
                                     placeholder="Calle Falsa 123"
                                 />
                             </div>
-                            <div style={{ gridColumn: 'span 3', marginTop: '1rem', position: 'relative' }}>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>2. Descripción del Servicio o Producto</label>
+                            <div style={{ gridColumn: 'span 3', marginTop: '0.6rem', position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>2. Descripción del Servicio o Producto</label>
                                 {renderRemoteCursorLabel('serviceDescription')}
                                 <textarea
                                     value={data.serviceDescription || ''}
                                     onChange={(e) => handleChange('serviceDescription', e.target.value)}
                                     onFocus={() => handleFocus('serviceDescription')}
                                     onBlur={() => handleBlur('serviceDescription')}
-                                    style={getInputStyle('serviceDescription', { minHeight: '80px' })}
+                                    style={getInputStyle('serviceDescription', { minHeight: '60px' })}
                                     placeholder="Describa brevemente el servicio o producto a cotizar..."
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <h3 style={{ color: '#1e293b' }}>Configuración Global de Precios (Interno)</h3>
-                    <div className="card-editor" style={{ marginBottom: '2rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', alignItems: 'flex-end' }}>
+                    <h3 style={{ color: '#1e293b', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Configuración Global de Precios (Interno)</h3>
+                    <div className="card-editor" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', alignItems: 'flex-end' }}>
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>% Ganancia Global</label>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
                                 <input
                                     type="number"
@@ -525,7 +494,7 @@ export default function QuotationEditor() {
                                 />
                             </div>
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>% Otros Global</label>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Otros Global</label>
                                 {renderRemoteCursorLabel('globalOtherCosts')}
                                 <input
                                     type="number"
@@ -539,7 +508,7 @@ export default function QuotationEditor() {
                             </div>
                             <button
                                 className="btn"
-                                style={{ background: '#334155', color: 'white', padding: '0.75rem' }}
+                                style={{ background: '#334155', color: 'white', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
                                 onClick={() => {
                                     const gp = parseFloat(data.globalProfitPercentage || 0);
                                     const go = parseFloat(data.globalOtherCosts || 0);
@@ -564,13 +533,68 @@ export default function QuotationEditor() {
                         </p>
                     </div>
 
-                    <h3 style={{ color: '#1e293b' }}>Ítems</h3>
+                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Ítems</h3>
                     {data.items && data.items.map((item, index) => (
-                        <div key={index} className="card-editor" style={{ marginBottom: '1rem', padding: '1.25rem' }}>
+                        <div key={index} className="card-editor" style={{ marginBottom: '0.5rem', padding: '0.8rem' }}>
                             {/* Item header with index and action buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ítem #{index + 1}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: item.isExpanded === false ? '0' : '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Ítem #{index + 1}
+                                    </span>
+                                    {item.isExpanded === false && (
+                                        <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500', marginLeft: '0.5rem' }}>
+                                            - {item.description || 'Sin título'} <strong style={{ color: '#22c55e' }}>(S/ {item.price || '0.00'})</strong>
+                                        </span>
+                                    )}
+                                </div>
                                 <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    {/* Chevron Collapse/Expand */}
+                                    <button
+                                        onClick={() => toggleItemExpanded(index)}
+                                        title={item.isExpanded !== false ? "Contraer" : "Expandir"}
+                                        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        {item.isExpanded !== false ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        )}
+                                    </button>
+                                    {/* Move Up button */}
+                                    <button
+                                        onClick={() => moveItemUp(index)}
+                                        title="Subir ítem"
+                                        disabled={index === 0}
+                                        style={{ background: index === 0 ? 'transparent' : '#f1f5f9', border: 'none', color: index === 0 ? '#cbd5e1' : '#475569', cursor: index === 0 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => { if (index !== 0) e.currentTarget.style.background = '#e2e8f0'; }}
+                                        onMouseOut={(e) => { if (index !== 0) e.currentTarget.style.background = '#f1f5f9'; }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                                    </button>
+                                    {/* Move Down button */}
+                                    <button
+                                        onClick={() => moveItemDown(index)}
+                                        title="Bajar ítem"
+                                        disabled={index === data.items.length - 1}
+                                        style={{ background: index === data.items.length - 1 ? 'transparent' : '#f1f5f9', border: 'none', color: index === data.items.length - 1 ? '#cbd5e1' : '#475569', cursor: index === data.items.length - 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#e2e8f0'; }}
+                                        onMouseOut={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#f1f5f9'; }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                    </button>
+                                    {/* Sub-items button */}
+                                    <button
+                                        onClick={() => setSubItemsModalData({ index, subItems: item.subItems || [] })}
+                                        title="Sub-ítems (Cálculo interno)"
+                                        style={{ background: '#fef3c7', border: 'none', color: '#d97706', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#fde68a'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = '#fef3c7'}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    </button>
                                     {/* Duplicate button */}
                                     <button
                                         onClick={() => duplicateItem(index)}
@@ -594,17 +618,31 @@ export default function QuotationEditor() {
                                     </button>
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                            {item.isExpanded !== false && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', marginTop: '1rem' }}>
                                 <div style={{ gridColumn: 'span 5', position: 'relative' }}>
                                     {renderRemoteCursorLabel(`item_${index}_description`)}
-                                    <input
-                                        placeholder="Descripción del ítem"
-                                        style={getInputStyle(`item_${index}_description`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.description}
-                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                        onFocus={() => handleFocus(`item_${index}_description`)}
-                                        onBlur={() => handleBlur(`item_${index}_description`)}
-                                    />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <input
+                                            placeholder="Título del ítem"
+                                            style={getInputStyle(`item_${index}_description`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc', fontWeight: 'bold' })}
+                                            value={item.description}
+                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                            onFocus={() => handleFocus(`item_${index}_description`)}
+                                            onBlur={() => handleBlur(`item_${index}_description`)}
+                                        />
+                                        <textarea
+                                            placeholder="Descripción detallada (puedes usar: • para viñetas, **texto** para negrita, enters para nuevas líneas)"
+                                            style={{ ...getInputStyle(`item_${index}_details`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #94a3b8', minHeight: '50px' }), fontSize: '0.8rem', resize: 'vertical' }}
+                                            value={item.details || ''}
+                                            onChange={(e) => handleItemChange(index, 'details', e.target.value)}
+                                            onFocus={() => handleFocus(`item_${index}_details`)}
+                                            onBlur={() => handleBlur(`item_${index}_details`)}
+                                        />
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
+                                            <span>💡 Usa <b>•</b> para viñetas, <b>**texto**</b> para negrita, <b>Enter</b> para nuevas líneas</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div style={{ position: 'relative' }}>
@@ -699,14 +737,15 @@ export default function QuotationEditor() {
                                         onBlur={() => handleBlur(`item_${index}_price`)}
                                     />
                                 </div>
-                            </div>
+                                </div>
+                            )}
                         </div>
                     ))}
-                    <button onClick={addItem} className="btn" style={{ background: '#e5e7eb', color: '#374151', marginBottom: '2rem' }}>
+                    <button onClick={addItem} className="btn" style={{ background: '#e5e7eb', color: '#374151', marginBottom: '1rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
                         + Agregar Ítem
                     </button>
 
-                    <h3 style={{ color: '#1e293b' }}>Notas / Condiciones</h3>
+                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Notas / Condiciones</h3>
                     <div className="card-editor" style={{ position: 'relative' }}>
                         {renderRemoteCursorLabel('notes')}
                         <textarea
@@ -715,7 +754,7 @@ export default function QuotationEditor() {
                             onFocus={() => handleFocus('notes')}
                             onBlur={() => handleBlur('notes')}
                             rows={6}
-                            style={getInputStyle('notes', { width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' })}
+                            style={getInputStyle('notes', { width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' })}
                             placeholder="Notas adicionales para esta cotización..."
                         />
                     </div>
@@ -735,9 +774,9 @@ export default function QuotationEditor() {
                             >
                                 🔄 Actualizar
                             </button>
-                            {dataForPdf && (
+                            {dataForPdf && pdfDocument && (
                                 <PDFDownloadLink
-                                    document={<QuotationDocument data={dataForPdf} />}
+                                    document={pdfDocument}
                                     fileName={`${dataForPdf.code || 'cotizacion'}.pdf`}
                                     style={{ textDecoration: 'none' }}
                                 >
@@ -760,6 +799,16 @@ export default function QuotationEditor() {
                     </div>
                 </div>
             </div>
+
+            {subItemsModalData !== null && (
+                <SubItemsModal
+                    isOpen={true}
+                    onClose={() => setSubItemsModalData(null)}
+                    initialSubItems={subItemsModalData.subItems}
+                    itemDescription={data.items[subItemsModalData.index]?.description}
+                    onSave={handleSaveSubItems}
+                />
+            )}
         </ProtectedRoute>
     )
 }

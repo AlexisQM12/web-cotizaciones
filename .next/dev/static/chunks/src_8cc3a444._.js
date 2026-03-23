@@ -317,6 +317,141 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$numberToWords$
 ;
 ;
 ;
+// Helper function to parse and render formatted text
+// Supports: **bold**, • bullets, and newlines
+const renderFormattedText = (text, baseStyle = {})=>{
+    if (!text) return null;
+    const lines = text.split('\n');
+    const elements = [];
+    lines.forEach((line, lineIndex)=>{
+        if (!line.trim()) {
+            // Empty line - add a small spacer
+            elements.push(/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                style: {
+                    ...baseStyle,
+                    height: 4
+                },
+                children: " "
+            }, `empty-${lineIndex}`, false, {
+                fileName: "[project]/src/components/QuotationDocument.js",
+                lineNumber: 17,
+                columnNumber: 17
+            }, ("TURBOPACK compile-time value", void 0)));
+            return;
+        }
+        // Check if line starts with bullet
+        const hasBullet = line.startsWith('•');
+        let lineContent = hasBullet ? line.substring(1) : line;
+        // Check for bold text (**text**)
+        const boldRegex = /\*\*(.+?)\*\*/g;
+        const boldMatches = [];
+        let match;
+        while((match = boldRegex.exec(lineContent)) !== null){
+            boldMatches.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                text: match[1]
+            });
+        }
+        if (boldMatches.length > 0) {
+            // Line has bold text - build array of parts
+            const parts = [];
+            let currentIndex = 0;
+            boldMatches.forEach((bold)=>{
+                // Add text before bold
+                if (bold.start > currentIndex) {
+                    const beforeText = lineContent.substring(currentIndex, bold.start);
+                    parts.push({
+                        text: beforeText,
+                        bold: false
+                    });
+                }
+                // Add bold text
+                parts.push({
+                    text: bold.text,
+                    bold: true
+                });
+                currentIndex = bold.end;
+            });
+            // Add remaining text after last bold
+            if (currentIndex < lineContent.length) {
+                parts.push({
+                    text: lineContent.substring(currentIndex),
+                    bold: false
+                });
+            }
+            // Render the line with bullet prefix if applicable
+            elements.push(/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                style: {
+                    ...baseStyle,
+                    marginBottom: 2
+                },
+                children: [
+                    hasBullet && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                        style: {
+                            ...baseStyle
+                        },
+                        children: "• "
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/QuotationDocument.js",
+                        lineNumber: 62,
+                        columnNumber: 35
+                    }, ("TURBOPACK compile-time value", void 0)),
+                    parts.map((part, partIndex)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                            style: part.bold ? {
+                                ...baseStyle,
+                                fontWeight: 'bold'
+                            } : baseStyle,
+                            children: part.text
+                        }, partIndex, false, {
+                            fileName: "[project]/src/components/QuotationDocument.js",
+                            lineNumber: 64,
+                            columnNumber: 25
+                        }, ("TURBOPACK compile-time value", void 0)))
+                ]
+            }, `line-${lineIndex}`, true, {
+                fileName: "[project]/src/components/QuotationDocument.js",
+                lineNumber: 61,
+                columnNumber: 17
+            }, ("TURBOPACK compile-time value", void 0)));
+        } else {
+            // No bold text - render simply
+            elements.push(/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                style: {
+                    ...baseStyle,
+                    marginBottom: 2
+                },
+                children: [
+                    hasBullet && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                        style: {
+                            ...baseStyle
+                        },
+                        children: "• "
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/QuotationDocument.js",
+                        lineNumber: 77,
+                        columnNumber: 35
+                    }, ("TURBOPACK compile-time value", void 0)),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
+                        style: {
+                            ...baseStyle
+                        },
+                        children: lineContent
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/QuotationDocument.js",
+                        lineNumber: 78,
+                        columnNumber: 21
+                    }, ("TURBOPACK compile-time value", void 0))
+                ]
+            }, `line-${lineIndex}`, true, {
+                fileName: "[project]/src/components/QuotationDocument.js",
+                lineNumber: 76,
+                columnNumber: 17
+            }, ("TURBOPACK compile-time value", void 0)));
+        }
+    });
+    return elements;
+};
 // Register fonts if needed (we'll stick to standard ones for now to ensure speed)
 // Ideally, we would register a bold font, but Helvetica-Bold is standard.
 const styles = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$renderer$2f$lib$2f$react$2d$pdf$2e$browser$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["StyleSheet"].create({
@@ -599,7 +734,7 @@ const QuotationDocument = ({ data })=>{
                                     style: styles.logo
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 284,
+                                    lineNumber: 366,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -607,7 +742,7 @@ const QuotationDocument = ({ data })=>{
                                     children: company.name || 'MI EMPRESA S.A.C.'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 286,
+                                    lineNumber: 368,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -616,7 +751,7 @@ const QuotationDocument = ({ data })=>{
                                     }
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 287,
+                                    lineNumber: 369,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -624,7 +759,7 @@ const QuotationDocument = ({ data })=>{
                                     children: company.address || 'Av. Principal 123, Lima, Perú'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 289,
+                                    lineNumber: 371,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -635,7 +770,7 @@ const QuotationDocument = ({ data })=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 290,
+                                    lineNumber: 372,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -647,7 +782,7 @@ const QuotationDocument = ({ data })=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 291,
+                                    lineNumber: 373,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -658,13 +793,13 @@ const QuotationDocument = ({ data })=>{
                                     children: company.website || 'www.miempresa.com'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 292,
+                                    lineNumber: 374,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 282,
+                            lineNumber: 364,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -680,7 +815,7 @@ const QuotationDocument = ({ data })=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 297,
+                                        lineNumber: 379,
                                         columnNumber: 29
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -688,7 +823,7 @@ const QuotationDocument = ({ data })=>{
                                         children: "COTIZACIÓN"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 298,
+                                        lineNumber: 380,
                                         columnNumber: 29
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -696,24 +831,24 @@ const QuotationDocument = ({ data })=>{
                                         children: code
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 299,
+                                        lineNumber: 381,
                                         columnNumber: 29
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                lineNumber: 296,
+                                lineNumber: 378,
                                 columnNumber: 25
                             }, ("TURBOPACK compile-time value", void 0))
                         }, void 0, false, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 295,
+                            lineNumber: 377,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 281,
+                    lineNumber: 363,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -727,20 +862,20 @@ const QuotationDocument = ({ data })=>{
                                     children: "FECHA EMISIÓN:"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 307,
+                                    lineNumber: 389,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
                                     children: date
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 308,
+                                    lineNumber: 390,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 306,
+                            lineNumber: 388,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -751,26 +886,26 @@ const QuotationDocument = ({ data })=>{
                                     children: "MONEDA:"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 311,
+                                    lineNumber: 393,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
                                     children: currency
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 312,
+                                    lineNumber: 394,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 310,
+                            lineNumber: 392,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 305,
+                    lineNumber: 387,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -778,7 +913,7 @@ const QuotationDocument = ({ data })=>{
                     children: "1. CLIENTE"
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 317,
+                    lineNumber: 399,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -792,7 +927,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "Razón Social:"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 320,
+                                    lineNumber: 402,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -802,13 +937,13 @@ const QuotationDocument = ({ data })=>{
                                     children: clientName
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 321,
+                                    lineNumber: 403,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 319,
+                            lineNumber: 401,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         clientRuc && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -819,7 +954,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "RUC:"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 325,
+                                    lineNumber: 407,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -829,13 +964,13 @@ const QuotationDocument = ({ data })=>{
                                     children: clientRuc
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 326,
+                                    lineNumber: 408,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 324,
+                            lineNumber: 406,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0)),
                         clientAddress && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -846,7 +981,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "Dirección:"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 331,
+                                    lineNumber: 413,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -856,19 +991,19 @@ const QuotationDocument = ({ data })=>{
                                     children: clientAddress
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 332,
+                                    lineNumber: 414,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 330,
+                            lineNumber: 412,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 318,
+                    lineNumber: 400,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 serviceDescription && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -881,7 +1016,7 @@ const QuotationDocument = ({ data })=>{
                             children: "2. DESCRIPCIÓN DEL SERVICIO O PRODUCTO"
                         }, void 0, false, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 340,
+                            lineNumber: 422,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -899,18 +1034,18 @@ const QuotationDocument = ({ data })=>{
                                 children: serviceDescription
                             }, void 0, false, {
                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                lineNumber: 342,
+                                lineNumber: 424,
                                 columnNumber: 29
                             }, ("TURBOPACK compile-time value", void 0))
                         }, void 0, false, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 341,
+                            lineNumber: 423,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 339,
+                    lineNumber: 421,
                     columnNumber: 21
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -918,7 +1053,7 @@ const QuotationDocument = ({ data })=>{
                     children: "3. DETALLES DEL PRESUPUESTO"
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 350,
+                    lineNumber: 432,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -935,7 +1070,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "ITEM"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 356,
+                                    lineNumber: 438,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -946,7 +1081,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "DESCRIPCIÓN"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 357,
+                                    lineNumber: 439,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -957,7 +1092,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "CANT"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 358,
+                                    lineNumber: 440,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -968,7 +1103,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "PRECIO.U"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 359,
+                                    lineNumber: 441,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -979,13 +1114,13 @@ const QuotationDocument = ({ data })=>{
                                     children: "SUBTOTAL"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 360,
+                                    lineNumber: 442,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 355,
+                            lineNumber: 437,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         items.map((item, index)=>{
@@ -1007,7 +1142,7 @@ const QuotationDocument = ({ data })=>{
                                         children: index + 1
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 373,
+                                        lineNumber: 455,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1020,7 +1155,7 @@ const QuotationDocument = ({ data })=>{
                                                     style: styles.itemImage
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                                    lineNumber: 379,
+                                                    lineNumber: 461,
                                                     columnNumber: 45
                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1031,7 +1166,7 @@ const QuotationDocument = ({ data })=>{
                                                             children: item.name || item.description
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/QuotationDocument.js",
-                                                            lineNumber: 382,
+                                                            lineNumber: 464,
                                                             columnNumber: 45
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         item.details && item.details !== (item.name || item.description) && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1039,24 +1174,24 @@ const QuotationDocument = ({ data })=>{
                                                             children: item.details
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/QuotationDocument.js",
-                                                            lineNumber: 384,
+                                                            lineNumber: 466,
                                                             columnNumber: 49
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                                    lineNumber: 381,
+                                                    lineNumber: 463,
                                                     columnNumber: 41
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/QuotationDocument.js",
-                                            lineNumber: 376,
+                                            lineNumber: 458,
                                             columnNumber: 37
                                         }, ("TURBOPACK compile-time value", void 0))
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 375,
+                                        lineNumber: 457,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1069,7 +1204,7 @@ const QuotationDocument = ({ data })=>{
                                         children: itemQty.toFixed(2)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 390,
+                                        lineNumber: 474,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1085,7 +1220,7 @@ const QuotationDocument = ({ data })=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 391,
+                                        lineNumber: 475,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1101,20 +1236,20 @@ const QuotationDocument = ({ data })=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 392,
+                                        lineNumber: 476,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, index, true, {
                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                lineNumber: 372,
+                                lineNumber: 454,
                                 columnNumber: 29
                             }, ("TURBOPACK compile-time value", void 0));
                         })
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 351,
+                    lineNumber: 433,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1133,7 +1268,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "Subtotal"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 401,
+                                    lineNumber: 485,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1149,13 +1284,13 @@ const QuotationDocument = ({ data })=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 402,
+                                    lineNumber: 486,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 400,
+                            lineNumber: 484,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1171,7 +1306,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "IGV (18%)"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 405,
+                                    lineNumber: 489,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1187,13 +1322,13 @@ const QuotationDocument = ({ data })=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 406,
+                                    lineNumber: 490,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 404,
+                            lineNumber: 488,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1209,7 +1344,7 @@ const QuotationDocument = ({ data })=>{
                                     children: "IMPORTE TOTAL"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 409,
+                                    lineNumber: 493,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1226,19 +1361,19 @@ const QuotationDocument = ({ data })=>{
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 410,
+                                    lineNumber: 494,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/QuotationDocument.js",
-                            lineNumber: 408,
+                            lineNumber: 492,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 399,
+                    lineNumber: 483,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1252,7 +1387,7 @@ const QuotationDocument = ({ data })=>{
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 413,
+                    lineNumber: 497,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1265,7 +1400,7 @@ const QuotationDocument = ({ data })=>{
                     children: "4. NOTAS"
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 418,
+                    lineNumber: 502,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1279,12 +1414,12 @@ const QuotationDocument = ({ data })=>{
                         children: notes
                     }, void 0, false, {
                         fileName: "[project]/src/components/QuotationDocument.js",
-                        lineNumber: 420,
+                        lineNumber: 504,
                         columnNumber: 21
                     }, ("TURBOPACK compile-time value", void 0))
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 419,
+                    lineNumber: 503,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1292,7 +1427,7 @@ const QuotationDocument = ({ data })=>{
                     children: "5. CONDICIONES DE PAGO"
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 424,
+                    lineNumber: 508,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1305,7 +1440,7 @@ const QuotationDocument = ({ data })=>{
                                 children: "CUENTAS BANCARIAS:"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                lineNumber: 427,
+                                lineNumber: 511,
                                 columnNumber: 25
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["View"], {
@@ -1330,7 +1465,7 @@ const QuotationDocument = ({ data })=>{
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                                lineNumber: 433,
+                                                lineNumber: 517,
                                                 columnNumber: 41
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1341,7 +1476,7 @@ const QuotationDocument = ({ data })=>{
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                                lineNumber: 434,
+                                                lineNumber: 518,
                                                 columnNumber: 41
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             acc.cci && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
@@ -1352,47 +1487,47 @@ const QuotationDocument = ({ data })=>{
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                                lineNumber: 435,
+                                                lineNumber: 519,
                                                 columnNumber: 53
                                             }, ("TURBOPACK compile-time value", void 0))
                                         ]
                                     }, i, true, {
                                         fileName: "[project]/src/components/QuotationDocument.js",
-                                        lineNumber: 432,
+                                        lineNumber: 516,
                                         columnNumber: 37
                                     }, ("TURBOPACK compile-time value", void 0))) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$react$2d$pdf$2f$primitives$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Text"], {
                                     style: styles.paymentVal,
                                     children: "No hay cuentas configuradas."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/QuotationDocument.js",
-                                    lineNumber: 439,
+                                    lineNumber: 523,
                                     columnNumber: 33
                                 }, ("TURBOPACK compile-time value", void 0))
                             }, void 0, false, {
                                 fileName: "[project]/src/components/QuotationDocument.js",
-                                lineNumber: 428,
+                                lineNumber: 512,
                                 columnNumber: 25
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/QuotationDocument.js",
-                        lineNumber: 426,
+                        lineNumber: 510,
                         columnNumber: 21
                     }, ("TURBOPACK compile-time value", void 0))
                 }, void 0, false, {
                     fileName: "[project]/src/components/QuotationDocument.js",
-                    lineNumber: 425,
+                    lineNumber: 509,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0))
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/QuotationDocument.js",
-            lineNumber: 278,
+            lineNumber: 360,
             columnNumber: 13
         }, ("TURBOPACK compile-time value", void 0))
     }, void 0, false, {
         fileName: "[project]/src/components/QuotationDocument.js",
-        lineNumber: 277,
+        lineNumber: 359,
         columnNumber: 9
     }, ("TURBOPACK compile-time value", void 0));
 };
