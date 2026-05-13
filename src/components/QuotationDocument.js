@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
-import { numberToSpanishWords } from '@/lib/numberToWords';
+import { numberToSpanishWords, formatAmount } from '@/lib/numberToWords';
 
 // Helper function to parse and render formatted text
 // Supports: **bold**, • bullets, and newlines
@@ -241,11 +241,11 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
     },
     itemImage: {
-        width: 30,
-        height: 30,
-        marginRight: 5,
-        objectFit: 'cover',
-        borderRadius: 2,
+        width: 70,
+        height: 70,
+        marginRight: 8,
+        objectFit: 'contain',
+        borderRadius: 3,
     },
     itemTextContainer: {
         flex: 1,
@@ -471,9 +471,9 @@ export const QuotationDocument = ({ data }) => {
                                     </View>
                                 </View>
 
-                                <Text style={[styles.colQty, { fontSize: 8 }]}>{itemQty.toFixed(2)}</Text>
-                                <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {itemPrecioU.toFixed(2)}</Text>
-                                <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {itemSubtotal.toFixed(2)}</Text>
+                                <Text style={[styles.colQty, { fontSize: 8 }]}>{formatAmount(itemQty)}</Text>
+                                <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {formatAmount(itemPrecioU)}</Text>
+                                <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {formatAmount(itemSubtotal)}</Text>
                             </View>
                         );
                     })}
@@ -483,15 +483,15 @@ export const QuotationDocument = ({ data }) => {
                 <View style={styles.totalsContainer}>
                     <View style={styles.totalRow}>
                         <Text style={[styles.totalLabel, { fontSize: 8 }]}>Subtotal</Text>
-                        <Text style={[styles.totalValue, { fontSize: 8 }]}>S/ {subtotal.toFixed(2)}</Text>
+                        <Text style={[styles.totalValue, { fontSize: 8 }]}>S/ {formatAmount(subtotal)}</Text>
                     </View>
                     <View style={styles.totalRow}>
                         <Text style={[styles.totalLabel, { fontSize: 8 }]}>IGV (18%)</Text>
-                        <Text style={[styles.totalValue, { fontSize: 8 }]}>S/ {igv.toFixed(2)}</Text>
+                        <Text style={[styles.totalValue, { fontSize: 8 }]}>S/ {formatAmount(igv)}</Text>
                     </View>
                     <View style={styles.totalRowFinal}>
                         <Text style={[styles.totalLabel, { fontSize: 10 }]}>IMPORTE TOTAL</Text>
-                        <Text style={[styles.totalValue, { fontSize: 10, fontWeight: 'bold' }]}>S/ {total.toFixed(2)}</Text>
+                        <Text style={[styles.totalValue, { fontSize: 10, fontWeight: 'bold' }]}>S/ {formatAmount(total)}</Text>
                     </View>
                 </View>
                 <Text style={styles.totalAmountText}>

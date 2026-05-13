@@ -3,6 +3,7 @@ import { parse } from 'url';
 import next from 'next';
 import { Server } from "socket.io";
 import 'dotenv/config';
+import { startEmailListener } from './src/services/emailListener.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -137,5 +138,8 @@ app.prepare().then(() => {
     if (err) throw err;
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Socket.io ready`);
+
+    // Iniciar el listener de correos con el socket
+    startEmailListener(io);
   });
 });

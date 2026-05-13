@@ -1,9 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/quotations/[id]/route": "app/api/quotations/[id]/route.js",
-  "/api/quotations/route": "app/api/quotations/route.js",
-  "/api/users/route": "app/api/users/route.js",
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/quotations/[id]/page": "app/quotations/[id]/page.js"
-}

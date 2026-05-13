@@ -1,3 +1,7 @@
+export function formatAmount(n) {
+    return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function numberToSpanishWords(n) {
     if (n === 0) return 'CERO';
 

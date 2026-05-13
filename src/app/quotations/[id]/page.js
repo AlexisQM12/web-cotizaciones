@@ -8,6 +8,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
+import { storage } from '@/lib/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 // Import PDFViewer dynamically to avoid SSR issues
 const PDFViewer = dynamic(
@@ -66,6 +68,36 @@ export default function QuotationEditor() {
     const [pdfData, setPdfData] = useState(null);
     const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
     const [subItemsModalData, setSubItemsModalData] = useState(null);
+    const [uploadingItem, setUploadingItem] = useState({}); // { [index]: true }
+
+    const uploadItemImage = async (index, file) => {
+        if (!file || !storage) return;
+        setUploadingItem(prev => ({ ...prev, [index]: true }));
+        try {
+            const ext = file.name.split('.').pop();
+            const storageRef = ref(storage, `quotation-images/${id}/item-${index}-${Date.now()}.${ext}`);
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            handleItemChange(index, 'imageUrl', url);
+        } catch (err) {
+            console.error('Error subiendo imagen:', err);
+            alert('Error al subir la imagen. Intenta de nuevo.');
+        } finally {
+            setUploadingItem(prev => ({ ...prev, [index]: false }));
+        }
+    };
+
+    const removeItemImage = async (index, imageUrl) => {
+        try {
+            if (imageUrl) {
+                const storageRef = ref(storage, imageUrl);
+                await deleteObject(storageRef).catch(() => {});
+            }
+            handleItemChange(index, 'imageUrl', null);
+        } catch (err) {
+            console.error('Error eliminando imagen:', err);
+        }
+    };
 
     // Reset PDF state whenever we navigate to a different quotation
     useEffect(() => {
@@ -544,7 +576,7 @@ export default function QuotationEditor() {
                                     </span>
                                     {item.isExpanded === false && (
                                         <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500', marginLeft: '0.5rem' }}>
-                                            - {item.description || 'Sin título'} <strong style={{ color: '#22c55e' }}>(S/ {item.price || '0.00'})</strong>
+                                            - {item.description || 'Sin título'} <strong style={{ color: '#22c55e' }}>(S/ {Number(item.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</strong>
                                         </span>
                                     )}
                                 </div>
@@ -641,6 +673,46 @@ export default function QuotationEditor() {
                                         />
                                         <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
                                             <span>💡 Usa <b>•</b> para viñetas, <b>**texto**</b> para negrita, <b>Enter</b> para nuevas líneas</span>
+                                        </div>
+
+                                        {/* Image upload */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                                            {item.imageUrl ? (
+                                                <>
+                                                    <img
+                                                        src={item.imageUrl}
+                                                        alt="Imagen del ítem"
+                                                        style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                                    />
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                                        <label style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '600' }}>Imagen adjunta al ítem</label>
+                                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                            <label style={{ cursor: 'pointer', fontSize: '0.72rem', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: 5, padding: '0.25rem 0.6rem', fontWeight: '600' }}>
+                                                                Cambiar
+                                                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
+                                                            </label>
+                                                            <button onClick={() => removeItemImage(index, item.imageUrl)} style={{ fontSize: '0.72rem', color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 5, padding: '0.25rem 0.6rem', cursor: 'pointer', fontWeight: '600' }}>
+                                                                Quitar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <label style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                    cursor: uploadingItem[index] ? 'wait' : 'pointer',
+                                                    fontSize: '0.75rem', color: uploadingItem[index] ? '#94a3b8' : '#475569',
+                                                    background: '#f8fafc', border: '1.5px dashed #cbd5e1',
+                                                    borderRadius: 6, padding: '0.45rem 0.85rem', fontWeight: '600',
+                                                    transition: 'border-color 0.15s',
+                                                }}>
+                                                    {uploadingItem[index]
+                                                        ? <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Subiendo...</>
+                                                        : <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Añadir imagen</>
+                                                    }
+                                                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingItem[index]} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
+                                                </label>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

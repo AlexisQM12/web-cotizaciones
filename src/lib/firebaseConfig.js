@@ -1,6 +1,7 @@
 // Firebase Client Configuration for Authentication
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,16 +15,17 @@ const firebaseConfig = {
 // Initialize Firebase (only in browser, not during build)
 let app;
 let auth;
+let storage;
 
 if (typeof window !== 'undefined') {
-    // Only initialize on client-side
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
+    storage = getStorage(app);
 } else {
-    // Server-side: create dummy exports to prevent errors during build
     app = null;
     auth = null;
+    storage = null;
 }
 
-export { auth };
+export { auth, storage };
 export default app;

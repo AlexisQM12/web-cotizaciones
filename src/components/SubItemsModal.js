@@ -82,7 +82,7 @@ export function SubItemsModal({ isOpen, onClose, initialSubItems, itemDescriptio
                                     />
                                 </td>
                                 <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 'bold', fontSize: '0.9rem', color: '#334155' }}>
-                                    S/ {((parseFloat(si.quantity) || 0) * (parseFloat(si.basePrice) || 0)).toFixed(2)}
+                                    S/ {((parseFloat(si.quantity) || 0) * (parseFloat(si.basePrice) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                     <button onClick={() => handleRemove(idx)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', padding: '0.3rem 0.5rem', cursor: 'pointer' }}>
@@ -100,7 +100,7 @@ export function SubItemsModal({ isOpen, onClose, initialSubItems, itemDescriptio
                     </button>
                     
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>
-                        Costo Base Total: <span style={{ color: '#22c55e' }}>S/ {totalCost.toFixed(2)}</span>
+                        Costo Base Total: <span style={{ color: '#22c55e' }}>S/ {totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                 </div>
                 

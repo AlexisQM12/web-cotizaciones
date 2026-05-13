@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { io } from 'socket.io-client'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { QuotationDocument } from '@/components/QuotationDocument'
+import { ScannerLogsModal } from '@/components/ScannerLogsModal'
 
 export default function Dashboard() {
     const [quotations, setQuotations] = useState([])
     const [activeTab, setActiveTab] = useState('published') // 'published' or 'drafts'
     const [loading, setLoading] = useState(true)
-    const [downloadingId, setDownloadingId] = useState(null) // tracks which card is downloading
+    const [downloadingId, setDownloadingId] = useState(null)
+    const [socketInstance, setSocketInstance] = useState(null)
+    const [isScannerModalOpen, setIsScannerModalOpen] = useState(false)
+    const [stageFilter, setStageFilter] = useState('todas')
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -36,6 +41,21 @@ export default function Dashboard() {
             setQuotations(quotations.map(q =>
                 q.id === id ? { ...q, quotationStatus: newStatus } : q
             ));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const toggleSent = async (id, current, e) => {
+        e.stopPropagation();
+        const isSent = !current;
+        try {
+            await fetch(`/api/quotations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isSent })
+            });
+            setQuotations(prev => prev.map(q => q.id === id ? { ...q, isSent } : q));
         } catch (err) {
             console.error(err);
         }
@@ -88,25 +108,40 @@ export default function Dashboard() {
         fetch('/api/quotations')
             .then(res => {
                 if (res.status === 401) {
-                    router.push('/login')
-                    return []
+                    router.push('/login');
+                    return [];
                 }
-                return res.json()
+                return res.json();
             })
             .then(data => {
                 if (Array.isArray(data)) {
-                    setQuotations(data)
+                    setQuotations(data);
                 } else {
                     console.error('API Error:', data.error);
                     setQuotations([]);
                 }
-                setLoading(false)
+                setLoading(false);
             })
             .catch(err => {
-                console.error(err)
-                setLoading(false)
-            })
-    }, [router])
+                console.error(err);
+                setLoading(false);
+            });
+            
+        // Socket.io for Real-time Updates
+        const newSocket = io();
+        setSocketInstance(newSocket);
+        
+        newSocket.on('quotation_updated', (changes) => {
+            if (changes.quotationStatus === 'aprobada' && changes.ocPdfUrl) {
+                console.log(`📡 OC detectada automáticamente para cotización ${changes.id}`);
+            }
+            setQuotations(prev => prev.map(q =>
+                String(q.id) === String(changes.id) ? { ...q, ...changes } : q
+            ));
+        });
+
+        return () => newSocket.disconnect();
+    }, [router]);
 
     const createNewQuotation = async () => {
         try {
@@ -124,7 +159,20 @@ export default function Dashboard() {
     // Filter quotations based on active tab
     const publishedQuotations = quotations.filter(q => q.isPublished === true);
     const draftQuotations = quotations.filter(q => q.isPublished === false || q.isPublished === undefined);
-    const displayList = activeTab === 'published' ? publishedQuotations : draftQuotations;
+
+    const STAGES = [
+        { key: 'todas',    label: 'Todas' },
+        { key: 'emitida',  label: 'Sin enviar',    match: q => !q.isSent && q.quotationStatus !== 'aprobada' && q.quotationStatus !== 'completado' },
+        { key: 'enviada',  label: 'Enviada',        match: q => q.isSent && q.quotationStatus !== 'aprobada' && q.quotationStatus !== 'completado' },
+        { key: 'aprobada', label: 'OC Recibida',   match: q => q.quotationStatus === 'aprobada' },
+        { key: 'completado', label: 'Facturada',   match: q => q.quotationStatus === 'completado' },
+    ];
+
+    const stageFiltered = stageFilter === 'todas'
+        ? publishedQuotations
+        : publishedQuotations.filter(STAGES.find(s => s.key === stageFilter)?.match || (() => true));
+
+    const displayList = activeTab === 'published' ? stageFiltered : draftQuotations;
 
     return (
         <ProtectedRoute>
@@ -136,6 +184,9 @@ export default function Dashboard() {
                         <p style={{ color: '#667085', marginTop: '0.5rem', fontSize: '1.1rem' }}>Administra y crea nuevas propuestas profesionales.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button className="btn btn-secondary" onClick={() => setIsScannerModalOpen(true)}>
+                            📡 Lector O.C.
+                        </button>
                         <button className="btn btn-secondary" onClick={() => router.push('/settings')}>
                             Configuración
                         </button>
@@ -144,6 +195,13 @@ export default function Dashboard() {
                         </button>
                     </div>
                 </div>
+
+                <ScannerLogsModal 
+                    isOpen={isScannerModalOpen} 
+                    onClose={() => setIsScannerModalOpen(false)} 
+                    socket={socketInstance} 
+                    quotations={quotations}
+                />
 
                 {/* Tabs */}
                 <div style={{ marginBottom: '2rem', borderBottom: '2px solid #f1f5f9' }}>
@@ -181,6 +239,59 @@ export default function Dashboard() {
                     </button>
                 </div>
 
+                {/* Stage filter chips — solo para cotizaciones publicadas */}
+                {activeTab === 'published' && (
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                        {STAGES.map(stage => {
+                            const count = stage.key === 'todas'
+                                ? publishedQuotations.length
+                                : publishedQuotations.filter(stage.match).length;
+                            const isActive = stageFilter === stage.key;
+                            const colors = {
+                                todas:      { active: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+                                emitida:    { active: '#64748b', bg: '#f8fafc', border: '#cbd5e1' },
+                                enviada:    { active: '#0369a1', bg: '#e0f2fe', border: '#bae6fd' },
+                                aprobada:   { active: '#4338ca', bg: '#eef2ff', border: '#c7d2fe' },
+                                completado: { active: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                            }[stage.key];
+                            return (
+                                <button
+                                    key={stage.key}
+                                    onClick={() => setStageFilter(stage.key)}
+                                    style={{
+                                        padding: '0.4rem 1rem',
+                                        borderRadius: '999px',
+                                        border: `1.5px solid ${isActive ? colors.active : colors.border}`,
+                                        background: isActive ? colors.active : colors.bg,
+                                        color: isActive ? 'white' : colors.active,
+                                        fontWeight: '600',
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                    }}
+                                >
+                                    {stage.label}
+                                    <span style={{
+                                        background: isActive ? 'rgba(255,255,255,0.25)' : colors.active,
+                                        color: isActive ? 'white' : 'white',
+                                        borderRadius: '999px',
+                                        padding: '0.05rem 0.45rem',
+                                        fontSize: '0.7rem',
+                                        fontWeight: '700',
+                                        minWidth: 20,
+                                        textAlign: 'center',
+                                    }}>
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
                 <div className="content-frame" style={{ padding: '3.5rem' }}>
                     {loading ? (
                         <div style={{ color: '#101828', textAlign: 'center', padding: '4rem', fontSize: '1.1rem' }}>Cargando cotizaciones...</div>
@@ -212,9 +323,9 @@ export default function Dashboard() {
                                                     value={q.quotationStatus || 'pendiente'}
                                                     onChange={(e) => updateStatus(q.id, e.target.value, e)}
                                                     style={{
-                                                        backgroundColor: (q.quotationStatus || 'pendiente') === 'completado' ? '#dcfce7' : '#fef9c3',
-                                                        color: (q.quotationStatus || 'pendiente') === 'completado' ? '#16a34a' : '#a16207',
-                                                        border: `1px solid ${(q.quotationStatus || 'pendiente') === 'completado' ? '#bbf7d0' : '#fde68a'}`,
+                                                        backgroundColor: (q.quotationStatus || 'pendiente') === 'completado' ? '#dcfce7' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#e0e7ff' : '#fef9c3',
+                                                        color: (q.quotationStatus || 'pendiente') === 'completado' ? '#16a34a' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#4338ca' : '#a16207',
+                                                        border: `1px solid ${(q.quotationStatus || 'pendiente') === 'completado' ? '#bbf7d0' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#c7d2fe' : '#fde68a'}`,
                                                         borderRadius: '20px',
                                                         padding: '0.2rem 0.75rem',
                                                         fontSize: '0.75rem',
@@ -222,17 +333,32 @@ export default function Dashboard() {
                                                         cursor: 'pointer'
                                                     }}
                                                 >
+                                                    <option value="aprobada">🚀 OC Recibida</option>
                                                     <option value="completado">✓ Completado</option>
                                                     <option value="pendiente">⏳ Pendiente</option>
                                                 </select>
                                             </div>
+                                            {q.ocPdfUrl && (
+                                                <a
+                                                    href={q.ocPdfUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    title="Descargar Orden de Compra recibida"
+                                                    style={{ background: '#7c3aed', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 }}
+                                                    onMouseOver={(e) => e.currentTarget.style.background = '#6d28d9'}
+                                                    onMouseOut={(e) => e.currentTarget.style.background = '#7c3aed'}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                                                </a>
+                                            )}
                                             <button
                                                 onClick={(e) => downloadPdf(q, e)}
                                                 disabled={downloadingId === q.id}
                                                 style={{ background: downloadingId === q.id ? '#93c5fd' : '#3b82f6', border: 'none', color: 'white', cursor: downloadingId === q.id ? 'wait' : 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
                                                 onMouseOver={(e) => { if (downloadingId !== q.id) e.currentTarget.style.background = '#2563eb'; }}
                                                 onMouseOut={(e) => { if (downloadingId !== q.id) e.currentTarget.style.background = '#3b82f6'; }}
-                                                title="Descargar PDF"
+                                                title="Descargar cotización PDF"
                                             >
                                                 {downloadingId === q.id
                                                     ? <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
@@ -261,9 +387,57 @@ export default function Dashboard() {
                                     <p style={{ fontSize: '0.875rem', color: '#667085' }}>
                                         Última edición: {new Date(q.updatedAt).toLocaleDateString()}
                                     </p>
-                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+
+                                    {/* Progress steps */}
+                                    {(() => {
+                                        const ocDone = q.quotationStatus === 'aprobada' || q.quotationStatus === 'completado';
+                                        const steps = [
+                                            { label: 'Emisión', done: !!q.code },
+                                            { label: 'Envío', done: !!q.isSent || ocDone, clickable: true },
+                                            { label: 'Recep. OC', done: ocDone },
+                                            { label: 'Factura', done: q.quotationStatus === 'completado' },
+                                        ];
+                                        return (
+                                            <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: 0 }}>
+                                                {steps.map((step, i) => (
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : 'none' }}>
+                                                        <div
+                                                            onClick={step.clickable && !ocDone ? (e) => toggleSent(q.id, q.isSent, e) : undefined}
+                                                            title={step.clickable && !ocDone ? (step.done ? 'Marcar como no enviada' : 'Marcar como enviada') : step.label}
+                                                            style={{
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                                                                cursor: step.clickable && !ocDone ? 'pointer' : 'default',
+                                                                flexShrink: 0,
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                width: 22, height: 22, borderRadius: '50%',
+                                                                background: step.done ? '#22c55e' : '#f1f5f9',
+                                                                border: `2px solid ${step.done ? '#22c55e' : '#cbd5e1'}`,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                transition: 'all 0.2s',
+                                                            }}>
+                                                                {step.done
+                                                                    ? <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                    : <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1' }} />
+                                                                }
+                                                            </div>
+                                                            <span style={{ fontSize: '0.6rem', fontWeight: '600', color: step.done ? '#16a34a' : '#94a3b8', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>
+                                                                {step.label}
+                                                            </span>
+                                                        </div>
+                                                        {i < steps.length - 1 && (
+                                                            <div style={{ flex: 1, height: 2, background: steps[i + 1].done ? '#22c55e' : '#e2e8f0', margin: '0 4px', marginBottom: '1rem', transition: 'background 0.2s' }} />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                         <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Total</span>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>S/ {(q.total || 0).toFixed(2)}</span>
+                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>S/ {Number(q.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             ))}
