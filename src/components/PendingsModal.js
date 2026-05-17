@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '@/contexts/AuthContext';
 
 const actionBtnStyle = {
     display: 'flex',
@@ -18,6 +19,7 @@ const actionBtnStyle = {
 };
 
 export function PendingsModal({ quotation, onClose, onSave }) {
+    const { user } = useAuth();
     const [tasks, setTasks] = useState(quotation.operationsData?.tasks || []);
     const [materials, setMaterials] = useState(quotation.operationsData?.materials || []);
 
@@ -150,12 +152,10 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             return;
         }
         try {
-            // Resolver companyProfileId desde el perfil default
-            const profilesRes = await fetch('/api/company-profiles');
-            const profiles    = await profilesRes.json();
-            const companyProfileId = profiles.find(p => p.isDefault)?.id || profiles[0]?.id;
+            // Usar directamente el empresaId del usuario autenticado
+            const companyProfileId = user?.empresaId;
             if (!companyProfileId) {
-                alert('No hay perfil de empresa configurado.');
+                alert('No hay perfil de empresa configurado. Verifica tu sesión.');
                 return;
             }
 
