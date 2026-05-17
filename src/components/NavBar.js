@@ -53,8 +53,20 @@ export function NavBar() {
                 {companyLogo && (
                     <>
                         <div style={{ width: 1, height: 28, background: '#e2e8f0' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
-                            onClick={() => router.push('/settings')}>
+                        <div
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                cursor: 'pointer',
+                                background: '#fff',
+                                padding: '4px 10px 4px 6px',
+                                borderRadius: '10px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                transition: 'transform 0.2s'
+                            }}
+                            onClick={() => router.push('/settings')}
+                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
                             <img
                                 src={companyLogo}
                                 alt={companyName || 'Logo empresa'}
