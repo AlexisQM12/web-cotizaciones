@@ -36,11 +36,33 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             const url = await getDownloadURL(storageRef);
             
             if (type === 'material') {
-                setMaterials(materials.map(m => m.id === itemId ? { ...m, attachmentUrl: url } : m));
+                let detectedCost = null;
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const res = await fetch('/api/scan-invoice', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.amount) {
+                            detectedCost = data.amount;
+                            alert(`Monto detectado automáticamente: S/ ${detectedCost}`);
+                        }
+                    }
+                } catch(e) {
+                    console.error("Error en OCR:", e);
+                }
+
+                setMaterials(prev => prev.map(m => m.id === itemId ? { 
+                    ...m, 
+                    attachmentUrl: url, 
+                    purchased: detectedCost ? true : m.purchased,
+                    cost: detectedCost !== null ? detectedCost : m.cost
+                } : m));
+
             } else if (type === 'material_image') {
-                setMaterials(materials.map(m => m.id === itemId ? { ...m, productImageUrl: url } : m));
+                setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, productImageUrl: url } : m));
             } else {
-                setTasks(tasks.map(t => t.id === itemId ? { ...t, attachmentUrl: url } : t));
+                setTasks(prev => prev.map(t => t.id === itemId ? { ...t, attachmentUrl: url } : t));
             }
         } catch (error) {
             console.error("Error al subir archivo:", error);
@@ -175,7 +197,8 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                                 <input type="text" className="input" placeholder="Marca" value={m.brand || ''} onChange={(e) => updateMaterialField(m.id, 'brand', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
                                                 <input type="text" className="input" placeholder="Modelo" value={m.model || ''} onChange={(e) => updateMaterialField(m.id, 'model', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
                                                 <input type="text" className="input" placeholder="Código" value={m.code || ''} onChange={(e) => updateMaterialField(m.id, 'code', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                                <input type="url" className="input" placeholder="Link de compra (URL)" value={m.buyLink || ''} onChange={(e) => updateMaterialField(m.id, 'buyLink', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
+                                                <input type="number" className="input" placeholder="Costo (S/)" value={m.cost || ''} onChange={(e) => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
+                                                <input type="url" className="input" placeholder="Link de compra" value={m.buyLink || ''} onChange={(e) => updateMaterialField(m.id, 'buyLink', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }}>
                                                 <label style={{...actionBtnStyle, padding: '0.3rem 0.6rem'}}>
