@@ -15,13 +15,33 @@ export async function GET(req) {
         ]);
 
         const periods = {};
-        const bump = (p, key) => {
-            if (!p) return;
-            periods[p] = periods[p] || { period: p, sales: 0, purchases: 0 };
-            periods[p][key] += 1;
+        const ensure = (p) => {
+            periods[p] = periods[p] || {
+                period: p,
+                sales: 0, purchases: 0,
+                salesAmount: 0, purchasesAmount: 0,
+            };
+            return periods[p];
         };
-        salesSnap.docs.forEach(d => bump(d.data().period, 'sales'));
-        purchasesSnap.docs.forEach(d => bump(d.data().period, 'purchases'));
+        salesSnap.docs.forEach(doc => {
+            const d = doc.data();
+            if (!d.period || d.anulado) return;
+            const row = ensure(d.period);
+            row.sales += 1;
+            row.salesAmount += Number(d.total) || 0;
+        });
+        purchasesSnap.docs.forEach(doc => {
+            const d = doc.data();
+            if (!d.period || d.anulado) return;
+            const row = ensure(d.period);
+            row.purchases += 1;
+            row.purchasesAmount += Number(d.total) || 0;
+        });
+        // Redondeo a 2 decimales para evitar restos flotantes (0.1 + 0.2 = 0.3000004)
+        Object.values(periods).forEach(p => {
+            p.salesAmount     = Math.round(p.salesAmount * 100) / 100;
+            p.purchasesAmount = Math.round(p.purchasesAmount * 100) / 100;
+        });
 
         const list = Object.values(periods).sort((a, b) => b.period.localeCompare(a.period));
         const latestWithData = list[0]?.period || null;

@@ -18,6 +18,8 @@ export default function Dashboard() {
     const [socketInstance, setSocketInstance] = useState(null)
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false)
     const [stageFilter, setStageFilter] = useState('todas')
+    const [leads, setLeads] = useState([])
+    const [toasts, setToasts] = useState([]) // notificaciones flotantes transitorias
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -131,10 +133,16 @@ export default function Dashboard() {
                 setLoading(false);
             });
             
+        // Cargar solicitudes de cotización pendientes desde el email
+        fetch('/api/quote-leads?status=pending')
+            .then(r => r.json())
+            .then(d => { if (Array.isArray(d.leads)) setLeads(d.leads); })
+            .catch(() => {});
+
         // Socket.io for Real-time Updates
         const newSocket = io();
         setSocketInstance(newSocket);
-        
+
         newSocket.on('quotation_updated', (changes) => {
             if (changes.empresaId && changes.empresaId !== user.empresaId) return;
             if (changes.quotationStatus === 'aprobada' && changes.ocPdfUrl) {
@@ -143,6 +151,14 @@ export default function Dashboard() {
             setQuotations(prev => prev.map(q =>
                 String(q.id) === String(changes.id) ? { ...q, ...changes } : q
             ));
+        });
+
+        newSocket.on('quote_lead_detected', (lead) => {
+            setLeads(prev => [lead, ...prev]);
+            // Mostrar toast flotante que se auto-cierra en 8 segundos
+            const toastId = `${lead.id}-${Date.now()}`;
+            setToasts(prev => [...prev, { ...lead, toastId }]);
+            setTimeout(() => setToasts(prev => prev.filter(t => t.toastId !== toastId)), 8000);
         });
 
         return () => newSocket.disconnect();
@@ -165,6 +181,39 @@ export default function Dashboard() {
             console.error(err)
         }
     }
+
+    const createQuotationFromLead = async (lead) => {
+        if (!user?.empresaId) return;
+        // Extrae nombre del remitente del campo "Nombre <email>"
+        const nameMatch = lead.from?.match(/^([^<]+)</) || [];
+        const clientName = (nameMatch[1]?.trim() || lead.from || 'Cliente por correo').slice(0, 80);
+        try {
+            const res = await fetch('/api/quotations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientName, empresaId: user.empresaId }),
+            });
+            const quote = await res.json();
+            await fetch(`/api/quote-leads/${lead.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'converted' }),
+            });
+            setLeads(prev => prev.filter(l => l.id !== lead.id));
+            router.push(`/quotations/${quote.id}`);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const dismissLead = async (leadId) => {
+        setLeads(prev => prev.filter(l => l.id !== leadId));
+        await fetch(`/api/quote-leads/${leadId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'dismissed' }),
+        }).catch(() => {});
+    };
 
     // Filter quotations based on active tab
     const publishedQuotations = quotations.filter(q => q.isPublished === true);
@@ -209,12 +258,115 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <ScannerLogsModal 
-                    isOpen={isScannerModalOpen} 
-                    onClose={() => setIsScannerModalOpen(false)} 
-                    socket={socketInstance} 
+                <ScannerLogsModal
+                    isOpen={isScannerModalOpen}
+                    onClose={() => setIsScannerModalOpen(false)}
+                    socket={socketInstance}
                     quotations={quotations}
                 />
+
+                {/* ── Solicitudes de cotización detectadas por email ── */}
+                {leads.length > 0 && (
+                    <div style={{
+                        background: '#fffbeb', border: '1px solid #fde68a',
+                        borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.5rem',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                            <span style={{
+                                width: 10, height: 10, borderRadius: '50%', background: '#f59e0b',
+                                animation: 'pulse-dot 1.4s ease-in-out infinite', display: 'inline-block',
+                            }} />
+                            <strong style={{ color: '#92400e', fontSize: '0.95rem' }}>
+                                {leads.length} posible{leads.length > 1 ? 's' : ''} solicitud{leads.length > 1 ? 'es' : ''} de cotización detectada{leads.length > 1 ? 's' : ''} en tu correo
+                            </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {leads.map(lead => (
+                                <div key={lead.id} style={{
+                                    background: '#fff', borderRadius: 10,
+                                    padding: '0.75rem 1rem',
+                                    border: '1px solid #fde68a',
+                                    display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
+                                }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {lead.subject}
+                                        </div>
+                                        <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>
+                                            De: {lead.from} · {formatLeadDate(lead.receivedAt)}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
+                                            onClick={() => createQuotationFromLead(lead)}
+                                        >
+                                            ＋ Crear cotización
+                                        </button>
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                                            onClick={() => dismissLead(lead.id)}
+                                        >
+                                            Descartar
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Toasts flotantes para leads en tiempo real ── */}
+                <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {toasts.map(toast => (
+                        <div key={toast.toastId} style={{
+                            background: '#1f2937', color: '#fff',
+                            borderRadius: 12, padding: '1rem 1.25rem',
+                            maxWidth: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                            animation: 'slide-in 0.3s ease',
+                            borderLeft: '4px solid #f59e0b',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>📩</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: 4 }}>
+                                        Nueva solicitud de cotización
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: '#d1d5db', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {toast.subject}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{toast.from}</div>
+                                </div>
+                                <button
+                                    onClick={() => setToasts(prev => prev.filter(t => t.toastId !== toast.toastId))}
+                                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0 }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <button
+                                className="btn btn-primary"
+                                style={{ width: '100%', marginTop: '0.75rem', padding: '0.45rem', fontSize: '0.82rem' }}
+                                onClick={() => { createQuotationFromLead(toast); setToasts(prev => prev.filter(t => t.toastId !== toast.toastId)); }}
+                            >
+                                ＋ Crear cotización ahora
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <style jsx global>{`
+                    @keyframes pulse-dot {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50%       { opacity: 0.5; transform: scale(1.4); }
+                    }
+                    @keyframes slide-in {
+                        from { opacity: 0; transform: translateX(40px); }
+                        to   { opacity: 1; transform: translateX(0); }
+                    }
+                `}</style>
 
                 {/* Tabs */}
                 <div className="dashboard-tabs">
@@ -454,4 +606,9 @@ export default function Dashboard() {
             </main>
         </ProtectedRoute>
     )
+}
+
+function formatLeadDate(iso) {
+    if (!iso) return '';
+    try { const d = new Date(iso); return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return iso; }
 }

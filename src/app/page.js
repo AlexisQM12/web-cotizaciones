@@ -1,11 +1,25 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { io } from 'socket.io-client'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 
 export default function Home() {
     const router = useRouter()
+    const [pendingLeads, setPendingLeads] = useState(0)
+
+    useEffect(() => {
+        fetch('/api/quote-leads?status=pending')
+            .then(r => r.json())
+            .then(d => setPendingLeads(d.leads?.length || 0))
+            .catch(() => {});
+
+        const socket = io()
+        socket.on('quote_lead_detected', () => setPendingLeads(n => n + 1))
+        return () => socket.disconnect()
+    }, [])
 
     return (
         <ProtectedRoute>
@@ -21,11 +35,28 @@ export default function Home() {
                 <div className="content-frame main-content-frame">
                     <div className="grid-list" style={{ gap: '2rem' }}>
                         {/* Card 1: Mis Cotizaciones */}
-                        <div 
-                            className="card" 
-                            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}
+                        <div
+                            className="card"
+                            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem', position: 'relative' }}
                             onClick={() => router.push('/quotations')}
                         >
+                            {pendingLeads > 0 && (
+                                <span style={{
+                                    position: 'absolute', top: '1rem', right: '1rem',
+                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                    background: '#fee2e2', color: '#b91c1c',
+                                    borderRadius: 999, padding: '0.25rem 0.65rem',
+                                    fontSize: '0.72rem', fontWeight: 700,
+                                }}>
+                                    <span style={{
+                                        width: 8, height: 8, borderRadius: '50%',
+                                        background: '#ef4444',
+                                        animation: 'pulse-dot 1.4s ease-in-out infinite',
+                                        display: 'inline-block',
+                                    }} />
+                                    {pendingLeads} solicitud{pendingLeads > 1 ? 'es' : ''}
+                                </span>
+                            )}
                             <div style={{ background: '#eff6ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
@@ -37,11 +68,18 @@ export default function Home() {
                             </div>
                             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mis Cotizaciones</h2>
                             <p style={{ color: '#667085', fontSize: '0.95rem' }}>Gestiona tus cotizaciones, órdenes de compra y facturación.</p>
+
+                            <style jsx>{`
+                                @keyframes pulse-dot {
+                                    0%, 100% { opacity: 1; transform: scale(1); }
+                                    50%       { opacity: 0.5; transform: scale(1.35); }
+                                }
+                            `}</style>
                         </div>
 
                         {/* Card 2: Mis Pendientes */}
-                        <div 
-                            className="card" 
+                        <div
+                            className="card"
                             style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}
                             onClick={() => router.push('/pendings')}
                         >

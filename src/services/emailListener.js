@@ -9,6 +9,54 @@ import { firestore, storage, admin } from '../lib/firebase-admin.js';
 const STATE_COL  = 'scanner_state';
 const CACHE_DOC  = 'cache';
 const LOGS_DOC   = 'logs';
+const LEADS_COL  = 'quote_leads';
+
+// ── Detección de solicitudes de cotización ────────────────────────────────
+const QUOTE_KEYWORDS = [
+  /solicitud\s+de\s+cotizaci[oó]n/i,
+  /solicitud\s+de\s+presupuesto/i,
+  /solicitud\s+de\s+precio/i,
+  /solicitar\s+cotizaci[oó]n/i,
+  /cotizaci[oó]n\s+de\b/i,
+  /pedir\s+cotizaci[oó]n/i,
+  /quisiera\s+cotizar/i,
+  /me\s+pueden\s+cotizar/i,
+  /pueden\s+cotizarme/i,
+  /solicito\s+cotizaci[oó]n/i,
+  /necesito\s+cotizaci[oó]n/i,
+  /requiero\s+cotizaci[oó]n/i,
+  /\brequest\s+for\s+quot(e|ation)\b/i,
+  /\brfq\b/i,
+  /presupuesto\s+para\b/i,
+  /\bproforma\b/i,
+];
+
+function isLikelyQuoteRequest(subject) {
+  return QUOTE_KEYWORDS.some(re => re.test(subject));
+}
+
+async function saveQuoteLead(uid, subject, fromRaw, dateRaw, io) {
+  try {
+    const docId = `inbox-${uid}`;
+    const ref   = firestore.collection(LEADS_COL).doc(docId);
+    const snap  = await ref.get();
+    if (snap.exists) return; // ya guardado en ciclo anterior
+
+    const lead = {
+      emailUid:   String(uid),
+      subject:    subject || '(sin asunto)',
+      from:       fromRaw || '',
+      receivedAt: dateRaw || new Date().toISOString(),
+      status:     'pending',
+      createdAt:  new Date().toISOString(),
+    };
+    await ref.set(lead);
+    console.log(`[Lector] 📩 Solicitud de cotización detectada: "${subject}" de ${fromRaw}`);
+    if (io) io.emit('quote_lead_detected', { id: docId, ...lead });
+  } catch (e) {
+    console.warn('[Lector] Error guardando lead:', e.message);
+  }
+}
 
 export const poLogs         = [];
 const processedUids         = new Set();
@@ -221,6 +269,18 @@ export async function startEmailListener(io) {
       try { connection.end(); } catch (_) {}
 
       console.log(`[Lector] ${pdfQueue.length} PDFs extraídos de ${withPdf.length} correos. Cerrando IMAP...`);
+
+      // ── Fase 2b: detectar solicitudes de cotización por asunto ──────────
+      // Usamos los headers ya descargados (sin nueva conexión IMAP).
+      for (const m of unprocessed) {
+        const headerPart = m.parts?.find(p => String(p.which || '').includes('HEADER'));
+        const subject = (headerPart?.body?.subject?.[0] || '').trim();
+        if (isLikelyQuoteRequest(subject)) {
+          const fromRaw = (headerPart?.body?.from?.[0] || '').trim();
+          const dateRaw = (headerPart?.body?.date?.[0] || '').trim();
+          await saveQuoteLead(m.attributes.uid, subject, fromRaw, dateRaw, io);
+        }
+      };
 
       // ── FASE 2: Procesar PDFs — sin conexión IMAP abierta ──
       if (pdfQueue.length === 0) return;
