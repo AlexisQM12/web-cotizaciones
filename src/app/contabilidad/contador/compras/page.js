@@ -180,6 +180,18 @@ function RegistroCompras() {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                            {s.pdfUrl && (
+                                                <a
+                                                    href={s.pdfUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="acc-icon-btn"
+                                                    title="Ver / Descargar factura"
+                                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                                                >
+                                                    <Icon name="doc-down" size={14} />
+                                                </a>
+                                            )}
                                             <button className="acc-icon-btn" title="Editar" onClick={() => { setEditing(s); setShowForm(true); }}><Icon name="edit" size={14} /></button>
                                             <button className="acc-icon-btn danger" title="Eliminar" onClick={() => handleDelete(s.id)}><Icon name="trash" size={14} /></button>
                                         </div>

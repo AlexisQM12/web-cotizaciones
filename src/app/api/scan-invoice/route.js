@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import vision from '@google-cloud/vision';
+import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const PDFParse = require('pdf-parse');
 
 // ─── Cliente de Google Cloud Vision con las mismas credenciales de Firebase Admin ───
 function getVisionClient() {
@@ -13,9 +17,35 @@ function getVisionClient() {
     });
 }
 
-// Endpoint OCR para escanear facturas/comprobantes (PDF o imagen).
-// Usa Google Cloud Vision API — mucho más preciso que Tesseract para facturas en español.
-// Devuelve: { amount, ruc, serie, numero, fecha, razonSocial, text }
+// ─── Renderizador de PDF en imagen usando pdfjs-dist y canvas local ───
+async function getPdfjsDocument(buffer) {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const workerPath = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = `file:///${workerPath.replace(/\\/g, '/')}`;
+    return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+}
+
+async function renderPdfPageToImage(buffer) {
+    const { createCanvas } = await import('@napi-rs/canvas');
+    const pdf = await getPdfjsDocument(buffer);
+    const page = await pdf.getPage(1); // Escaneamos la primera página (donde están todos los totales y datos)
+    const viewport = page.getViewport({ scale: 2.0 }); // Escala 2.0 para alta definición en OCR
+    const w = Math.ceil(viewport.width);
+    const h = Math.ceil(viewport.height);
+
+    const canvas = createCanvas(w, h);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, w, h);
+    
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas.toBuffer('image/png');
+}
+
+// Endpoint OCR inteligente para escanear facturas/comprobantes (PDF o imagen).
+// 1) Si es PDF nativo con texto legible, usa pdf-parse (instantáneo y gratis).
+// 2) Si es PDF escaneado (imagen) o con encoding raro, lo convierte a imagen y hace OCR de Google Vision.
+// 3) Si es imagen, hace OCR de Google Vision directo.
 export async function POST(req) {
     try {
         const formData = await req.formData();
@@ -28,24 +58,49 @@ export async function POST(req) {
         const name   = file.name || '';
 
         const client = getVisionClient();
-
         let extractedText = '';
+        let textSource = '';
 
         if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
-            // Para PDFs: Vision API soporta PDFs directamente via document_text_detection
-            const [result] = await client.documentTextDetection({
-                image: { content: buffer.toString('base64') },
-                imageContext: { languageHints: ['es', 'en'] },
-            });
-            extractedText = result.fullTextAnnotation?.text || '';
+            // 1. Intentamos extracción rápida de texto nativo
+            try {
+                const parser = new PDFParse(buffer);
+                const pdfData = await parser;
+                extractedText = pdfData?.text || '';
+                textSource = 'pdf-parse';
+            } catch (parseErr) {
+                console.warn('pdf-parse falló, se intentará renderizar:', parseErr);
+            }
 
+            // 2. Si no hay texto, o el texto es sospechosamente corto, o no tiene los datos clave,
+            // renderizamos la primera página a imagen y hacemos el OCR robusto de Google Vision.
+            const isTextGarbage = !extractedText || extractedText.trim().length < 50;
+            const tempAmount = isTextGarbage ? null : extractTotalAmount(extractedText);
+            const tempRuc    = isTextGarbage ? null : extractRUC(extractedText);
+
+            if (isTextGarbage || !tempAmount || !tempRuc) {
+                try {
+                    console.log('PDF escaneado o ilegible detectado. Convirtiendo a imagen para OCR con Google Vision...');
+                    const pageImageBuffer = await renderPdfPageToImage(buffer);
+                    
+                    const [result] = await client.documentTextDetection({
+                        image: { content: pageImageBuffer.toString('base64') },
+                        imageContext: { languageHints: ['es', 'en'] },
+                    });
+                    extractedText = result.fullTextAnnotation?.text || '';
+                    textSource = 'google-vision-pdf';
+                } catch (ocrErr) {
+                    console.error('OCR de PDF renderizado falló:', ocrErr);
+                }
+            }
         } else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
-            // Para imágenes: document_text_detection es más preciso que text_detection
+            // Para imágenes directo a Google Vision
             const [result] = await client.documentTextDetection({
                 image: { content: buffer.toString('base64') },
                 imageContext: { languageHints: ['es', 'en'] },
             });
             extractedText = result.fullTextAnnotation?.text || '';
+            textSource = 'google-vision-image';
         } else {
             return NextResponse.json({ error: `Tipo de archivo no soportado: ${type || name}` }, { status: 400 });
         }
@@ -72,6 +127,7 @@ export async function POST(req) {
             fecha,
             razonSocial,
             text: extractedText.slice(0, 3000),
+            textSource,
         });
 
     } catch (err) {
@@ -84,32 +140,45 @@ export async function POST(req) {
 function extractTotalAmount(text) {
     const upper = text.toUpperCase().replace(/\s+/g, ' ');
 
-    // Prioridad 1: "Importe Total: 24.30" o "TOTAL A PAGAR: S/ 24.30"
-    const priority = [
-        /IMPORTE\s+TOTAL[^:\n]{0,15}[:\s]+S?\/?\s*([\d,]+\.?\d{0,2})/i,
-        /TOTAL\s+A\s+PAGAR[^:\n]{0,10}[:\s]+S?\/?\s*([\d,]+\.?\d{0,2})/i,
-        /TOTAL[^:\n]{0,20}[:\s]+S?\/?\s*([\d,]+\.?\d{0,2})/i,
-        /IMPORTE[^:\n]{0,20}[:\s]+S?\/?\s*([\d,]+\.?\d{0,2})/i,
+    // Buscamos todas las coincidencias de patrones de TOTAL real
+    const regexes = [
+        // 1. TOTAL A PAGAR o IMPORTE TOTAL (las etiquetas más específicas)
+        /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
+        // 2. TOTAL a secas (evitando SUB TOTAL, P. TOTAL y PRECIO TOTAL)
+        /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
+        // 3. IMPORTE a secas
+        /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
     ];
-    for (const re of priority) {
-        const m = upper.match(re);
-        if (m) {
-            const n = parseFloat(m[1].replace(/,/g, ''));
-            if (n > 0 && n < 10_000_000) return Math.round(n * 100) / 100;
+
+    for (const regex of regexes) {
+        let match;
+        regex.lastIndex = 0;
+        const matches = [];
+        while ((match = regex.exec(upper)) !== null) {
+            const val = parseFloat(match[1].replace(/,/g, ''));
+            if (val > 0 && val < 1000000) {
+                matches.push(val);
+            }
+        }
+        if (matches.length > 0) {
+            // Devolvemos el último encontrado en el documento, que corresponde al total final del pie de página
+            return matches[matches.length - 1];
         }
     }
 
-    // Prioridad 2: S/. XX.XX o S/ XX.XX
-    const soles = [...upper.matchAll(/S\s*\/\.?\s*([\d,]+\.\d{2})/g)]
-        .map(m => parseFloat(m[1].replace(/,/g, '')))
-        .filter(n => n > 0 && n < 10_000_000);
-    if (soles.length > 0) return Math.max(...soles);
-
-    // Prioridad 3: cualquier monto con decimales
-    const general = [...upper.matchAll(/\b(\d{1,3}(?:,\d{3})*\.\d{2})\b/g)]
-        .map(m => parseFloat(m[1].replace(/,/g, '')))
-        .filter(n => n > 1 && n < 10_000_000);
-    if (general.length > 0) return Math.max(...general);
+    // Fallback inteligente: si no se detectan etiquetas, buscamos el último valor monetario del documento con S/
+    const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
+    let m;
+    const moneyValues = [];
+    while ((m = moneyRegex.exec(upper)) !== null) {
+        const val = parseFloat(m[1].replace(/,/g, ''));
+        if (val > 0 && val < 1000000) {
+            moneyValues.push(val);
+        }
+    }
+    if (moneyValues.length > 0) {
+        return moneyValues[moneyValues.length - 1]; // El último monto con S/ suele ser el total final
+    }
 
     return null;
 }
