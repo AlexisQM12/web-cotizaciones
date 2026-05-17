@@ -30,12 +30,19 @@ export function AuthProvider({ children }) {
 
                 setUser(userData);
 
-                // Sync user data to Firestore
-                await fetch('/api/users', {
+                // Sync user data to Firestore and get full profile (including empresaId)
+                const res = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(userData)
                 });
+                
+                if (res.ok) {
+                    const dbData = await res.json();
+                    setUser(dbData.user);
+                } else {
+                    setUser(userData);
+                }
             } else {
                 // User is signed out
                 setUser(null);

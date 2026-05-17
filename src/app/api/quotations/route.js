@@ -2,7 +2,15 @@ import { firestore } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
-        const snapshot = await firestore.collection('quotations').get();
+        const { searchParams } = new URL(req.url);
+        const empresaId = searchParams.get('empresaId');
+
+        let query = firestore.collection('quotations');
+        if (empresaId) {
+            query = query.where('empresaId', '==', empresaId);
+        }
+
+        const snapshot = await query.get();
 
         let quotations = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -38,16 +46,14 @@ export async function GET(req) {
 
 export async function POST(req) {
     try {
-        const { clientName } = await req.json();
+        const { clientName, empresaId } = await req.json();
 
         // Fetch default profiles
-        const [companySnap, clientSnap] = await Promise.all([
-            firestore.collection('company_profiles').where('isDefault', '==', true).limit(1).get(),
-            firestore.collection('client_profiles').where('isDefault', '==', true).limit(1).get()
-        ]);
+        const companySnap = await firestore.collection('company_profiles').doc(empresaId).get();
+        const clientSnap = await firestore.collection('client_profiles').where('empresaId', '==', empresaId).where('isDefault', '==', true).limit(1).get();
 
-        const defaultCompany = companySnap.docs[0];
-        const defaultClient = clientSnap.docs[0];
+        const defaultCompany = companySnap.exists ? companySnap : null;
+        const defaultClient = !clientSnap.empty ? clientSnap.docs[0] : null;
 
         // Create draft quotation without code
         const newQuote = {
@@ -58,6 +64,7 @@ export async function POST(req) {
             authorId: '1',
             companyProfileId: defaultCompany?.id || null,
             clientProfileId: defaultClient?.id || null,
+            empresaId: empresaId || null,
             items: [],
             total: 0,
             createdAt: new Date().toISOString(),

@@ -2,7 +2,18 @@ import { firestore, storage } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
-        const snapshot = await firestore.collection('company_profiles').get();
+        const { searchParams } = new URL(req.url);
+        const empresaId = searchParams.get('empresaId');
+
+        let snapshot;
+        if (empresaId) {
+            // Return only the company profile matching the user's empresaId
+            const docRef = await firestore.collection('company_profiles').doc(empresaId).get();
+            snapshot = { docs: docRef.exists ? [docRef] : [] };
+        } else {
+            // Fallback (only for admins or legacy)
+            snapshot = await firestore.collection('company_profiles').get();
+        }
 
         let profiles = snapshot.docs.map(doc => ({
             id: doc.id,

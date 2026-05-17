@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function Settings() {
+    const { user } = useAuth();
     const [companyProfiles, setCompanyProfiles] = useState([]);
     const [clientProfiles, setClientProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,13 +48,14 @@ export default function Settings() {
     const router = useRouter();
 
     useEffect(() => {
+        if (!user?.empresaId) return;
         fetchCompanyProfiles();
         fetchClientProfiles();
-    }, []);
+    }, [user?.empresaId]);
 
     const fetchCompanyProfiles = async () => {
         try {
-            const res = await fetch('/api/company-profiles');
+            const res = await fetch(`/api/company-profiles?empresaId=${user?.empresaId}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setCompanyProfiles(data);
@@ -68,7 +72,7 @@ export default function Settings() {
 
     const fetchClientProfiles = async () => {
         try {
-            const res = await fetch('/api/client-profiles');
+            const res = await fetch(`/api/client-profiles?empresaId=${user?.empresaId}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setClientProfiles(data);
@@ -153,7 +157,7 @@ export default function Settings() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clientFormData)
+                body: JSON.stringify({ ...clientFormData, empresaId: user?.empresaId })
             });
             if (res.ok) {
                 setClientFormData({ name: '', ruc: '', address: '', isDefault: false });

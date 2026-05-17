@@ -7,8 +7,10 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { QuotationDocument } from '@/components/QuotationDocument'
 import { ScannerLogsModal } from '@/components/ScannerLogsModal'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function Dashboard() {
+    const { user } = useAuth();
     const [quotations, setQuotations] = useState([])
     const [activeTab, setActiveTab] = useState('published') // 'published' or 'drafts'
     const [loading, setLoading] = useState(true)
@@ -105,7 +107,9 @@ export default function Dashboard() {
     };
 
     useEffect(() => {
-        fetch('/api/quotations')
+        if (!user?.empresaId) return;
+
+        fetch(`/api/quotations?empresaId=${user.empresaId}`)
             .then(res => {
                 if (res.status === 401) {
                     router.push('/login');
@@ -132,6 +136,7 @@ export default function Dashboard() {
         setSocketInstance(newSocket);
         
         newSocket.on('quotation_updated', (changes) => {
+            if (changes.empresaId && changes.empresaId !== user.empresaId) return;
             if (changes.quotationStatus === 'aprobada' && changes.ocPdfUrl) {
                 console.log(`📡 OC detectada automáticamente para cotización ${changes.id}`);
             }
@@ -141,13 +146,18 @@ export default function Dashboard() {
         });
 
         return () => newSocket.disconnect();
-    }, [router]);
+    }, [router, user?.empresaId]);
 
     const createNewQuotation = async () => {
+        if (!user?.empresaId) {
+            alert('Debes configurar tu empresa primero.');
+            return;
+        }
         try {
             const res = await fetch('/api/quotations', {
                 method: 'POST',
-                body: JSON.stringify({ clientName: 'Sin Título' })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientName: 'Sin Título', empresaId: user.empresaId })
             })
             const quote = await res.json()
             router.push(`/quotations/${quote.id}`)

@@ -33,15 +33,17 @@ export async function POST(req) {
                 photoURL: userData.photoURL,
                 firstName: userData.firstName
             });
+            const updatedUser = (await userRef.get()).data();
+            return Response.json({ success: true, user: updatedUser });
         } else {
             // Create new user
-            await userRef.set({
+            const newUser = {
                 ...userData,
                 createdAt: new Date().toISOString()
-            });
+            };
+            await userRef.set(newUser);
+            return Response.json({ success: true, user: newUser });
         }
-
-        return Response.json({ success: true, user: userData });
     } catch (error) {
         console.error('User API Error:', error);
         return Response.json({ error: 'Failed to save user data' }, { status: 500 });

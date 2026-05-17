@@ -2,7 +2,15 @@ import { firestore } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
-        const snapshot = await firestore.collection('client_profiles').get();
+        const { searchParams } = new URL(req.url);
+        const empresaId = searchParams.get('empresaId');
+
+        let query = firestore.collection('client_profiles');
+        if (empresaId) {
+            query = query.where('empresaId', '==', empresaId);
+        }
+
+        const snapshot = await query.get();
 
         let profiles = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -28,13 +36,16 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { name, ruc, address, isDefault } = body;
+        const { name, ruc, address, isDefault, empresaId } = body;
 
         const batch = firestore.batch();
 
-        // If this is set as default, unset others
-        if (isDefault) {
-            const defaultQuery = await firestore.collection('client_profiles').where('isDefault', '==', true).get();
+        // If this is set as default, unset others for this empresaId
+        if (isDefault && empresaId) {
+            const defaultQuery = await firestore.collection('client_profiles')
+                .where('empresaId', '==', empresaId)
+                .where('isDefault', '==', true)
+                .get();
             defaultQuery.forEach(doc => {
                 batch.update(doc.ref, { isDefault: false });
             });
@@ -46,6 +57,7 @@ export async function POST(req) {
             ruc,
             address,
             isDefault,
+            empresaId: empresaId || null,
             createdAt: new Date().toISOString()
         });
 
