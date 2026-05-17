@@ -27,7 +27,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
 
     const handleFileUpload = async (itemId, type, file) => {
         if (!file) return;
-        setUploadingState(prev => ({ ...prev, [itemId]: true }));
+        setUploadingState(prev => ({ ...prev, [itemId]: 'Subiendo archivo a la nube...' }));
         try {
             const ext = file.name.split('.').pop();
             const filename = `pendings/${quotation.id}/${type}_${itemId}_${Date.now()}.${ext}`;
@@ -37,6 +37,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             
             if (type === 'material') {
                 let detectedCost = null;
+                setUploadingState(prev => ({ ...prev, [itemId]: 'Escaneando comprobante con IA...' }));
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -71,7 +72,23 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             console.error("Error al subir archivo:", error);
             alert("Error al subir el archivo.");
         } finally {
-            setUploadingState(prev => ({ ...prev, [itemId]: false }));
+            setUploadingState(prev => {
+                const newState = { ...prev };
+                delete newState[itemId];
+                return newState;
+            });
+        }
+    };
+
+    const handleFileDelete = (itemId, type) => {
+        if (!window.confirm("¿Estás seguro de que deseas eliminar este archivo?")) return;
+        
+        if (type === 'material') {
+            setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, attachmentUrl: null, cost: '' } : m));
+        } else if (type === 'material_image') {
+            setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, productImageUrl: null } : m));
+        } else {
+            setTasks(prev => prev.map(t => t.id === itemId ? { ...t, attachmentUrl: null } : t));
         }
     };
 
@@ -209,7 +226,12 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                                     <span style={{ fontSize: '0.75rem' }}>Imagen del Producto</span>
                                                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material_image', e.target.files[0])} />
                                                 </label>
-                                                {m.productImageUrl && <a href={m.productImageUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>Ver Imagen</a>}
+                                                {m.productImageUrl && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <a href={m.productImageUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>Ver Imagen</a>
+                                                        <button onClick={() => handleFileDelete(m.id, 'material_image')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>✕</button>
+                                                    </div>
+                                                )}
                                                 {uploadingState[m.id] && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Subiendo...</span>}
                                             </div>
                                         </div>
@@ -217,7 +239,10 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${m.purchased ? '#bbf7d0' : '#e2e8f0'}`, paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             {uploadingState[m.id] ? (
-                                                <span style={{ fontSize: '0.85rem', color: '#94a3b8', padding: '0.5rem 0' }}>Subiendo archivo...</span>
+                                                <span style={{ fontSize: '0.85rem', color: '#ea580c', padding: '0.5rem 0', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                                                    {uploadingState[m.id]}
+                                                </span>
                                             ) : (
                                                 <>
                                                     <label style={actionBtnStyle}>
@@ -234,10 +259,15 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                             )}
                                         </div>
                                         {m.attachmentUrl && (
-                                            <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                                                Ver Factura
-                                            </a>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                                                    Ver Factura
+                                                </a>
+                                                <button onClick={() => handleFileDelete(m.id, 'material')} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                    ✕
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -282,7 +312,10 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${t.completed ? '#bbf7d0' : '#e2e8f0'}`, paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             {uploadingState[t.id] ? (
-                                                <span style={{ fontSize: '0.85rem', color: '#94a3b8', padding: '0.5rem 0' }}>Subiendo archivo...</span>
+                                                <span style={{ fontSize: '0.85rem', color: '#ea580c', padding: '0.5rem 0', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                                                    {uploadingState[t.id]}
+                                                </span>
                                             ) : (
                                                 <>
                                                     <label style={actionBtnStyle}>
@@ -299,10 +332,15 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                             )}
                                         </div>
                                         {t.attachmentUrl && (
-                                            <a href={t.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                                                Ver Evidencia
-                                            </a>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <a href={t.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                                                    Ver Evidencia
+                                                </a>
+                                                <button onClick={() => handleFileDelete(t.id, 'task')} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                    ✕
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
