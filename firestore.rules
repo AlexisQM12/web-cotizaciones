@@ -7,9 +7,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Quotations: authenticated users can read/write
+    // Helper: get user's empresaId
+    function getUserEmpresaId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.empresaId;
+    }
+
+    // Helper: verify if the request matches the user's empresaId
+    function isUserInEmpresa(empresaId) {
+      return isAuth() && getUserEmpresaId() == empresaId;
+    }
+
+    // Quotations: authenticated users can only access quotations for their empresaId
     match /quotations/{quotationId} {
-      allow read, write: if isAuth();
+      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
+      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
 
       // ActiveUsers subcollection: authenticated users can read/write their own doc
       match /activeUsers/{userId} {
@@ -21,18 +33,28 @@ service cloud.firestore {
 
     // Company profiles
     match /company_profiles/{profileId} {
-      allow read, write: if isAuth();
+      // The profileId is essentially the empresaId for the main tenant architecture
+      allow read, update, delete: if isAuth() && getUserEmpresaId() == profileId;
+      // Anyone authenticated can create a company (happens during onboarding)
+      allow create: if isAuth();
     }
 
     // Client profiles
     match /client_profiles/{profileId} {
-      allow read, write: if isAuth();
+      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
+      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
     }
 
     // Settings (general conditions, etc.)
     match /settings/{docId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read, write: if isAuth(); // Used for general settings, though mostly unused now
+    }
+    
+    // Accounting config
+    match /accounting_config/{configId} {
+      allow read, update, delete: if isAuth() && getUserEmpresaId() == configId;
+      allow create: if isAuth();
     }
 
     // Users collection
@@ -42,3 +64,4 @@ service cloud.firestore {
     }
   }
 }
+

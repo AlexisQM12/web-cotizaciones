@@ -2,7 +2,14 @@ import { firestore } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
-        const docRef = firestore.collection('settings').doc('general_conditions');
+        const { searchParams } = new URL(req.url);
+        const empresaId = searchParams.get('empresaId');
+        
+        if (!empresaId) {
+            return Response.json({ error: 'empresaId is required' }, { status: 400 });
+        }
+
+        const docRef = firestore.collection('settings').doc(`general_conditions_${empresaId}`);
         const doc = await docRef.get();
 
         if (!doc.exists) {
@@ -21,8 +28,13 @@ export async function GET(req) {
 
 export async function PUT(req) {
     try {
-        const { text } = await req.json();
-        const docRef = firestore.collection('settings').doc('general_conditions');
+        const { text, empresaId } = await req.json();
+        
+        if (!empresaId) {
+            return Response.json({ error: 'empresaId is required' }, { status: 400 });
+        }
+
+        const docRef = firestore.collection('settings').doc(`general_conditions_${empresaId}`);
         const updatedData = {
             text,
             updatedAt: new Date().toISOString()
