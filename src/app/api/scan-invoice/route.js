@@ -3,7 +3,7 @@ import vision from '@google-cloud/vision';
 import path from 'path';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const PDFParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse'); // Destructurado para evitar constructor TypeErrors
 
 // ─── Cliente de Google Cloud Vision con las mismas credenciales de Firebase Admin ───
 function getVisionClient() {
@@ -11,17 +11,25 @@ function getVisionClient() {
     const clientEmail  = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
     const privateKey   = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
 
-    return new vision.ImageAnnotatorClient({
-        credentials: { client_email: clientEmail, private_key: privateKey },
-        projectId,
-    });
+    // En producción (GCP / Firebase App Hosting), si no hay env variables explícitas,
+    // dejamos que use automáticamente la Cuenta de Servicio del entorno de Cloud Run (ADC)
+    if (clientEmail && privateKey) {
+        return new vision.ImageAnnotatorClient({
+            credentials: { client_email: clientEmail, private_key: privateKey },
+            projectId,
+        });
+    }
+
+    return new vision.ImageAnnotatorClient();
 }
 
 // ─── Renderizador de PDF en imagen usando pdfjs-dist y canvas local ───
 async function getPdfjsDocument(buffer) {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const workerPath = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = `file:///${workerPath.replace(/\\/g, '/')}`;
+    // Para Next.js, importar el worker en proceso es mucho más seguro y portable
+    // que depender de resoluciones de rutas relativas con file:///
+    const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
+    pdfjs.GlobalWorkerOptions.workerPort = pdfjsWorker;
     return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
 }
 
@@ -64,8 +72,8 @@ export async function POST(req) {
         if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
             // 1. Intentamos extracción rápida de texto nativo
             try {
-                const parser = new PDFParse(buffer);
-                const pdfData = await parser;
+                const parser = new PDFParse({ data: buffer });
+                const pdfData = await parser.getText();
                 extractedText = pdfData?.text || '';
                 textSource = 'pdf-parse';
             } catch (parseErr) {
