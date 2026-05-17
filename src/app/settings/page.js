@@ -224,7 +224,7 @@ export default function Settings() {
         <main className="container">
             <div style={{ marginBottom: '2rem' }}>
                 <button onClick={() => router.push('/')} className="btn" style={{ marginBottom: '1rem', background: '#4b5563', color: 'white' }}>
-                    Volver al Dashboard
+                    ← Volver al Dashboard
                 </button>
                 <h1 style={{ color: '#111827' }}>Configuración de Empresa</h1>
                 <p style={{ color: '#475569' }}>Administra los datos de tu empresa para las cotizaciones.</p>
