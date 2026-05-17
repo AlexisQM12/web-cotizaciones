@@ -74,7 +74,6 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     attachmentUrl: url,
                     purchased: detectedCost ? true : m.purchased,
                     cost: detectedCost !== null ? detectedCost : m.cost,
-                    // Datos del OCR para que el módulo contable pueda crear la compra
                     ocrData: scanData ? {
                         ruc: scanData.ruc || null,
                         serie: scanData.serie || null,
@@ -84,6 +83,39 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                         amount: scanData.amount || null,
                     } : (m.ocrData || null),
                 } : m));
+
+                // Auto-registrar en contabilidad si el OCR detectó monto
+                if (scanData?.amount && user?.empresaId) {
+                    setUploadingState(prev => ({ ...prev, [itemId]: 'Registrando en contabilidad...' }));
+                    try {
+                        const currentMaterial = materials.find(m => m.id === itemId) || {};
+                        await fetch('/api/accounting/purchases/from-pending', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                companyProfileId: user.empresaId,
+                                quotationId:      quotation.id,
+                                materialId:       itemId,
+                                materialTitle:    currentMaterial.title || '',
+                                ocrData:          {
+                                    ruc:        scanData.ruc        || null,
+                                    serie:      scanData.serie      || null,
+                                    numero:     scanData.numero     || null,
+                                    fecha:      scanData.fecha      || null,
+                                    razonSocial: scanData.razonSocial || null,
+                                    amount:     scanData.amount,
+                                },
+                                attachmentUrl: url,
+                            }),
+                        });
+                        // Marcar como registrado
+                        setMaterials(prev => prev.map(m =>
+                            m.id === itemId ? { ...m, purchaseLedgerId: 'auto' } : m
+                        ));
+                    } catch (regErr) {
+                        console.error('Auto-registro contabilidad falló:', regErr);
+                    }
+                }
 
             } else if (type === 'material_image') {
                 setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, productImageUrl: url } : m));
