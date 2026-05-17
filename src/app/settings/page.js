@@ -236,6 +236,16 @@ export default function Settings() {
 
             <div className="content-frame">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+
+                    {/* ─── LOGO DE EMPRESA ─── */}
+                    <div>
+                        <h2 style={{ color: '#101828', marginBottom: '0.5rem', fontSize: '1.5rem' }}>Logo de Empresa</h2>
+                        <p style={{ color: '#475569', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                            Este logo aparecerá en la barra de navegación y en tus cotizaciones.
+                        </p>
+                        <LogoUploader empresaId={user?.empresaId} profiles={companyProfiles} onUpdated={fetchCompanyProfiles} />
+                    </div>
+
                     <div>
                         <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Empresa</h2>
                         <div className="grid-2-col" style={{ gap: '2.5rem' }}>
@@ -546,5 +556,115 @@ export default function Settings() {
             </div>
 
         </main>
+    );
+}
+
+// ─── Componente: subir/cambiar logo de la empresa ────────────────────────
+import { useState as useLocalState, useRef } from 'react';
+
+function LogoUploader({ empresaId, profiles, onUpdated }) {
+    const [file, setFile] = useLocalState(null);
+    const [preview, setPreview] = useLocalState(null);
+    const [saving, setSaving] = useLocalState(false);
+    const [savedOk, setSavedOk] = useLocalState(false);
+    const [error, setError] = useLocalState(null);
+    const inputRef = useRef(null);
+
+    // Obtener logo actual del perfil de empresa
+    const currentLogo = profiles?.[0]?.logoUrl || null;
+    const profileId = empresaId || profiles?.[0]?.id;
+    const profile = profiles?.[0] || {};
+
+    const handleFileChange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        setFile(f);
+        setPreview(URL.createObjectURL(f));
+        setSavedOk(false);
+        setError(null);
+    };
+
+    const handleSave = async () => {
+        if (!file || !profileId) return;
+        setSaving(true);
+        setError(null);
+        try {
+            const formData = new FormData();
+            formData.append('name', profile.name || '');
+            formData.append('address', profile.address || '');
+            formData.append('email', profile.email || '');
+            formData.append('phone', profile.phone || '');
+            formData.append('ruc', profile.ruc || '');
+            formData.append('website', profile.website || '');
+            formData.append('accounts', JSON.stringify(profile.accounts || []));
+            formData.append('conditions', profile.conditions || '');
+            formData.append('isDefault', String(profile.isDefault || true));
+            formData.append('existingLogoUrl', profile.logoUrl || '');
+            formData.append('logo', file);
+
+            const res = await fetch(`/api/company-profiles/${profileId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Error al guardar');
+            setSavedOk(true);
+            setFile(null);
+            if (onUpdated) await onUpdated();
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '2rem', padding: '1.5rem 2rem', flexWrap: 'wrap' }}>
+            {/* Preview */}
+            <div
+                onClick={() => inputRef.current?.click()}
+                style={{
+                    width: 90, height: 90, borderRadius: 16, cursor: 'pointer',
+                    border: '2px dashed #cbd5e1', background: '#f8fafc',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden', flexShrink: 0, transition: 'border-color 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.borderColor = '#94a3b8'}
+                onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+            >
+                {(preview || currentLogo) ? (
+                    <img src={preview || currentLogo} alt="Logo"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                    <span style={{ fontSize: 32, color: '#cbd5e1' }}>🖼️</span>
+                )}
+            </div>
+
+            <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={handleFileChange} />
+
+            <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 700, color: '#101828', marginBottom: 6 }}>
+                    {currentLogo ? 'Logo actual' : 'Sin logo cargado'}
+                </div>
+                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: 12 }}>
+                    Haz clic en la imagen o en el botón para subir tu logo (PNG, JPG, SVG — recomendado fondo transparente).
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn" onClick={() => inputRef.current?.click()}
+                        style={{ background: '#f1f5f9', color: '#334155', padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                        {file ? '📎 Cambiar imagen' : '📎 Seleccionar imagen'}
+                    </button>
+                    {file && (
+                        <button className="btn" onClick={handleSave} disabled={saving}
+                            style={{ background: '#101828', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
+                            {saving ? 'Guardando...' : savedOk ? '✓ Guardado' : 'Guardar logo'}
+                        </button>
+                    )}
+                    {error && <span style={{ color: '#ef4444', fontSize: '0.85rem' }}>{error}</span>}
+                    {savedOk && !file && <span style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>✓ Logo actualizado</span>}
+                </div>
+            </div>
+        </div>
     );
 }
