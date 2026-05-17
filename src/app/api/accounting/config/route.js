@@ -18,9 +18,9 @@ export async function GET(req) {
 
         const doc = await firestore.collection('accounting_config').doc(empresaId).get();
         if (!doc.exists) {
-            return Response.json({ exists: false, companyProfileId });
+            return Response.json({ exists: false, companyProfileId: empresaId });
         }
-        return Response.json({ exists: true, companyProfileId, ...doc.data() });
+        return Response.json({ exists: true, companyProfileId: empresaId, ...doc.data() });
     } catch (err) {
         console.error('[accounting/config] GET error:', err);
         return Response.json({ error: err.message }, { status: 500 });
@@ -32,13 +32,16 @@ export async function PUT(req) {
     try {
         const body = await req.json();
         const {
-            companyProfileId, companyType, taxRegime, ruc, razonSocial,
+            companyProfileId, empresaId: bodyEmpresaId, companyType, taxRegime, ruc, razonSocial,
             direccionFiscal, fechaInicioActividades, esBuenContribuyente,
             tieneTrabajadores, ingresosAnualesProyectados, coeficienteRenta,
         } = body;
 
-        if (!companyProfileId) {
-            return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
+        // Accept either companyProfileId (legacy) or empresaId (SaaS)
+        const resolvedId = bodyEmpresaId || companyProfileId;
+
+        if (!resolvedId) {
+            return Response.json({ error: 'empresaId requerido' }, { status: 400 });
         }
         if (!COMPANY_TYPES[companyType]) {
             return Response.json({ error: 'Tipo de empresa inválido' }, { status: 400 });
@@ -56,7 +59,7 @@ export async function PUT(req) {
         }
 
         const data = {
-            companyProfileId, companyType, taxRegime,
+            companyProfileId: resolvedId, companyType, taxRegime,
             ruc: String(ruc), razonSocial: razonSocial || '',
             direccionFiscal: direccionFiscal || '',
             fechaInicioActividades: fechaInicioActividades || null,
@@ -67,7 +70,7 @@ export async function PUT(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = firestore.collection('accounting_config').doc(companyProfileId);
+        const ref = firestore.collection('accounting_config').doc(resolvedId);
         const existing = await ref.get();
         if (!existing.exists) data.createdAt = data.updatedAt;
 

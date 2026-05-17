@@ -5,9 +5,11 @@ import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { COMPANY_TYPES, TAX_REGIMES, getAllowedRegimes, getRequiredBooks } from '@/lib/accounting/sunatRules';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SetupPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [selectedProfileId, setSelectedProfileId] = useState(null);
     const { config, exists, companyProfileId, error: cfgError, reload } = useAccountingConfig(selectedProfileId);
     const [profiles, setProfiles]   = useState([]);
@@ -29,14 +31,15 @@ export default function SetupPage() {
     const [savedOk, setSavedOk] = useState(false);
 
     useEffect(() => {
+        if (!user?.empresaId) return;
         (async () => {
             try {
-                const r = await fetch('/api/company-profiles');
+                const r = await fetch(`/api/company-profiles?empresaId=${user.empresaId}`);
                 const data = await r.json();
                 setProfiles(Array.isArray(data) ? data : []);
             } catch {} finally { setLoadingProfiles(false); }
         })();
-    }, []);
+    }, [user?.empresaId]);
 
     // Pre-cargar valores existentes o desde el perfil de empresa
     useEffect(() => {
@@ -91,10 +94,11 @@ export default function SetupPage() {
         if (!canSave) return;
         setSaving(true);
         try {
+            const resolvedId = companyProfileId || user?.empresaId;
             const r = await fetch('/api/accounting/config', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, companyProfileId }),
+                body: JSON.stringify({ ...form, companyProfileId: resolvedId, empresaId: resolvedId }),
             });
             if (!r.ok) {
                 const data = await r.json().catch(() => ({}));
