@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import { createWorker } from 'tesseract.js';
 
 export async function POST(req) {
@@ -17,10 +17,17 @@ export async function POST(req) {
         let extractedText = '';
 
         if (type === 'application/pdf') {
-            const pdfData = await pdfParse(buffer);
-            extractedText = pdfData.text;
+            const parser = new PDFParse({ data: buffer });
+            const pdfData = await parser.getText();
+            extractedText = pdfData;
         } else if (type.startsWith('image/')) {
-            const worker = await createWorker('spa');
+            const path = require('path');
+            const workerPath = path.join(process.cwd(), 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js');
+            const corePath   = path.join(process.cwd(), 'node_modules', 'tesseract.js-core', 'tesseract-core-simd.wasm.js');
+            const worker = await createWorker('spa', 1, {
+                workerPath,
+                corePath
+            });
             const ret = await worker.recognize(buffer);
             extractedText = ret.data.text;
             await worker.terminate();
@@ -33,7 +40,7 @@ export async function POST(req) {
         return NextResponse.json({ amount, text: extractedText });
     } catch (err) {
         console.error("Error scanning invoice:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err ? err.toString() : 'Unknown error' }, { status: 500 });
     }
 }
 

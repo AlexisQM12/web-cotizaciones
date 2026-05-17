@@ -49,11 +49,16 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             alert(`Monto detectado automáticamente: S/ ${detectedCost}`);
                         } else {
                             alert("Documento escaneado, pero no se pudo detectar el monto exacto. Por favor, ingrésalo manualmente en la casilla 'Costo (S/)'.");
-                            console.log("Texto extraído:", data.text);
+                            console.log("Texto extraído OCR:", data.text);
                         }
+                    } else {
+                        const errText = await res.text();
+                        console.error("API /scan-invoice falló con status:", res.status, errText);
+                        alert(`Error en el servidor OCR: ${res.status}`);
                     }
                 } catch(e) {
-                    console.error("Error en OCR:", e);
+                    console.error("Excepción al contactar OCR:", e);
+                    alert("Excepción al escanear: " + e.message);
                 }
 
                 setMaterials(prev => prev.map(m => m.id === itemId ? { 
