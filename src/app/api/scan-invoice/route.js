@@ -1,58 +1,33 @@
 import { NextResponse } from 'next/server';
 import vision from '@google-cloud/vision';
-import path from 'path';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { PDFParse } = require('pdf-parse'); // Destructurado para evitar constructor TypeErrors
+const { PDFParse } = require('pdf-parse');
 
-// ─── Cliente de Google Cloud Vision con las mismas credenciales de Firebase Admin ───
+// ─── Cliente de Google Cloud Vision ──────────────────────────────────────
+// Siempre que existan FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY las usamos
+// (tanto local como producción). Esto evita depender del Service Account de
+// runtime de App Hosting (que por defecto no tiene rol Cloud Vision AI User).
 function getVisionClient() {
-    // Si estamos en entorno de producción en Google Cloud Run / Firebase App Hosting,
-    // es 100% recomendado inicializar sin parámetros para usar las credenciales por defecto (ADC) del contenedor.
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.K_SERVICE;
+    const projectId   = process.env.FIREBASE_PROJECT_ID?.trim().replace(/^["']|["']$/g, '');
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
+    const privateKey  = (process.env.FIREBASE_PRIVATE_KEY || '')
+        .trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
 
-    if (!isProduction) {
-        const projectId    = process.env.FIREBASE_PROJECT_ID?.trim().replace(/^["']|["']$/g, '');
-        const clientEmail  = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
-        const privateKey   = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
-
-        if (clientEmail && privateKey) {
-            return new vision.ImageAnnotatorClient({
-                credentials: { client_email: clientEmail, private_key: privateKey },
-                projectId,
-            });
-        }
+    if (clientEmail && privateKey) {
+        return new vision.ImageAnnotatorClient({
+            credentials: { client_email: clientEmail, private_key: privateKey },
+            projectId,
+        });
     }
-
     return new vision.ImageAnnotatorClient();
 }
 
-// ─── Renderizador de PDF en imagen usando pdfjs-dist y canvas local ───
-async function getPdfjsDocument(buffer) {
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerPort = pdfjsWorker;
-    return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
-}
-
-async function renderPdfPageToImage(buffer) {
-    const { createCanvas } = await import('@napi-rs/canvas');
-    const pdf = await getPdfjsDocument(buffer);
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 2.0 });
-    const w = Math.ceil(viewport.width);
-    const h = Math.ceil(viewport.height);
-
-    const canvas = createCanvas(w, h);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, w, h);
-    
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    return canvas.toBuffer('image/png');
-}
-
-// Endpoint OCR inteligente para escanear facturas/comprobantes (PDF o imagen).
+// Endpoint OCR para escanear facturas/comprobantes (PDF o imagen).
+// Estrategia:
+//   - PDF: pdf-parse (texto nativo, gratis). Si no hay texto útil → Vision
+//     batchAnnotateFiles enviando el PDF inline (sin render local con canvas).
+//   - Imagen: directo a Vision documentTextDetection.
 export async function POST(req) {
     try {
         const formData = await req.formData();
@@ -60,57 +35,97 @@ export async function POST(req) {
 
         if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
         if (typeof file === 'string') {
-            return NextResponse.json({ error: 'El archivo recibido no es válido (se esperaba binario).' }, { status: 400 });
+            return NextResponse.json({ error: 'El archivo recibido no es válido.' }, { status: 400 });
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
         const type   = file.type || '';
         const name   = file.name || '';
 
-        const client = getVisionClient();
+        // Vision rechaza inline > 20 MB. Para PDFs/imágenes más grandes habría
+        // que pasar por GCS asyncBatchAnnotateFiles (no implementado aquí).
+        if (buffer.byteLength > 20 * 1024 * 1024) {
+            return NextResponse.json({
+                error: `El archivo pesa ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB. El máximo soportado es 20 MB.`,
+            }, { status: 413 });
+        }
+
         let extractedText = '';
         let textSource = '';
 
         if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
-            // 1. Intentamos extracción rápida de texto nativo
+            // 1) Extracción nativa rápida
             try {
                 const parser = new PDFParse({ data: buffer });
                 const pdfData = await parser.getText();
                 extractedText = pdfData?.text || '';
                 textSource = 'pdf-parse';
             } catch (parseErr) {
-                console.warn('pdf-parse falló, se intentará renderizar:', parseErr);
+                console.warn('[scan-invoice] pdf-parse falló:', parseErr?.message);
             }
 
-            // 2. Si no hay texto, o el texto es sospechosamente corto, o no tiene los datos clave,
-            // renderizamos la primera página a imagen y hacemos el OCR robusto de Google Vision.
-            const isTextGarbage = !extractedText || extractedText.trim().length < 50;
-            const tempAmount = isTextGarbage ? null : extractTotalAmount(extractedText);
-            const tempRuc    = isTextGarbage ? null : extractRUC(extractedText);
+            // 2) Si la capa de texto no sirve, mandamos el PDF a Vision tal cual
+            const tooShort  = !extractedText || extractedText.trim().length < 50;
+            const tempRuc   = tooShort ? null : extractRUC(extractedText);
+            const tempAmnt  = tooShort ? null : extractTotalAmount(extractedText);
 
-            if (isTextGarbage || !tempAmount || !tempRuc) {
+            if (tooShort || !tempRuc || !tempAmnt) {
                 try {
-                    console.log('PDF escaneado o ilegible detectado. Convirtiendo a imagen para OCR con Google Vision...');
-                    const pageImageBuffer = await renderPdfPageToImage(buffer);
-                    
-                    const [result] = await client.documentTextDetection({
-                        image: { content: pageImageBuffer.toString('base64') },
-                        imageContext: { languageHints: ['es', 'en'] },
+                    const client = getVisionClient();
+                    const [batchResult] = await client.batchAnnotateFiles({
+                        requests: [{
+                            inputConfig: {
+                                content: buffer.toString('base64'),
+                                mimeType: 'application/pdf',
+                            },
+                            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                            pages: [1, 2, 3, 4, 5], // hasta 5 páginas por request inline
+                            imageContext: { languageHints: ['es', 'en'] },
+                        }],
                     });
-                    extractedText = result.fullTextAnnotation?.text || '';
-                    textSource = 'google-vision-pdf';
+
+                    const pages = batchResult?.responses?.[0]?.responses || [];
+                    const visionText = pages
+                        .map(p => p?.fullTextAnnotation?.text || '')
+                        .join('\n')
+                        .trim();
+
+                    if (visionText.length > 0) {
+                        extractedText = visionText;
+                        textSource = 'google-vision-pdf';
+                    }
                 } catch (ocrErr) {
-                    console.error('OCR de PDF renderizado falló:', ocrErr);
+                    console.error('[scan-invoice] Vision PDF falló:', ocrErr);
+                    // Si pdf-parse ya devolvió algo, seguimos con eso; si no,
+                    // devolvemos el error de Vision al cliente.
+                    if (!extractedText) {
+                        return NextResponse.json({
+                            error: `OCR Vision falló: ${ocrErr?.message || 'error desconocido'}`,
+                            hint: ocrErr?.code === 7
+                                ? 'El Service Account no tiene permiso para Cloud Vision API. Asigna el rol "Cloud Vision AI User".'
+                                : undefined,
+                        }, { status: 500 });
+                    }
                 }
             }
         } else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
-            // Para imágenes directo a Google Vision
-            const [result] = await client.documentTextDetection({
-                image: { content: buffer.toString('base64') },
-                imageContext: { languageHints: ['es', 'en'] },
-            });
-            extractedText = result.fullTextAnnotation?.text || '';
-            textSource = 'google-vision-image';
+            try {
+                const client = getVisionClient();
+                const [result] = await client.documentTextDetection({
+                    image: { content: buffer.toString('base64') },
+                    imageContext: { languageHints: ['es', 'en'] },
+                });
+                extractedText = result.fullTextAnnotation?.text || '';
+                textSource = 'google-vision-image';
+            } catch (ocrErr) {
+                console.error('[scan-invoice] Vision image falló:', ocrErr);
+                return NextResponse.json({
+                    error: `OCR Vision falló: ${ocrErr?.message || 'error desconocido'}`,
+                    hint: ocrErr?.code === 7
+                        ? 'El Service Account no tiene permiso para Cloud Vision API. Asigna el rol "Cloud Vision AI User".'
+                        : undefined,
+                }, { status: 500 });
+            }
         } else {
             return NextResponse.json({ error: `Tipo de archivo no soportado: ${type || name}` }, { status: 400 });
         }
@@ -122,7 +137,6 @@ export async function POST(req) {
             }, { status: 200 });
         }
 
-        // ── Extraer datos estructurados de manera ultra-defensiva ──────────────────
         const amount      = extractTotalAmount(extractedText);
         const ruc         = extractRUC(extractedText);
         const serie       = extractSerieNumero(extractedText, name);
@@ -142,7 +156,9 @@ export async function POST(req) {
 
     } catch (err) {
         console.error('[scan-invoice] Error crítico:', err);
-        return NextResponse.json({ error: err?.message || 'Error interno del servidor en OCR' }, { status: 500 });
+        return NextResponse.json({
+            error: err?.message || 'Error interno del servidor en OCR',
+        }, { status: 500 });
     }
 }
 
@@ -151,13 +167,9 @@ function extractTotalAmount(text) {
     if (!text) return null;
     const upper = text.toUpperCase().replace(/\s+/g, ' ');
 
-    // Buscamos todas las coincidencias de patrones de TOTAL real
     const regexes = [
-        // 1. TOTAL A PAGAR o IMPORTE TOTAL (las etiquetas más específicas)
         /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        // 2. TOTAL a secas (evitando SUB TOTAL, P. TOTAL y PRECIO TOTAL)
         /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        // 3. IMPORTE a secas
         /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
     ];
 
@@ -167,28 +179,19 @@ function extractTotalAmount(text) {
         const matches = [];
         while ((match = regex.exec(upper)) !== null) {
             const val = parseFloat(match[1].replace(/,/g, ''));
-            if (val > 0 && val < 1000000) {
-                matches.push(val);
-            }
+            if (val > 0 && val < 1000000) matches.push(val);
         }
-        if (matches.length > 0) {
-            return matches[matches.length - 1];
-        }
+        if (matches.length > 0) return matches[matches.length - 1];
     }
 
-    // Fallback inteligente: si no se detectan etiquetas, buscamos el último valor monetario del documento con S/
     const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
     let m;
     const moneyValues = [];
     while ((m = moneyRegex.exec(upper)) !== null) {
         const val = parseFloat(m[1].replace(/,/g, ''));
-        if (val > 0 && val < 1000000) {
-            moneyValues.push(val);
-        }
+        if (val > 0 && val < 1000000) moneyValues.push(val);
     }
-    if (moneyValues.length > 0) {
-        return moneyValues[moneyValues.length - 1];
-    }
+    if (moneyValues.length > 0) return moneyValues[moneyValues.length - 1];
 
     return null;
 }
