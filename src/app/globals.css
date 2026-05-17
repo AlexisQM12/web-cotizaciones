@@ -313,12 +313,18 @@ textarea:focus,
 .navbar {
   position: fixed;
   top: 0;
+  left: 0;
   right: 0;
   padding: 1rem 2rem;
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.navbar > * {
+  pointer-events: auto;
 }
 
 .scanner-modal-content {

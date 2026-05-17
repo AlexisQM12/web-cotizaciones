@@ -15,19 +15,23 @@ export function NavBar() {
 
     return (
         <div className="navbar">
-            <img 
+             <img 
                 src="/icono-cgo.png" 
                 alt="Logo CGO" 
+                onClick={() => router.push('/')}
                 style={{ 
-                    width: '36px', 
-                    height: '36px', 
+                    width: '38px', 
+                    height: '38px', 
                     objectFit: 'contain', 
-                    marginRight: '0.5rem',
                     borderRadius: '8px',
                     background: '#fff',
                     padding: '2px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s'
                 }} 
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
             />
             <div style={{
                 display: 'flex',
