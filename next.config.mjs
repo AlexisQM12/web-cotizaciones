@@ -25,7 +25,7 @@ const nextConfig = {
             },
         ];
     },
-    serverExternalPackages: ['pdf-parse', 'tesseract.js']
+    serverExternalPackages: ['pdf-parse', 'tesseract.js', '@napi-rs/canvas', 'pdfjs-dist']
 };
 
 export default nextConfig;

@@ -60,10 +60,10 @@ export default function Home() {
                         </div>
 
                         {/* Card 3: Mi Contador y Administrador */}
-                        <div 
-                            className="card" 
+                        <div
+                            className="card"
                             style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}
-                            onClick={() => alert('Módulo "Mi Contador y Administrador" en desarrollo')}
+                            onClick={() => router.push('/contabilidad')}
                         >
                             <div style={{ background: '#ecfdf5', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

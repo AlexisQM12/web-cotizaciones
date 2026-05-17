@@ -37,35 +37,50 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             
             if (type === 'material') {
                 let detectedCost = null;
-                setUploadingState(prev => ({ ...prev, [itemId]: 'Escaneando comprobante con IA...' }));
+                let scanData = null;
+                setUploadingState(prev => ({ ...prev, [itemId]: 'Escaneando con OCR (puede tardar 5-15s)...' }));
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
                     const res = await fetch('/api/scan-invoice', { method: 'POST', body: formData });
+                    const data = await res.json().catch(() => ({}));
                     if (res.ok) {
-                        const data = await res.json();
+                        scanData = data;
                         if (data.amount) {
                             detectedCost = data.amount;
-                            alert(`Monto detectado automáticamente: S/ ${detectedCost}`);
+                            const partes = [`Monto: S/ ${detectedCost}`];
+                            if (data.ruc)    partes.push(`RUC: ${data.ruc}`);
+                            if (data.serie && data.numero) partes.push(`Comprobante: ${data.serie}-${data.numero}`);
+                            if (data.fecha)  partes.push(`Fecha: ${data.fecha}`);
+                            alert(`OCR detectó:\n\n${partes.join('\n')}`);
                         } else {
-                            alert("Documento escaneado, pero no se pudo detectar el monto exacto. Por favor, ingrésalo manualmente en la casilla 'Costo (S/)'.");
-                            console.log("Texto extraído OCR:", data.text);
+                            const etapas = (data.stages || []).map(s => `  · ${s.name}: ${s.error ? 'error → ' + s.error : s.chars + ' chars'}`).join('\n');
+                            alert(`Documento escaneado pero no se detectó monto.\n\nEtapas:\n${etapas}\n\nIngresa el costo manualmente.`);
+                            console.log('OCR debug:', data);
                         }
                     } else {
-                        const errText = await res.text();
-                        console.error("API /scan-invoice falló con status:", res.status, errText);
-                        alert(`Error en el servidor OCR: ${res.status}`);
+                        console.error('API /scan-invoice falló:', res.status, data);
+                        alert(`Error en OCR (${res.status}): ${data?.error || 'desconocido'}\n\nVerifica que el archivo sea una imagen o PDF legible.`);
                     }
                 } catch(e) {
-                    console.error("Excepción al contactar OCR:", e);
-                    alert("Excepción al escanear: " + e.message);
+                    console.error('Excepción al contactar OCR:', e);
+                    alert('No se pudo contactar al OCR: ' + e.message);
                 }
 
-                setMaterials(prev => prev.map(m => m.id === itemId ? { 
-                    ...m, 
-                    attachmentUrl: url, 
+                setMaterials(prev => prev.map(m => m.id === itemId ? {
+                    ...m,
+                    attachmentUrl: url,
                     purchased: detectedCost ? true : m.purchased,
-                    cost: detectedCost !== null ? detectedCost : m.cost
+                    cost: detectedCost !== null ? detectedCost : m.cost,
+                    // Datos del OCR para que el módulo contable pueda crear la compra
+                    ocrData: scanData ? {
+                        ruc: scanData.ruc || null,
+                        serie: scanData.serie || null,
+                        numero: scanData.numero || null,
+                        fecha: scanData.fecha || null,
+                        razonSocial: scanData.razonSocial || null,
+                        amount: scanData.amount || null,
+                    } : (m.ocrData || null),
                 } : m));
 
             } else if (type === 'material_image') {
@@ -127,6 +142,52 @@ export function PendingsModal({ quotation, onClose, onSave }) {
 
     const removeTask = (id) => setTasks(tasks.filter(t => t.id !== id));
     const removeMaterial = (id) => setMaterials(materials.filter(m => m.id !== id));
+
+    // Envía un material escaneado al registro de compras del módulo contable
+    const handleRegisterAsPurchase = async (material) => {
+        if (!material.ocrData) {
+            alert('Este material no tiene datos OCR. Sube primero un comprobante con "Archivo" o "Cámara".');
+            return;
+        }
+        try {
+            // Resolver companyProfileId desde el perfil default
+            const profilesRes = await fetch('/api/company-profiles');
+            const profiles    = await profilesRes.json();
+            const companyProfileId = profiles.find(p => p.isDefault)?.id || profiles[0]?.id;
+            if (!companyProfileId) {
+                alert('No hay perfil de empresa configurado.');
+                return;
+            }
+
+            const res = await fetch('/api/accounting/purchases/from-pending', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    companyProfileId,
+                    quotationId:  quotation.id,
+                    materialId:   material.id,
+                    materialTitle: material.title,
+                    ocrData:      material.ocrData,
+                    attachmentUrl: material.attachmentUrl,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Error al registrar compra'); return; }
+
+            if (data.alreadyExists) {
+                alert(`Esta compra ya está registrada en contabilidad (${data.serie || ''}-${data.numero || ''}).`);
+            } else {
+                const detail = [`Periodo: ${data.period}`, `Total: S/ ${data.total}`,
+                    data.serie && `Comprobante: ${data.serie}-${data.numero}`,
+                    data.numeroDocProveedor && `RUC: ${data.numeroDocProveedor}`,
+                    data.needsReview && '⚠ Datos incompletos — revísala en el Registro de Compras'].filter(Boolean).join('\n');
+                alert(`Compra registrada en contabilidad:\n\n${detail}`);
+            }
+            // Marcar el material para no volver a registrarlo
+            setMaterials(prev => prev.map(m => m.id === material.id ? { ...m, purchaseLedgerId: data.id } : m));
+        } catch (e) {
+            alert('Error al registrar: ' + e.message);
+        }
+    };
 
     const handleSave = () => {
         onSave({ tasks, materials });
@@ -264,11 +325,26 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                             )}
                                         </div>
                                         {m.attachmentUrl && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                                 <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                                                     Ver Factura
                                                 </a>
+                                                {m.ocrData?.amount && (
+                                                    <button
+                                                        onClick={() => handleRegisterAsPurchase(m)}
+                                                        title={m.purchaseLedgerId ? 'Ya registrada en contabilidad' : 'Crear entrada en el registro de compras del módulo contable'}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                                            color: m.purchaseLedgerId ? '#16a34a' : '#1e293b',
+                                                            background: m.purchaseLedgerId ? '#dcfce7' : '#f1f5f9',
+                                                            border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px',
+                                                            fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer'
+                                                        }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
+                                                        {m.purchaseLedgerId ? 'En contabilidad' : 'Registrar en contabilidad'}
+                                                    </button>
+                                                )}
                                                 <button onClick={() => handleFileDelete(m.id, 'material')} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                     ✕
                                                 </button>
