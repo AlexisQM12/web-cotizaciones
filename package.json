@@ -22,7 +22,7 @@
     "firebase-admin": "^13.6.0",
     "imap-simple": "^5.1.0",
     "mailparser": "^3.9.8",
-    "next": "^16.1.2",
+    "next": "15.5.18",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.4.296",
     "react": "^19.2.3",
