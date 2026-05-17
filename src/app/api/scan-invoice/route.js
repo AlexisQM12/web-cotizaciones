@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import vision from '@google-cloud/vision';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { PDFParse } = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 
 // ─── Cliente de Google Cloud Vision ──────────────────────────────────────
 // Siempre que existan FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY las usamos
