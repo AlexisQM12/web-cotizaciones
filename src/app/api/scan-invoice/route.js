@@ -38,32 +38,51 @@ export async function POST(req) {
 }
 
 function extractTotalAmount(text) {
-    const regexes = [
-        /(?:IMPORTE TOTAL|TOTAL|TOTAL A PAGAR|MONTO TOTAL)[^\d]*?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/i,
-        /S\/\s*?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/i,
-        /TOTAL[^\d]*S\/\s*?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/i
-    ];
+    // Normalize spaces and newlines
+    const normalized = text.toUpperCase().replace(/\s+/g, ' ');
     
-    for (let r of regexes) {
-        const match = text.match(r);
-        if (match && match[1]) {
-            let str = match[1];
-            if (/,/.test(str) && !/\./.test(str)) {
-                str = str.replace(',', '.');
-            } else if (/,/.test(str) && /\./.test(str)) {
-                const lastComma = str.lastIndexOf(',');
-                const lastDot = str.lastIndexOf('.');
-                if (lastComma > lastDot) {
-                    str = str.replace(/\./g, '').replace(',', '.');
-                } else {
-                    str = str.replace(/,/g, '');
-                }
-            } else {
-                str = str.replace(/,/g, '');
-            }
-            const val = parseFloat(str);
-            if (!isNaN(val)) return val;
-        }
+    // Attempt 1: Keywords
+    const keywordRegex = /(?:IMPORTE TOTAL|TOTAL A PAGAR|TOTAL COMPROBANTE|IMPORTE DE LA OPERACION|IMPORTE|TOTAL)[^\d]{0,25}?(\d{1,6}(?:[.,\s]\d{3})*(?:[.,]\d{1,2}))/g;
+    let matches = [...normalized.matchAll(keywordRegex)];
+    if (matches.length > 0) {
+        // Usually the grand total is the last mention
+        return parseNumberString(matches[matches.length - 1][1]);
     }
+    
+    // Attempt 2: Currency symbol S/
+    const currencyRegex = /S\/\s*?(\d{1,6}(?:[.,\s]\d{3})*(?:[.,]\d{1,2}))/g;
+    matches = [...normalized.matchAll(currencyRegex)];
+    if (matches.length > 0) {
+        return parseNumberString(matches[matches.length - 1][1]);
+    }
+
+    // Attempt 3: PEN currency code
+    const penRegex = /PEN[^\d]{0,10}?(\d{1,6}(?:[.,\s]\d{3})*(?:[.,]\d{1,2}))/g;
+    matches = [...normalized.matchAll(penRegex)];
+    if (matches.length > 0) {
+        return parseNumberString(matches[matches.length - 1][1]);
+    }
+
     return null;
+}
+
+function parseNumberString(str) {
+    // Remove all spaces (e.g. "1 500.00" -> "1500.00")
+    let cleanStr = str.replace(/\s+/g, '');
+    
+    if (/,/.test(cleanStr) && !/\./.test(cleanStr)) {
+        cleanStr = cleanStr.replace(',', '.');
+    } else if (/,/.test(cleanStr) && /\./.test(cleanStr)) {
+        const lastComma = cleanStr.lastIndexOf(',');
+        const lastDot = cleanStr.lastIndexOf('.');
+        if (lastComma > lastDot) {
+            cleanStr = cleanStr.replace(/\./g, '').replace(',', '.');
+        } else {
+            cleanStr = cleanStr.replace(/,/g, '');
+        }
+    } else {
+        cleanStr = cleanStr.replace(/,/g, '');
+    }
+    const val = parseFloat(cleanStr);
+    return isNaN(val) ? null : val;
 }

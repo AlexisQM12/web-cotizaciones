@@ -46,6 +46,9 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                         if (data.amount) {
                             detectedCost = data.amount;
                             alert(`Monto detectado automáticamente: S/ ${detectedCost}`);
+                        } else {
+                            alert("Documento escaneado, pero no se pudo detectar el monto exacto. Por favor, ingrésalo manualmente en la casilla 'Costo (S/)'.");
+                            console.log("Texto extraído:", data.text);
                         }
                     }
                 } catch(e) {
