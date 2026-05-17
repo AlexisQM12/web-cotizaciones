@@ -1,47 +1,44 @@
 import { NextResponse } from 'next/server';
 import vision from '@google-cloud/vision';
-import { PDFParse } from 'pdf-parse';
 
 // ─── Cliente de Google Cloud Vision ──────────────────────────────────────
 // Siempre que existan FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY las usamos
-// (tanto local como producción). Esto evita depender del Service Account de
-// runtime de App Hosting (que por defecto no tiene rol Cloud Vision AI User).
+// (típicamente en local). Si estamos en Cloud Run / App Hosting, se usa ADC automático.
 function getVisionClient() {
-    const projectId   = process.env.FIREBASE_PROJECT_ID?.trim().replace(/^["']|["']$/g, '');
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
-    const privateKey  = (process.env.FIREBASE_PRIVATE_KEY || '')
-        .trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+    const isProd = process.env.NODE_ENV === 'production' || process.env.K_SERVICE;
+    
+    if (!isProd) {
+        const projectId   = process.env.FIREBASE_PROJECT_ID?.replace(/^["']|["']$/g, '');
+        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.replace(/^["']|["']$/g, '');
+        const privateKey  = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
 
-    if (clientEmail && privateKey) {
-        return new vision.ImageAnnotatorClient({
-            credentials: { client_email: clientEmail, private_key: privateKey },
-            projectId,
-        });
+        if (clientEmail && privateKey) {
+            return new vision.ImageAnnotatorClient({
+                credentials: { client_email: clientEmail, private_key: privateKey },
+                projectId,
+            });
+        }
     }
     return new vision.ImageAnnotatorClient();
 }
 
-// Endpoint OCR para escanear facturas/comprobantes (PDF o imagen).
-// Estrategia:
-//   - PDF: pdf-parse (texto nativo, gratis). Si no hay texto útil → Vision
-//     batchAnnotateFiles enviando el PDF inline (sin render local con canvas).
-//   - Imagen: directo a Vision documentTextDetection.
 export async function POST(req) {
     try {
         const formData = await req.formData();
         const file = formData.get('file');
 
-        if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
+        if (!file) {
+            return NextResponse.json({ error: 'No se recibió archivo.' }, { status: 400 });
+        }
         if (typeof file === 'string') {
-            return NextResponse.json({ error: 'El archivo recibido no es válido.' }, { status: 400 });
+            return NextResponse.json({ error: 'Archivo inválido (se esperaba binario).' }, { status: 400 });
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
         const type   = file.type || '';
         const name   = file.name || '';
 
-        // Vision rechaza inline > 20 MB. Para PDFs/imágenes más grandes habría
-        // que pasar por GCS asyncBatchAnnotateFiles (no implementado aquí).
+        // Google Vision máximo: 20MB
         if (buffer.byteLength > 20 * 1024 * 1024) {
             return NextResponse.json({
                 error: `El archivo pesa ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB. El máximo soportado es 20 MB.`,
@@ -52,8 +49,9 @@ export async function POST(req) {
         let textSource = '';
 
         if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
-            // 1) Extracción nativa rápida
+            // 1. Intentamos extracción rápida de texto nativo con import dinámico para evitar 500
             try {
+                const { PDFParse } = await import('pdf-parse');
                 const parser = new PDFParse({ data: buffer });
                 const pdfData = await parser.getText();
                 extractedText = pdfData?.text || '';
@@ -69,44 +67,24 @@ export async function POST(req) {
 
             if (tooShort || !tempRuc || !tempAmnt) {
                 try {
+                    console.log('[scan-invoice] PDF escaneado o sin capa de texto clara. Usando Vision API...');
                     const client = getVisionClient();
-                    const [batchResult] = await client.batchAnnotateFiles({
-                        requests: [{
-                            inputConfig: {
-                                content: buffer.toString('base64'),
-                                mimeType: 'application/pdf',
-                            },
-                            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-                            pages: [1, 2, 3, 4, 5], // hasta 5 páginas por request inline
-                            imageContext: { languageHints: ['es', 'en'] },
-                        }],
+                    
+                    const [result] = await client.documentTextDetection({
+                        image: { content: buffer.toString('base64') },
+                        imageContext: { languageHints: ['es', 'en'] },
                     });
-
-                    const pages = batchResult?.responses?.[0]?.responses || [];
-                    const visionText = pages
-                        .map(p => p?.fullTextAnnotation?.text || '')
-                        .join('\n')
-                        .trim();
-
-                    if (visionText.length > 0) {
-                        extractedText = visionText;
-                        textSource = 'google-vision-pdf';
-                    }
-                } catch (ocrErr) {
-                    console.error('[scan-invoice] Vision PDF falló:', ocrErr);
-                    // Si pdf-parse ya devolvió algo, seguimos con eso; si no,
-                    // devolvemos el error de Vision al cliente.
-                    if (!extractedText) {
-                        return NextResponse.json({
-                            error: `OCR Vision falló: ${ocrErr?.message || 'error desconocido'}`,
-                            hint: ocrErr?.code === 7
-                                ? 'El Service Account no tiene permiso para Cloud Vision API. Asigna el rol "Cloud Vision AI User".'
-                                : undefined,
-                        }, { status: 500 });
-                    }
+                    
+                    extractedText = result.fullTextAnnotation?.text || '';
+                    textSource = 'google-vision-pdf';
+                } catch (visionPdfErr) {
+                    console.error('[scan-invoice] Fallo en Vision PDF:', visionPdfErr?.message);
+                    return NextResponse.json({ error: `OCR Vision falló: ${visionPdfErr?.message}` }, { status: 500 });
                 }
             }
-        } else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
+        } 
+        else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
+            // Imágenes van directo a Vision
             try {
                 const client = getVisionClient();
                 const [result] = await client.documentTextDetection({
@@ -115,16 +93,12 @@ export async function POST(req) {
                 });
                 extractedText = result.fullTextAnnotation?.text || '';
                 textSource = 'google-vision-image';
-            } catch (ocrErr) {
-                console.error('[scan-invoice] Vision image falló:', ocrErr);
-                return NextResponse.json({
-                    error: `OCR Vision falló: ${ocrErr?.message || 'error desconocido'}`,
-                    hint: ocrErr?.code === 7
-                        ? 'El Service Account no tiene permiso para Cloud Vision API. Asigna el rol "Cloud Vision AI User".'
-                        : undefined,
-                }, { status: 500 });
+            } catch (visionImgErr) {
+                console.error('[scan-invoice] Fallo en Vision Imagen:', visionImgErr?.message);
+                return NextResponse.json({ error: `OCR Vision falló: ${visionImgErr?.message}` }, { status: 500 });
             }
-        } else {
+        } 
+        else {
             return NextResponse.json({ error: `Tipo de archivo no soportado: ${type || name}` }, { status: 400 });
         }
 
@@ -135,6 +109,7 @@ export async function POST(req) {
             }, { status: 200 });
         }
 
+        // ── Extracción Segura ──
         const amount      = extractTotalAmount(extractedText);
         const ruc         = extractRUC(extractedText);
         const serie       = extractSerieNumero(extractedText, name);
@@ -150,13 +125,14 @@ export async function POST(req) {
             razonSocial,
             text: (extractedText || '').slice(0, 3000),
             textSource,
+            stages: [
+                { name: textSource, chars: extractedText.length, error: null }
+            ]
         });
 
     } catch (err) {
         console.error('[scan-invoice] Error crítico:', err);
-        return NextResponse.json({
-            error: err?.message || 'Error interno del servidor en OCR',
-        }, { status: 500 });
+        return NextResponse.json({ error: err?.message || 'Error interno en el servidor.' }, { status: 500 });
     }
 }
 
@@ -194,7 +170,7 @@ function extractTotalAmount(text) {
     return null;
 }
 
-// ─── Extracción del RUC del emisor ───────────────────────────────────────
+// ─── Extracción del RUC ───────────────────────────────────────
 function extractRUC(text) {
     if (!text) return null;
     const upper = text.toUpperCase();
@@ -204,7 +180,7 @@ function extractRUC(text) {
     return m2?.[0] || null;
 }
 
-// ─── Extracción de Serie + Número del comprobante ────────────────────────
+// ─── Extracción de Serie + Número ────────────────────────
 function extractSerieNumero(text, filename = '') {
     if (!text) return null;
     const fnMatch = filename.match(/(\d{8,11})-(\d{2})-([EFB]\d{2,3})-(\d+)/i);
@@ -216,7 +192,7 @@ function extractSerieNumero(text, filename = '') {
     return null;
 }
 
-// ─── Extracción de fecha de emisión ──────────────────────────────────────
+// ─── Extracción de Fecha ──────────────────────────────────────
 function extractFecha(text) {
     if (!text) return null;
     const upper = text.toUpperCase();
@@ -237,7 +213,7 @@ function extractFecha(text) {
     return null;
 }
 
-// ─── Extracción de razón social del emisor ────────────────────────────────
+// ─── Extracción de Razón Social ────────────────────────────────
 function extractRazonSocial(text, ruc) {
     if (!text || !ruc) return null;
     const idx = text.toUpperCase().indexOf(ruc);
