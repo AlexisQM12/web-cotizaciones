@@ -15,6 +15,20 @@ export function NavBar() {
 
     return (
         <div className="navbar">
+            <img 
+                src="/icono-cgo.png" 
+                alt="Logo CGO" 
+                style={{ 
+                    width: '36px', 
+                    height: '36px', 
+                    objectFit: 'contain', 
+                    marginRight: '0.5rem',
+                    borderRadius: '8px',
+                    background: '#fff',
+                    padding: '2px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                }} 
+            />
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
