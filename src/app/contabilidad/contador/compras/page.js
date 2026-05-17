@@ -24,10 +24,23 @@ function RegistroCompras() {
     useEffect(() => { if (companyProfileId) load(); }, [companyProfileId, period]);
 
     const load = async () => {
+        if (!companyProfileId) return;
         setLoading(true);
-        const r = await fetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
-        setItems(await r.json() || []);
-        setLoading(false);
+        try {
+            const r = await fetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
+            const data = await r.json();
+            if (!r.ok) {
+                console.error('[compras] API error:', data.error);
+                setItems([]);
+            } else {
+                setItems(Array.isArray(data) ? data : []);
+            }
+        } catch (e) {
+            console.error('[compras] fetch error:', e);
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSave = async (entry) => {

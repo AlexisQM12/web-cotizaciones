@@ -4,15 +4,26 @@ import { firestore } from '@/lib/firebase-admin';
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const companyProfileId = searchParams.get('companyProfileId');
+        const companyProfileId = searchParams.get('companyProfileId') || searchParams.get('empresaId');
         const period           = searchParams.get('period');
-        if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
-        let q = firestore.collection('purchases_ledger').where('companyProfileId', '==', companyProfileId);
-        if (period) q = q.where('period', '==', period);
+        if (!companyProfileId) {
+            return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
+        }
 
-        const snap = await q.get();
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Query solo por companyProfileId para evitar requerir índice compuesto
+        const snap = await firestore
+            .collection('purchases_ledger')
+            .where('companyProfileId', '==', companyProfileId)
+            .get();
+
+        let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Filtrar por period en memoria
+        if (period) {
+            items = items.filter(item => item.period === period);
+        }
+
         items.sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
         return Response.json(items);
     } catch (err) {
