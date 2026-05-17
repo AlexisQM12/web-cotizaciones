@@ -234,7 +234,7 @@ export default function Settings() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
                     <div>
                         <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Empresa</h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem' }}>
+                        <div className="grid-2-col" style={{ gap: '2.5rem' }}>
                             <div className="card">
                                 <h3>{editingCompanyId ? 'Editar Perfil de Empresa' : 'Añadir Nuevo Perfil de Empresa'}</h3>
                                 <form onSubmit={handleCompanySubmit} style={{ marginTop: '2rem' }}>
@@ -249,7 +249,7 @@ export default function Settings() {
                                             placeholder="Ej: Mi Empresa S.A."
                                         />
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div className="grid-2-col" style={{ gap: '1.5rem' }}>
                                         <div className="input-group">
                                             <label className="label">RUC</label>
                                             <input
@@ -289,7 +289,7 @@ export default function Settings() {
                                                         ✕
                                                     </button>
                                                 </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                                <div className="grid-2-col" style={{ gap: '0.75rem' }}>
                                                     <input
                                                         className="input"
                                                         type="text"
@@ -321,7 +321,7 @@ export default function Settings() {
                                             placeholder="Calle Falsa 123"
                                         />
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div className="grid-2-col" style={{ gap: '1.5rem' }}>
                                         <div className="input-group">
                                             <label className="label">Email</label>
                                             <input
@@ -444,7 +444,7 @@ export default function Settings() {
 
                     <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '4rem' }}>
                         <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Cliente</h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem' }}>
+                        <div className="grid-2-col" style={{ gap: '2.5rem' }}>
                             <div className="card">
                                 <h3>{editingClientId ? 'Editar Perfil de Cliente' : 'Añadir Nuevo Cliente'}</h3>
                                 <form onSubmit={handleClientSubmit} style={{ marginTop: '2rem' }}>

@@ -14,16 +14,7 @@ export function NavBar() {
     if (!user) return null;
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            padding: '1rem 2rem',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-        }}>
+        <div className="navbar">
             <div style={{
                 display: 'flex',
                 alignItems: 'center',

@@ -1,0 +1,21 @@
+{
+  "name": "CGO Pymes",
+  "short_name": "CGO",
+  "description": "Centro de Gestión Operativa para Pymes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/logos/1770176125260-g2log.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/logos/1770176125260-g2log.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

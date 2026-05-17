@@ -12,6 +12,11 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState({ phase: 'idle', message: 'Conectando al servidor...', current: 0, total: 0, currentFile: null, nextScanAt: null });
   const [countdown, setCountdown] = useState(null);
+  const [reassignRow, setReassignRow] = useState(null); // logId del row con dropdown abierto
+  const [ocrProcessingId, setOcrProcessingId] = useState(null); // logId siendo procesado por OCR
+  const [debugRow, setDebugRow] = useState(null); // logId con panel de debug expandido
+  const [ocrToast, setOcrToast] = useState(null); // { type: 'success'|'warn'|'error', message }
+  const ocrToastRef = useRef(null);
   const countdownRef = useRef(null);
 
   // Countdown timer to next scan
@@ -34,18 +39,56 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
 
     socket.emit('request_po_logs');
 
-    const handleLogsList  = (data) => setLogs(data);
-    const handleLogAdded  = (newLog) => setLogs(prev => [newLog, ...prev]);
-    const handleStatus    = (s) => setStatus(s);
+    const handleLogsList  = (data) => {
+      const seen = new Set();
+      setLogs(data.filter(l => l.id && !seen.has(l.id) && seen.add(l.id)));
+    };
+    const showToast = (type, message) => {
+      clearTimeout(ocrToastRef.current);
+      setOcrToast({ type, message });
+      ocrToastRef.current = setTimeout(() => setOcrToast(null), 6000);
+    };
+
+    const handleLogAdded = (newLog) => {
+      setLogs(prev => {
+        const filtered = prev.filter(l => l.id !== newLog.id);
+        return [newLog, ...filtered];
+      });
+    };
+
+    const handleOcrResult = ({ status, foundCode }) => {
+      setOcrProcessingId(null);
+      if (status === 'Factura - Completado') {
+        showToast('success', `✅ Asignado a ${foundCode || '—'}`);
+      } else if (status === 'Sin monto legible') {
+        showToast('warn', '⚠️ OCR completado pero no se encontraron montos legibles en el PDF.');
+      } else if (status === 'No Coincide') {
+        showToast('warn', `⚠️ Montos detectados (${foundCode || '—'}) pero ninguna OC coincide. Asigna manualmente.`);
+      } else if (status === 'Error Lectura') {
+        showToast('error', '❌ Error al leer el PDF. Revisa los logs del servidor.');
+      } else {
+        showToast('warn', `⚠️ Resultado: ${status}`);
+      }
+    };
+
+    const handleStatus   = (s) => setStatus(s);
+    const handleOcrError = ({ message }) => {
+      setOcrProcessingId(null);
+      showToast('error', `❌ ${message}`);
+    };
 
     socket.on('po_logs_list', handleLogsList);
     socket.on('po_scanner_log_added', handleLogAdded);
     socket.on('scan_status', handleStatus);
+    socket.on('reprocess_ocr_result', handleOcrResult);
+    socket.on('reprocess_ocr_error', handleOcrError);
 
     return () => {
       socket.off('po_logs_list', handleLogsList);
       socket.off('po_scanner_log_added', handleLogAdded);
       socket.off('scan_status', handleStatus);
+      socket.off('reprocess_ocr_result', handleOcrResult);
+      socket.off('reprocess_ocr_error', handleOcrError);
     };
   }, [isOpen, socket]);
 
@@ -55,7 +98,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
       await fetch(`/api/quotations/${docId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'aprobada' })
+        body: JSON.stringify({ quotationStatus: 'aprobada' })
       });
       setLogs(prev => prev.map(log =>
         log.id === logId ? { ...log, status: 'Asignado Manualmente', docId } : log
@@ -63,6 +106,37 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
     } catch (err) {
       console.error(err);
       alert('Error al asignar cotización manualmente.');
+    }
+  };
+
+  const reassignInvoice = (logId, oldDocId, newDocId) => {
+    if (!socket || !newDocId || newDocId === oldDocId) return;
+    socket.emit('reassign_invoice', { logId, oldDocId, newDocId });
+    setReassignRow(null);
+    setLogs(prev => prev.map(log => {
+      if (log.id !== logId) return log;
+      const q = quotations.find(q => q.id === newDocId);
+      return { ...log, docId: newDocId, status: 'Factura - Completado', foundCode: q?.code || log.foundCode };
+    }));
+  };
+
+  const assignInvoiceManually = async (logId, newDocId) => {
+    if (!newDocId) return;
+    try {
+      await fetch(`/api/quotations/${newDocId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quotationStatus: 'completado' }),
+      });
+      const q = quotations.find(q => q.id === newDocId);
+      setLogs(prev => prev.map(log =>
+        log.id === logId
+          ? { ...log, docId: newDocId, status: 'Factura - Completado', foundCode: q?.code || 'Asignado' }
+          : log
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Error al asignar factura manualmente.');
     }
   };
 
@@ -75,21 +149,45 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
     .filter(q => q.code)
     .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
 
+  // Cotizaciones con OC recibida (aprobada) — opciones para asignar facturas
+  const ocOptions = quotations
+    .filter(q => q.code && q.quotationStatus === 'aprobada')
+    .sort((a, b) => (a.code || '').localeCompare(b.code || ''))
+    .map(q => {
+      const subtotal = q.items?.length
+        ? q.items.reduce((s, it) => s + (parseFloat(it.quantity) || 0) * (parseFloat(it.price) || 0), 0)
+        : (q.total || 0);
+      const totalConIGV = (Math.round(subtotal * 1.18 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return { id: q.id, label: `${q.code} — ${q.clientName || 'Sin cliente'} (S/ ${totalConIGV})` };
+    });
+
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
       backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
       display: 'flex', justifyContent: 'center', alignItems: 'center'
     }}>
-      <div style={{
-        background: 'white', borderRadius: '12px', padding: '2rem', width: '940px',
-        maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)'
-      }}>
+      {/* Toast OCR — siempre visible, esquina inferior derecha del overlay */}
+      {ocrToast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 1100,
+          maxWidth: 380, padding: '0.85rem 1.1rem', borderRadius: '10px',
+          fontSize: '0.88rem', fontWeight: '500', boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+          background: ocrToast.type === 'success' ? '#f0fdf4' : ocrToast.type === 'error' ? '#fef2f2' : '#fff7ed',
+          border: `1px solid ${ocrToast.type === 'success' ? '#86efac' : ocrToast.type === 'error' ? '#fca5a5' : '#fdba74'}`,
+          color: ocrToast.type === 'success' ? '#15803d' : ocrToast.type === 'error' ? '#dc2626' : '#c2410c',
+        }}>
+          <span style={{ flex: 1 }}>{ocrToast.message}</span>
+          <button onClick={() => setOcrToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'inherit', opacity: 0.5, padding: 0, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
+      <div className="scanner-modal-content">
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
+        <div className="scanner-modal-header">
           <h2 style={{ fontSize: '1.4rem', color: '#1e293b', margin: 0 }}>📡 Monitor de Escaneo de Órdenes de Compra</h2>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div className="scanner-modal-actions">
             <button
               onClick={() => {
                 if (!socket) return;
@@ -110,6 +208,27 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               title="Revierte estados incorrectos y re-escanea con la lógica correcta (solo archivos con 'OC' en el nombre)"
             >
               ⚠️ Resetear y re-escanear
+            </button>
+            <button
+              onClick={() => {
+                if (!socket) return;
+                if (!confirm('¿Re-escanear solo la carpeta de enviados? Útil para detectar facturas ya enviadas que el scanner no procesó.')) return;
+                socket.emit('rescan_sent');
+              }}
+              disabled={isActive}
+              style={{
+                background: isActive ? '#e2e8f0' : '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                color: isActive ? '#94a3b8' : '#16a34a',
+                borderRadius: '8px',
+                padding: '0.4rem 0.9rem',
+                fontSize: '0.82rem',
+                fontWeight: '600',
+                cursor: isActive ? 'not-allowed' : 'pointer',
+              }}
+              title="Limpia caché de enviados y re-escanea facturas y cotizaciones enviadas sin tocar el inbox"
+            >
+              📤 Re-escanear enviados
             </button>
             <button
               onClick={() => {
@@ -207,7 +326,8 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
             Aún no se han procesado PDFs. Aparecerán aquí cuando el escáner encuentre adjuntos.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+          <div className="table-responsive">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', minWidth: '800px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', color: '#475569', borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Hora</th>
@@ -220,13 +340,16 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
             </thead>
             <tbody>
               {logs.map((log) => {
-                const isOk = log.status?.startsWith('Asignado') || log.status === 'Enviada' || log.status === 'Factura - Completado';
-                const isErr = log.status === 'No Coincide' || log.status === 'No Existe' || log.status === 'Error Lectura';
+                const isOk  = log.status?.startsWith('Asignado') || log.status === 'Enviada' || log.status === 'Factura - Completado';
+                const isWarn = log.status === 'Sin monto legible';
+                const isErr = !isOk && !isWarn && (log.status === 'No Coincide' || log.status === 'No Existe' || log.status === 'Error Lectura');
                 const sourceLabel = log.source === 'factura' ? { text: 'Factura', bg: '#f3e8ff', color: '#7c3aed' }
                   : log.source === 'enviada' ? { text: 'Enviada', bg: '#e0f2fe', color: '#0369a1' }
                   : { text: 'OC', bg: '#fef3c7', color: '#d97706' };
+                const isOcrRunning = ocrProcessingId === log.id;
                 return (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <React.Fragment key={log.id}>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9', background: isOcrRunning ? '#ecfeff' : undefined, transition: 'background 0.3s' }}>
                     <td style={{ padding: '0.75rem 1rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                       {new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
@@ -236,7 +359,54 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: '500', color: '#0f172a', maxWidth: 220, wordBreak: 'break-word' }}>
-                      {log.filename}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span>{log.filename}</span>
+                        {log.debugText && (
+                          <button
+                            onClick={() => setDebugRow(debugRow === log.id ? null : log.id)}
+                            title="Ver texto extraído del PDF"
+                            style={{
+                              fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px',
+                              border: '1px solid #cbd5e1', background: debugRow === log.id ? '#f1f5f9' : 'white',
+                              color: '#64748b', cursor: 'pointer', flexShrink: 0,
+                            }}
+                          >
+                            📋
+                          </button>
+                        )}
+                        {log.source === 'factura' && !log.docId && (
+                          <button
+                            onClick={() => {
+                              if (isOcrRunning) return;
+                              console.log('[OCR] Solicitando re-proceso para:', log.id, '| socket:', socket?.id);
+                              setOcrProcessingId(log.id);
+                              socket?.emit('reprocess_invoice_ocr', { logId: log.id });
+                            }}
+                            title={isOcrRunning ? 'Procesando OCR...' : 'Re-procesar con OCR para extraer montos y asignar automáticamente'}
+                            disabled={isOcrRunning}
+                            style={{
+                              fontSize: '0.68rem', padding: '0.1rem 0.45rem', borderRadius: '4px',
+                              border: `1px solid ${isOcrRunning ? '#a5f3fc' : '#6ee7b7'}`,
+                              background: isOcrRunning ? '#ecfeff' : '#ecfdf5',
+                              color: isOcrRunning ? '#0e7490' : '#065f46',
+                              cursor: isOcrRunning ? 'not-allowed' : 'pointer',
+                              fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0,
+                              display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            }}
+                          >
+                            {isOcrRunning ? (
+                              <>
+                                <span style={{
+                                  display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                                  border: '1.5px solid #0e7490', borderTopColor: 'transparent',
+                                  animation: 'ocr-spin 0.7s linear infinite',
+                                }} />
+                                OCR...
+                              </>
+                            ) : '🔬 OCR'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', color: log.foundCode ? '#0284c7' : '#94a3b8', fontFamily: 'monospace' }}>
                       {log.foundCode || '—'}
@@ -244,14 +414,53 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <span style={{
                         padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
-                        background: isOk ? '#dcfce7' : isErr ? '#fee2e2' : '#fef3c7',
-                        color: isOk ? '#16a34a' : isErr ? '#dc2626' : '#d97706',
+                        background: isOk ? '#dcfce7' : isWarn ? '#fff7ed' : isErr ? '#fee2e2' : '#fef3c7',
+                        color: isOk ? '#16a34a' : isWarn ? '#ea580c' : isErr ? '#dc2626' : '#d97706',
                       }}>
                         {log.status}
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
-                      {isErr ? (
+                      {log.source === 'factura' ? (
+                        log.docId ? (
+                          // Factura asignada — código visible + botón Cambiar
+                          reassignRow === log.id ? (
+                            <select
+                              autoFocus
+                              defaultValue=""
+                              onChange={(e) => reassignInvoice(log.id, log.docId, e.target.value)}
+                              onBlur={() => setReassignRow(null)}
+                              style={{ padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #a855f7', fontSize: '0.8rem' }}
+                            >
+                              <option value="" disabled>Reasignar a OC recibida...</option>
+                              {ocOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                            </select>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '600' }}>
+                                ✓ {quotations.find(q => q.id === log.docId)?.code || 'Asignado'}
+                              </span>
+                              <button
+                                onClick={() => setReassignRow(log.id)}
+                                style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#7c3aed', cursor: 'pointer' }}
+                              >
+                                Cambiar
+                              </button>
+                            </div>
+                          )
+                        ) : (
+                          // Factura sin asignar (sin monto legible o sin coincidencia)
+                          <select
+                            defaultValue=""
+                            onChange={(e) => assignInvoiceManually(log.id, e.target.value)}
+                            style={{ padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #d8b4fe', fontSize: '0.8rem' }}
+                          >
+                            <option value="" disabled>Asignar a OC recibida...</option>
+                            {ocOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                          </select>
+                        )
+                      ) : isErr ? (
+                        // OC o COT sin coincidencia — re-vincular
                         <select
                           defaultValue=""
                           onChange={(e) => assignManually(log.id, e.target.value)}
@@ -259,20 +468,35 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
                         >
                           <option value="" disabled>Re-vincular...</option>
                           {pendingQuotations.map(q => (
-                            <option key={q.id} value={q.id}>
-                              {q.code} — {q.clientName || 'Sin Título'}
-                            </option>
+                            <option key={q.id} value={q.id}>{q.code} — {q.clientName || 'Sin Título'}</option>
                           ))}
                         </select>
                       ) : (
-                        <span style={{ fontSize: '0.8rem', color: '#16a34a' }}>✓ Completado</span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>—</span>
                       )}
                     </td>
                   </tr>
+                  {debugRow === log.id && log.debugText && (
+                    <tr style={{ background: '#f8fafc' }}>
+                      <td colSpan={6} style={{ padding: '0.5rem 1rem 0.75rem 1rem' }}>
+                        <pre style={{
+                          margin: 0, fontSize: '0.75rem', color: '#334155',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                          background: '#f1f5f9', border: '1px solid #e2e8f0',
+                          borderRadius: '6px', padding: '0.6rem 0.8rem',
+                          maxHeight: 200, overflowY: 'auto', fontFamily: 'monospace',
+                        }}>
+                          {log.debugText}
+                        </pre>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -280,6 +504,9 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
         @keyframes pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        @keyframes ocr-spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

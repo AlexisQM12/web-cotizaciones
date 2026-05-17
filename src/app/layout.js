@@ -2,8 +2,10 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata = {
-    title: 'Sistema de Cotizaciones',
-    description: 'Automatización de cotizaciones',
+    title: 'CGO Pymes - Dashboard',
+    description: 'Centro de Gestión Operativa para Pymes',
+    manifest: '/manifest.json',
+    themeColor: '#3b82f6',
 }
 
 export default function RootLayout({ children }) {

@@ -35,7 +35,8 @@ export function SubItemsModal({ isOpen, onClose, initialSubItems, itemDescriptio
                     <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
                 </div>
                 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
+                <div className="table-responsive">
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem', minWidth: '600px' }}>
                     <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                             <th style={{ padding: '0.75rem', textAlign: 'left', color: '#475569', fontSize: '0.85rem' }}>Descripción interna</th>
@@ -93,8 +94,9 @@ export function SubItemsModal({ isOpen, onClose, initialSubItems, itemDescriptio
                         ))}
                     </tbody>
                 </table>
+                </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem' }}>
                     <button onClick={handleAdd} style={{ background: '#e0f2fe', color: '#0369a1', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }}>
                         + Agregar Fila
                     </button>

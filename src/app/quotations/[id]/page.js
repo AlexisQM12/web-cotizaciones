@@ -401,13 +401,13 @@ export default function QuotationEditor() {
     return (
         <ProtectedRoute>
             <UserSidebar activeUsers={activeUsers} />
-            <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', marginLeft: '80px' }}>
+            <div className="editor-container">
                 {/* Left: Editor Form */}
-                <div style={{ width: '50%', padding: '1.25rem', overflowY: 'auto', borderRight: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div className="editor-left">
+                    <div className="editor-header">
                         <h1 style={{ color: '#1e293b', fontSize: '1.4rem' }}>Editor de Cotización</h1>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/')}>
+                            <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/quotations')}>
                                 ← Menú Principal
                             </button>
                             <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={saveQuotation} disabled={saving}>
@@ -417,7 +417,7 @@ export default function QuotationEditor() {
                     </div>
 
                     <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="grid-2-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -454,7 +454,7 @@ export default function QuotationEditor() {
                     </div>
 
                     <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Nombre de Cliente</label>
                                 {renderRemoteCursorLabel('clientName')}
@@ -511,7 +511,7 @@ export default function QuotationEditor() {
 
                     <h3 style={{ color: '#1e293b', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Configuración Global de Precios (Interno)</h3>
                     <div className="card-editor" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', alignItems: 'flex-end' }}>
+                        <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
@@ -651,7 +651,7 @@ export default function QuotationEditor() {
                                 </div>
                             </div>
                             {item.isExpanded !== false && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', marginTop: '1rem' }}>
+                                <div className="item-grid-container">
                                 <div style={{ gridColumn: 'span 5', position: 'relative' }}>
                                     {renderRemoteCursorLabel(`item_${index}_description`)}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -834,7 +834,7 @@ export default function QuotationEditor() {
                 </div>
 
                 {/* Right: PDF Preview */}
-                <div style={{ width: '50%', backgroundColor: '#525659', display: 'flex', flexDirection: 'column' }}>
+                <div className="editor-right">
                     <div style={{ padding: '0.75rem 1rem', backgroundColor: '#3a3c3e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '500' }}>Vista Previa del PDF</span>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>

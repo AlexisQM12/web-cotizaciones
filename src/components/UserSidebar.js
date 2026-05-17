@@ -18,33 +18,9 @@ export function UserSidebar({ activeUsers = [] }) {
     const uniqueUsers = Array.from(new Map(otherUsers.map(u => [u.uid, u])).values());
 
     return (
-        <div style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: '80px',
-            background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '1.5rem 0',
-            gap: '1.5rem',
-            zIndex: 100,
-            borderRight: '1px solid #e2e8f0',
-            boxShadow: '2px 0 8px rgba(0,0,0,0.05)',
-            transition: 'width 0.3s ease'
-        }}>
+        <div className="user-sidebar">
             {/* Current User Profile */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.5rem',
-                paddingBottom: '1.5rem',
-                borderBottom: '1px solid #e2e8f0',
-                width: '100%'
-            }}>
+            <div className="user-profile-current">
                 <div style={{ position: 'relative' }}>
                     {user.photoURL ? (
                         <img
@@ -108,24 +84,8 @@ export function UserSidebar({ activeUsers = [] }) {
 
             {/* Active Users */}
             {uniqueUsers.length > 0 && (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    width: '100%',
-                    flex: 1,
-                    overflowY: 'auto',
-                    paddingBottom: '1rem'
-                }}>
-                    <div style={{
-                        fontSize: '0.65rem',
-                        color: '#64748b',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        textAlign: 'center'
-                    }}>
+                <div className="user-sidebar-content">
+                    <div className="sidebar-label">
                         Editando
                     </div>
                     {uniqueUsers.map((activeUser, index) => (
@@ -203,33 +163,8 @@ export function UserSidebar({ activeUsers = [] }) {
 
             {/* Logout Button */}
             <button
+                className="btn-logout"
                 onClick={handleSignOut}
-                style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    color: '#ef4444',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem',
-                    transition: 'all 0.2s',
-                    marginTop: 'auto'
-                }}
-                onMouseOver={(e) => {
-                    e.currentTarget.style.background = '#ef4444';
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.borderColor = '#ef4444';
-                }}
-                onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                    e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                }}
-                title="Cerrar Sesión"
             >
                 🚪
             </button>

@@ -27,7 +27,13 @@ async function loadFromFirestore() {
     }
     if (logsSnap.exists) {
       const entries = logsSnap.data().entries || [];
-      poLogs.push(...entries);
+      const seen = new Set();
+      for (const entry of entries) {
+        if (entry.id && !seen.has(entry.id)) {
+          seen.add(entry.id);
+          poLogs.push(entry);
+        }
+      }
     }
     console.log(`[Lector] Firestore: ${processedUids.size} inbox | ${processedSentUids.size} sent | ${poLogs.length} logs`);
   } catch (e) {
@@ -45,6 +51,15 @@ async function saveCache() {
   } catch (e) {
     console.warn('[Lector] Error guardando caché:', e.message);
   }
+}
+
+function addLog(entry, io) {
+  const idx = poLogs.findIndex(l => l.id === entry.id);
+  if (idx !== -1) poLogs.splice(idx, 1);
+  poLogs.unshift(entry);
+  if (poLogs.length > 200) poLogs.pop();
+  saveLogs();
+  if (io) io.emit('po_scanner_log_added', entry);
 }
 
 async function saveLogs() {
@@ -281,10 +296,7 @@ export async function startEmailListener(io) {
           logEntry.status = 'Error Lectura';
         }
 
-        poLogs.unshift(logEntry);
-        if (poLogs.length > 200) poLogs.pop();
-        saveLogs();
-        if (io) io.emit('po_scanner_log_added', logEntry);
+        addLog(logEntry, io);
       }
 
     } catch (error) {
@@ -303,13 +315,51 @@ export async function startEmailListener(io) {
 
       const connection = await Imap.connect(config);
 
-      // Gmail sent folder — intenta nombre estándar, fallback a localizado
-      let sentBox = '[Gmail]/Sent Mail';
+      // Detectar carpeta de enviados — listar buzones disponibles y buscar coincidencia
+      let sentBox = null;
       try {
-        await connection.openBox(sentBox);
-      } catch {
-        sentBox = '[Gmail]/Enviados';
-        await connection.openBox(sentBox);
+        const boxes = await connection.getBoxes();
+        const gmail = boxes['[Gmail]'] || boxes['[Google Mail]'];
+        const gmailPrefix = boxes['[Gmail]'] ? '[Gmail]' : '[Google Mail]';
+        if (gmail?.children) {
+          const children = Object.keys(gmail.children);
+          console.log(`[Lector/Sent] Buzones Gmail disponibles: ${children.map(c => `${gmailPrefix}/${c}`).join(', ')}`);
+          const sentChild = children.find(c =>
+            /sent|enviados|enviad/i.test(c)
+          );
+          if (sentChild) sentBox = `${gmailPrefix}/${sentChild}`;
+        }
+        // Fallback: intenta nombres directos si no encontró en árbol
+        if (!sentBox) {
+          const topKeys = Object.keys(boxes);
+          console.log(`[Lector/Sent] Buzones raíz: ${topKeys.join(', ')}`);
+        }
+      } catch (listErr) {
+        console.warn('[Lector/Sent] No pudo listar buzones:', listErr.message);
+      }
+
+      // Si no encontró por detección, intenta candidatos comunes
+      const sentCandidates = sentBox
+        ? [sentBox]
+        : ['[Gmail]/Sent Mail', '[Gmail]/Enviados', '[Google Mail]/Sent Mail', '[Google Mail]/Enviados', 'Sent', 'Sent Items'];
+
+      let opened = false;
+      for (const candidate of sentCandidates) {
+        try {
+          await connection.openBox(candidate);
+          sentBox = candidate;
+          opened = true;
+          console.log(`[Lector/Sent] Carpeta enviados abierta: "${candidate}"`);
+          break;
+        } catch {
+          console.log(`[Lector/Sent] No encontrada: "${candidate}"`);
+        }
+      }
+
+      if (!opened) {
+        console.error('[Lector/Sent] No se pudo abrir ninguna carpeta de enviados.');
+        try { connection.end(); } catch (_) {}
+        return;
       }
 
       const allMessages = await connection.search(['ALL'], {
@@ -319,15 +369,23 @@ export async function startEmailListener(io) {
       });
 
       const unprocessed = allMessages.filter(m => !processedSentUids.has(m.attributes.uid));
+      console.log(`[Lector/Sent] Total en carpeta: ${allMessages.length} | Ya procesados: ${allMessages.length - unprocessed.length} | Nuevos: ${unprocessed.length}`);
       unprocessed.forEach(m => processedSentUids.add(m.attributes.uid));
       if (unprocessed.length > 0) saveCache();
       const withPdf = unprocessed.filter(m => hasPdfInStruct(m.attributes.struct));
+      const sinPdf  = unprocessed.filter(m => !hasPdfInStruct(m.attributes.struct));
 
-      console.log(`[Lector/Sent] ${unprocessed.length} enviados nuevos | ${withPdf.length} con PDFs`);
+      console.log(`[Lector/Sent] ${unprocessed.length} enviados nuevos | ${withPdf.length} con PDFs | ${sinPdf.length} sin PDFs detectados`);
+      if (sinPdf.length > 0 && sinPdf.length <= 5) {
+        for (const m of sinPdf) {
+          console.log(`[Lector/Sent] Sin PDF struct — UID ${m.attributes.uid}: ${JSON.stringify(m.attributes.struct)?.slice(0, 200)}`);
+        }
+      }
 
       // Cola separada por tipo
-      const invoiceQueue = [];  // facturas: PDF-DOC-E001-*
-      const sentCotQueue = [];  // cotizaciones enviadas: COT-*
+      const invoiceQueue    = [];  // facturas: PDF-DOC-E001-* o contenido con FACTURA
+      const sentCotQueue    = [];  // cotizaciones enviadas: COT-*
+      const unknownPdfQueue = [];  // PDFs sin patrón de nombre conocido → clasificar por contenido
 
       for (let i = 0; i < withPdf.length; i++) {
         const uid = withPdf[i].attributes.uid;
@@ -345,12 +403,21 @@ export async function startEmailListener(io) {
           if (!part?.body) continue;
 
           const email = await simpleParser('Imap-Id: ' + uid + '\r\n' + part.body);
-          for (const att of (email.attachments || [])) {
+          const allAtts = email.attachments || [];
+          console.log(`[Lector/Sent] UID ${uid}: ${allAtts.length} adjuntos encontrados por mailparser`);
+          for (const att of allAtts) {
             const name  = att.filename || '';
             const isPdf = att.contentType === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+            console.log(`[Lector/Sent]   adjunto: "${name}" | contentType: ${att.contentType} | size: ${att.content?.length ?? 0} | isPdf: ${isPdf}`);
             if (!isPdf || !att.content) continue;
 
-            const isInvoice = /^PDF-DOC-E\d{3}-\d+/i.test(name);
+            // Formato 1: PDF-DOC-E001-XXXXXXXXX
+            // Formato 2: {RUC}-01-{serie}-{num} — factura electrónica SUNAT tipo 01
+            //   Permite variaciones: RUC de 8-11 dígitos, serie con 1-2 letras, num variable
+            const nameClean = name.replace(/[‐-―−]/g, '-'); // normalizar guiones unicode
+            const isInvoice = /^PDF-DOC-E\d{3}-\d+/i.test(nameClean)
+                           || /^\d{8,11}-01-[A-Z]{1,2}\d{1,4}-\d+/i.test(nameClean);
+            console.log(`[Lector/Sent]   isInvoice=${isInvoice} isCot=${/COT-\d{4}-\d{4,}/i.test(nameClean)} para "${name}"`);
             const isCot     = /COT-\d{4}-\d{4,}/i.test(name);
 
             if (isInvoice) {
@@ -359,6 +426,9 @@ export async function startEmailListener(io) {
             } else if (isCot) {
               sentCotQueue.push({ uid, filename: name, buffer: att.content });
               console.log(`[Lector/Sent] Cotización enviada: "${name}"`);
+            } else {
+              unknownPdfQueue.push({ uid, filename: name, buffer: att.content });
+              console.log(`[Lector/Sent] PDF sin patrón de nombre, se leerá contenido: "${name}"`);
             }
           }
         } catch (dlErr) {
@@ -367,6 +437,30 @@ export async function startEmailListener(io) {
       }
 
       try { connection.end(); } catch (_) {}
+
+      // Clasificar PDFs de nombre desconocido leyendo su contenido
+      if (unknownPdfQueue.length > 0) {
+        console.log(`[Lector/Sent] Clasificando ${unknownPdfQueue.length} PDFs por contenido...`);
+        for (const item of unknownPdfQueue) {
+          try {
+            const parser  = new PDFParse({ data: item.buffer });
+            const pdfData = await parser.getText();
+            const text    = pdfData.text || '';
+            const cotMatch = text.match(/(COT-\d{4}-\d{4,})/i);
+            if (/FACTURA/i.test(text)) {
+              invoiceQueue.push(item);
+              console.log(`[Lector/Sent] "${item.filename}" → FACTURA (por contenido)`);
+            } else if (cotMatch) {
+              sentCotQueue.push(item);
+              console.log(`[Lector/Sent] "${item.filename}" → COT ${cotMatch[1]} (por contenido)`);
+            } else {
+              console.log(`[Lector/Sent] "${item.filename}" → no reconocido (sin FACTURA ni COT en contenido)`);
+            }
+          } catch (e) {
+            console.warn(`[Lector/Sent] No pudo leer contenido de "${item.filename}":`, e.message);
+          }
+        }
+      }
 
       const totalPdfs = invoiceQueue.length + sentCotQueue.length;
       if (totalPdfs === 0) return;
@@ -395,30 +489,55 @@ export async function startEmailListener(io) {
           source: 'factura',
         };
 
+        // Subir PDF siempre para permitir re-procesar OCR desde la UI
+        try {
+          const tempUrl = await uploadOcPdf(buffer, filename, `temp/${logEntry.id}`);
+          if (tempUrl) logEntry.tempPdfUrl = tempUrl;
+        } catch (_) {}
+
         try {
           const parser  = new PDFParse({ data: buffer });
           const pdfData = await parser.getText();
-          const amounts = extractAmounts(pdfData.text);
-          const match   = await findInvoiceMatch(amounts);
+          let text      = pdfData.text || '';
+          let amounts   = extractAmounts(text);
+          let hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
 
-          if (match) {
-            logEntry.foundCode = `${match.code} (S/ ${match.matchedAmount.toFixed(2)})`;
-            console.log(`✅ Factura → ${match.code} por S/ ${match.matchedAmount.toFixed(2)}`);
-            const result = await markInvoiceCompleted(match.docId, buffer, filename, io);
-            logEntry.status = result.success ? 'Factura - Completado' : 'Fallo DB';
-            if (result.success) logEntry.docId = match.docId;
+          if (!hasAmounts) {
+            console.log(`[pdfjs] "${filename}" sin montos en pdf-parse, intentando pdfjs...`);
+            text = await extractTextPdfjs(buffer);
+            amounts = extractAmounts(text);
+            hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
+          }
+
+          if (!hasAmounts) {
+            console.log(`[OCR] "${filename}" sin montos en pdfjs, intentando OCR...`);
+            emitStatus(io, { currentFile: filename, message: `OCR: ${filename}` });
+            text      = await extractTextWithOCR(buffer);
+            amounts   = extractAmounts(text);
+            hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
+          }
+
+          if (!hasAmounts) {
+            console.log(`⚠️ Factura "${filename}": sin montos legibles ni con OCR.`);
+            logEntry.status = 'Sin monto legible';
           } else {
-            console.log(`❌ Sin coincidencia de monto para factura: "${filename}"`);
+            const match = await findInvoiceMatch(amounts);
+            if (match) {
+              logEntry.foundCode = `${match.code} (S/ ${match.matchedAmount.toFixed(2)})`;
+              console.log(`✅ Factura → ${match.code} por S/ ${match.matchedAmount.toFixed(2)}`);
+              const result = await markInvoiceCompleted(match.docId, buffer, filename, io);
+              logEntry.status = result.success ? 'Factura - Completado' : 'Fallo DB';
+              if (result.success) logEntry.docId = match.docId;
+            } else {
+              console.log(`❌ Sin coincidencia de monto para factura: "${filename}"`);
+            }
           }
         } catch (e) {
           console.error(`[Lector/Sent] Error leyendo factura "${filename}":`, e.message);
           logEntry.status = 'Error Lectura';
         }
 
-        poLogs.unshift(logEntry);
-        if (poLogs.length > 200) poLogs.pop();
-        saveLogs();
-        if (io) io.emit('po_scanner_log_added', logEntry);
+        addLog(logEntry, io);
       }
 
       // ── Procesar cotizaciones enviadas ──
@@ -466,10 +585,7 @@ export async function startEmailListener(io) {
           logEntry.status = 'Error Lectura';
         }
 
-        poLogs.unshift(logEntry);
-        if (poLogs.length > 200) poLogs.pop();
-        saveLogs();
-        if (io) io.emit('po_scanner_log_added', logEntry);
+        addLog(logEntry, io);
       }
 
     } catch (error) {
@@ -489,6 +605,49 @@ export async function startEmailListener(io) {
         socket.emit('scan_status', scanStatus);
       });
 
+      socket.on('reassign_invoice', async ({ logId, oldDocId, newDocId }) => {
+        if (!firestore || !oldDocId || !newDocId || oldDocId === newDocId) return;
+        try {
+          const [oldSnap, newSnap] = await Promise.all([
+            firestore.collection('quotations').doc(oldDocId).get(),
+            firestore.collection('quotations').doc(newDocId).get(),
+          ]);
+          if (!oldSnap.exists || !newSnap.exists) return;
+
+          const invoicePdfUrl = oldSnap.data().invoicePdfUrl || null;
+          const now = new Date().toISOString();
+
+          const batch = firestore.batch();
+          // Revertir cotización anterior a aprobada
+          batch.update(oldSnap.ref, {
+            quotationStatus: 'aprobada',
+            invoicePdfUrl: admin.firestore.FieldValue.delete(),
+            updatedAt: now,
+          });
+          // Asignar factura a la nueva cotización
+          batch.update(newSnap.ref, {
+            quotationStatus: 'completado',
+            isSent: true,
+            invoicePdfUrl: invoicePdfUrl || admin.firestore.FieldValue.delete(),
+            updatedAt: now,
+          });
+          await batch.commit();
+
+          io.emit('quotation_updated', { id: oldDocId, quotationStatus: 'aprobada', invoicePdfUrl: null, updatedAt: now });
+          io.emit('quotation_updated', { id: newDocId, quotationStatus: 'completado', isSent: true, invoicePdfUrl, updatedAt: now });
+
+          // Actualizar log en memoria
+          const logIdx = poLogs.findIndex(l => l.id === logId);
+          if (logIdx !== -1) {
+            poLogs[logIdx] = { ...poLogs[logIdx], docId: newDocId, foundCode: newSnap.data().code || poLogs[logIdx].foundCode };
+            saveLogs();
+          }
+          console.log(`[Lector] Factura reasignada: ${oldDocId} → ${newDocId}`);
+        } catch (err) {
+          console.error('[Lector] Error reasignando factura:', err.message);
+        }
+      });
+
       socket.on('force_rescan', async () => {
         if (isScanning) {
           socket.emit('scan_status', { ...scanStatus, message: 'Ya hay un escaneo en curso, espera que termine.' });
@@ -499,6 +658,129 @@ export async function startEmailListener(io) {
         processedSentUids.clear();
         await saveCache();
         runScanCycle();
+      });
+
+      // Re-escanea solo la carpeta de enviados sin tocar inbox ni revertir estados
+      socket.on('rescan_sent', async () => {
+        if (isScanning) {
+          socket.emit('scan_status', { ...scanStatus, message: 'Ya hay un escaneo en curso, espera que termine.' });
+          return;
+        }
+        console.log('[Lector] Re-escaneo de enviados: limpiando caché de enviados...');
+        processedSentUids.clear();
+        await saveCache();
+        isScanning = true;
+        try {
+          await scanSent();
+        } finally {
+          isScanning = false;
+          scheduleNext();
+        }
+      });
+
+      // Re-procesa una factura específica por su logId usando el PDF ya subido a Storage
+      socket.on('reprocess_invoice_ocr', async ({ logId }) => {
+        const logEntry = poLogs.find(l => l.id === logId);
+        if (!logEntry) return;
+        console.log(`[OCR-Manual] Re-procesando "${logEntry.filename}"...`);
+        emitStatus(io, { phase: 'processing', message: `Re-procesando: ${logEntry.filename}`, currentFile: logEntry.filename });
+        try {
+          let buffer;
+          if (logEntry.tempPdfUrl) {
+            const res = await fetch(logEntry.tempPdfUrl);
+            buffer = Buffer.from(await res.arrayBuffer());
+          } else {
+            // Sin URL en Storage: re-obtener directamente desde IMAP usando el UID del logId
+            const uidMatch = logEntry.id.match(/^sent-(\d+)-/);
+            if (!uidMatch) throw new Error('No se pudo extraer UID del log');
+            const uid = uidMatch[1];
+            console.log(`[OCR-Manual] Descargando UID ${uid} desde IMAP...`);
+            emitStatus(io, { message: `Descargando desde IMAP: ${logEntry.filename}` });
+            buffer = await fetchSentPdfByUid(uid, logEntry.filename, config);
+            // Subir a Storage para futuros re-procesos
+            const url = await uploadOcPdf(buffer, logEntry.filename, `temp/${logEntry.id}`);
+            if (url) logEntry.tempPdfUrl = url;
+          }
+
+          const debugLines = [];
+
+          // ── Etapa 1: pdf-parse ──
+          const parser  = new PDFParse({ data: buffer });
+          const pdfData = await parser.getText();
+          let text      = pdfData.text || '';
+          let amounts   = extractAmounts(text);
+          let hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
+          const snippet1 = text.replace(/\s+/g, ' ').trim().slice(0, 400);
+          debugLines.push(`[pdf-parse] ${text.length} chars | labeled: [${amounts.labeled.join(', ')}] | general: [${amounts.general.join(', ')}]`);
+          debugLines.push(`  Texto: ${snippet1 || '(vacío)'}`);
+          console.log(debugLines[0]);
+          console.log(debugLines[1]);
+
+          // ── Etapa 2: pdfjs ──
+          if (!hasAmounts) {
+            console.log(`[OCR-Manual/pdfjs] "${logEntry.filename}" intentando pdfjs...`);
+            text = await extractTextPdfjs(buffer);
+            amounts = extractAmounts(text);
+            hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
+            const snippet2 = text.replace(/\s+/g, ' ').trim().slice(0, 400);
+            debugLines.push(`[pdfjs] ${text.length} chars | labeled: [${amounts.labeled.join(', ')}] | general: [${amounts.general.join(', ')}]`);
+            debugLines.push(`  Texto: ${snippet2 || '(vacío)'}`);
+            console.log(debugLines[debugLines.length - 2]);
+            console.log(debugLines[debugLines.length - 1]);
+          }
+
+          // ── Etapa 3: OCR ──
+          if (!hasAmounts) {
+            console.log(`[OCR-Manual/ocr] "${logEntry.filename}" intentando OCR...`);
+            emitStatus(io, { currentFile: logEntry.filename, message: `OCR manual: ${logEntry.filename}` });
+            try {
+              text = await extractTextWithOCR(buffer);
+              amounts = extractAmounts(text);
+              hasAmounts = amounts.labeled.length > 0 || amounts.general.length > 0;
+              const snippet3 = text.replace(/\s+/g, ' ').trim().slice(0, 400);
+              debugLines.push(`[OCR] ${text.length} chars | labeled: [${amounts.labeled.join(', ')}] | general: [${amounts.general.join(', ')}]`);
+              debugLines.push(`  Texto: ${snippet3 || '(vacío)'}`);
+            } catch (ocrErr) {
+              debugLines.push(`[OCR] ❌ ERROR: ${ocrErr.message}`);
+              console.error('[OCR-Manual] Error en OCR:', ocrErr.message);
+            }
+            console.log(debugLines[debugLines.length - 2]);
+            console.log(debugLines[debugLines.length - 1]);
+          }
+
+          // Guardar resumen para mostrarlo en la UI
+          logEntry.debugText = debugLines.join('\n');
+
+          if (!hasAmounts) {
+            logEntry.status = 'Sin monto legible';
+            console.log(`[OCR-Manual] "${logEntry.filename}": sin montos en ninguna etapa.`);
+          } else {
+            const match = await findInvoiceMatch(amounts);
+            if (match) {
+              logEntry.foundCode = `${match.code} (S/ ${match.matchedAmount.toFixed(2)})`;
+              console.log(`[OCR-Manual] ✅ Factura → ${match.code} por S/ ${match.matchedAmount.toFixed(2)}`);
+              const result = await markInvoiceCompleted(match.docId, buffer, logEntry.filename, io);
+              logEntry.status = result.success ? 'Factura - Completado' : 'Fallo DB';
+              if (result.success) logEntry.docId = match.docId;
+            } else {
+              logEntry.status = 'No Coincide';
+              logEntry.foundCode = `Montos: ${[...amounts.labeled, ...amounts.general].map(a => `S/${a}`).join(', ')}`;
+              console.log(`[OCR-Manual] ❌ Sin coincidencia. Montos detectados: labeled=[${amounts.labeled.join(', ')}] general=[${amounts.general.join(', ')}]`);
+            }
+          }
+        } catch (err) {
+          console.error(`[OCR-Manual] Error re-procesando "${logEntry.filename}":`, err.message);
+          logEntry.status = 'Error Lectura';
+          logEntry.debugText = `Error: ${err.message}`;
+        }
+        addLog(logEntry, io);
+        socket.emit('reprocess_ocr_result', {
+          logId: logEntry.id,
+          status: logEntry.status,
+          foundCode: logEntry.foundCode,
+          docId: logEntry.docId || null,
+        });
+        emitStatus(io, { phase: 'idle', message: 'Re-proceso completado', currentFile: null });
       });
 
       socket.on('reset_and_rescan', async () => {
@@ -660,21 +942,35 @@ async function markQuotationSent(cotCode, io) {
 }
 
 function extractAmounts(text) {
-  // Normalizar primero: colapsar espacios múltiples para que "1, 650.00" no se fragmente
-  const normalized = text.replace(/(\d),\s+(\d)/g, '$1,$2');
+  // ── Normalización ──────────────────────────────────────────────────────────
+  let normalized = text
+    .replace(/(\d),\s+(\d)/g, '$1,$2')          // "1, 650" → "1,650"
+    .replace(/(\d)\s+\.(\d{2})(?!\d)/g, '$1.$2') // "650 .18" → "650.18" (PDF fragmentado)
+    .replace(/(\d)\.\s+(\d{2})(?!\d)/g, '$1.$2') // "650. 18" → "650.18"
+    .replace(/S\s*\/\s*\.\s*/g, 'S/. ')           // "S / ." → "S/. "
+    .replace(/S\s*\/(?!\.)/g, 'S/ ');             // "S/" → "S/ " (asegura espacio)
 
-  // Alta confianza: número explícitamente etiquetado como total/monto final
-  // Negative lookbehind (?<![,\d]) evita capturar fragmentos de números con miles
-  // p.ej. en "1,650.00" no debe extraer "650.00" por separado
+  // ── Alta confianza: etiquetas conocidas de facturas SUNAT ─────────────────
   const labeled = new Set();
   const labeledPatterns = [
-    /S\/\.?\s*(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
-    /PEN\s*(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
-    /TOTAL[^:\n]{0,20}[:\s]+(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
-    /IMPORTE[^:\n]{0,20}[:\s]+(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
-    /VALOR[^:\n]{0,20}[:\s]+(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // S/ o S/. seguido del monto (formato SUNAT estándar)
+    /S\s*[/.]\s*\.?\s*(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // PEN
+    /PEN\s+(?<![,\d])([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // Importe Total (etiqueta específica SUNAT — siempre el total final)
+    /Importe\s+Total[^:\n]{0,10}[:\s]+(?:S\s*[/.]\s*\.?\s*)?([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // TOTAL genérico
+    /TOTAL[^:\n]{0,20}[:\s]+(?:S\s*[/.]\s*\.?\s*)?([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // IMPORTE — ahora acepta "S/ " entre el colon y el número
+    /IMPORTE[^:\n]{0,20}[:\s]+(?:S\s*[/.]\s*\.?\s*)?([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // VALOR VENTA / VALOR TOTAL
+    /VALOR[^:\n]{0,20}[:\s]+(?:S\s*[/.]\s*\.?\s*)?([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // Número después de ":" que va precedido por S/ (cualquier etiqueta con colon)
+    /:[:\s]*S\s*[/.]\s*\.?\s*([\d]{1,3}(?:,\d{3})*\.\d{2})(?!\d)/gi,
+    // Número con miles (siempre es un monto significativo)
     /(?<![,\d])([\d]{1,3}(?:,\d{3})+\.\d{2})(?!\d)/g,
   ];
+
   for (const re of labeledPatterns) {
     let m;
     while ((m = re.exec(normalized)) !== null) {
@@ -683,17 +979,16 @@ function extractAmounts(text) {
     }
   }
 
-  // General: cualquier decimal con al menos 2 dígitos enteros.
-  // (?<![,\d]) impide capturar fragmentos: en "1,650.00" no captura "650.00"
-  // porque "650" está precedido por ","
+  // ── General: cualquier decimal no precedido por coma/dígito ───────────────
   const general = new Set();
-  const generalRe = /(?<![,\d])(\d{2,}(?:,\d{3})*\.\d{2})(?!\d)/g;
+  const generalRe = /(?<![,\d\/])(\d{2,}(?:,\d{3})*\.\d{2})(?!\d)/g;
   let m;
   while ((m = generalRe.exec(normalized)) !== null) {
     const n = parseFloat(m[1].replace(/,/g, ''));
     if (n > 10 && n < 10_000_000) general.add(Math.round(n * 100) / 100);
   }
 
+  console.log(`[extractAmounts] labeled: [${[...labeled].join(', ')}] | general: [${[...general].join(', ')}]`);
   return { labeled: [...labeled], general: [...general] };
 }
 
@@ -770,6 +1065,148 @@ async function findQuotationByAmount({ labeled, general }) {
     console.error('[Lector] Error buscando por monto:', err.message);
     return null;
   }
+}
+
+// Obtiene el buffer de un PDF adjunto desde la carpeta de enviados por UID + nombre de archivo
+async function fetchSentPdfByUid(uid, filename, config) {
+  let connection;
+  try {
+    connection = await Imap.connect(config);
+
+    // Detectar carpeta de enviados
+    const boxes = await connection.getBoxes().catch(() => ({}));
+    const gmail = boxes['[Gmail]'] || boxes['[Google Mail]'];
+    const gmailPrefix = boxes['[Gmail]'] ? '[Gmail]' : '[Google Mail]';
+    let sentBox = null;
+    if (gmail?.children) {
+      const sentChild = Object.keys(gmail.children).find(c => /sent|enviados|enviad/i.test(c));
+      if (sentChild) sentBox = `${gmailPrefix}/${sentChild}`;
+    }
+    const candidates = sentBox
+      ? [sentBox]
+      : ['[Gmail]/Sent Mail', '[Gmail]/Enviados', '[Google Mail]/Sent Mail', '[Google Mail]/Enviados', 'Sent'];
+
+    let opened = false;
+    for (const candidate of candidates) {
+      try { await connection.openBox(candidate); opened = true; break; } catch (_) {}
+    }
+    if (!opened) throw new Error('No se pudo abrir carpeta de enviados');
+
+    const results = await connection.search(
+      [['UID', String(uid)]],
+      { bodies: [''], markSeen: false }
+    );
+    const item = results?.[0];
+    const part = item?.parts?.find(p => p.which === '');
+    if (!part?.body) throw new Error(`UID ${uid} no encontrado`);
+
+    const email = await simpleParser('Imap-Id: ' + uid + '\r\n' + part.body);
+    const att   = (email.attachments || []).find(a => {
+      const n = a.filename || '';
+      return n === filename || n.replace(/[‐-―−]/g, '-') === filename.replace(/[‐-―−]/g, '-');
+    });
+    if (!att?.content) throw new Error(`Adjunto "${filename}" no encontrado en UID ${uid}`);
+    return att.content;
+  } finally {
+    try { connection?.end(); } catch (_) {}
+  }
+}
+
+// Carga pdfjs con worker local para evitar mismatch de versión al descargar desde CDN
+async function getPdfjsDocument(buffer) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const workerPath = require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = `file:///${workerPath.replace(/\\/g, '/')}`;
+  return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+}
+
+// Etapa 2: pdfjs-dist getTextContent — mejor soporte de encodings que pdf-parse
+async function extractTextPdfjs(buffer) {
+  try {
+    const pdf = await getPdfjsDocument(buffer);
+    let full = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      full += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    console.log(`[pdfjs] Texto (${full.length} chars): ${full.slice(0, 300).replace(/\n/g, ' ')}`);
+    return full;
+  } catch (err) {
+    console.warn('[pdfjs] Error extrayendo texto:', err.message);
+    return '';
+  }
+}
+
+// Etapa 3: OCR con pdfjs-dist render + @napi-rs/canvas + tesseract.js
+// Solo se activa si las etapas anteriores no encuentran montos.
+async function extractTextWithOCR(buffer) {
+  const log = [];
+
+  log.push('[OCR] Importando @napi-rs/canvas...');
+  let createCanvas;
+  try {
+    ({ createCanvas } = await import('@napi-rs/canvas'));
+    log.push('[OCR] @napi-rs/canvas OK');
+  } catch (e) {
+    log.push(`[OCR] @napi-rs/canvas no disponible: ${e.message}`);
+    throw new Error(`@napi-rs/canvas no instalado: ${e.message}`);
+  }
+
+  log.push('[OCR] Importando tesseract.js...');
+  const { createWorker } = await import('tesseract.js');
+
+  log.push('[OCR] Cargando PDF...');
+  const pdf = await getPdfjsDocument(buffer);
+  log.push(`[OCR] PDF OK — ${pdf.numPages} páginas`);
+  console.log(log.join('\n'));
+
+  log.push('[OCR] Inicializando worker Tesseract...');
+  const workerPath = require.resolve('tesseract.js/src/worker-script/node/index.js');
+  const corePath   = require.resolve('tesseract.js-core/tesseract-core-simd.wasm.js');
+  const worker = await createWorker(['spa', 'eng'], 1, { workerPath, corePath });
+  await worker.setParameters({ tessedit_pageseg_mode: '11' });
+
+  const texts = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+    const page     = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2.5 });
+    const w = Math.ceil(viewport.width);
+    const h = Math.ceil(viewport.height);
+    console.log(`[OCR] Renderizando pág ${i}: ${w}×${h}px`);
+
+    let canvas;
+    try {
+      canvas = createCanvas(w, h);
+    } catch (e) {
+      throw new Error(`createCanvas falló: ${e.message}`);
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, w, h);
+    try {
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      console.log(`[OCR] Render pág ${i} OK`);
+    } catch (e) {
+      throw new Error(`page.render falló en pág ${i}: ${e.message}`);
+    }
+
+    let imgBuf;
+    try {
+      imgBuf = canvas.toBuffer('image/png');
+      console.log(`[OCR] PNG generado: ${imgBuf.length} bytes`);
+    } catch (e) {
+      throw new Error(`toBuffer falló: ${e.message}`);
+    }
+
+    const { data: { text, confidence } } = await worker.recognize(imgBuf);
+    console.log(`[OCR] Pág ${i} — confianza: ${Math.round(confidence)}% — texto: ${text.slice(0, 300).replace(/\n/g, ' ')}`);
+    texts.push(text);
+  }
+
+  await worker.terminate();
+  return texts.join('\n');
 }
 
 async function uploadOcPdf(buffer, filename, docId) {
