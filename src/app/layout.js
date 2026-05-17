@@ -5,6 +5,9 @@ export const metadata = {
     title: 'CGO Pymes - Dashboard',
     description: 'Centro de Gestión Operativa para Pymes',
     manifest: '/manifest.json',
+}
+
+export const viewport = {
     themeColor: '#3b82f6',
 }
 
