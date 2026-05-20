@@ -89,7 +89,9 @@ export default function Dashboard() {
                 clientName: client.name || fullData.clientName || '',
                 clientRuc: client.ruc || fullData.clientRuc || '',
                 clientAddress: client.address || fullData.clientAddress || '',
-                notes: fullData.notes !== undefined ? fullData.notes : (fullData.generalConditions?.text || '')
+                notes: (fullData.notes !== undefined && fullData.notes !== null && fullData.notes !== '')
+                    ? fullData.notes
+                    : (company.conditions || fullData.generalConditions?.text || '')
             };
 
             // Dynamically import pdf() to avoid SSR

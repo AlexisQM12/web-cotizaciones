@@ -118,19 +118,27 @@ export default function QuotationEditor() {
             const selectedClientProfileId = quotation.clientProfileId ||
                 clientProfiles.find(cp => cp.isDefault)?.id || null;
 
-            const newData = (prevData) => ({
-                ...quotation,
-                companyProfiles,
-                clientProfiles,
-                companyProfileId: selectedCompanyProfileId,
-                clientProfileId: selectedClientProfileId,
-                clientName: quotation.clientName || prevData.clientName || '',
-                clientRuc: quotation.clientRuc || prevData.clientRuc || '',
-                clientAddress: quotation.clientAddress || prevData.clientAddress || '',
-                items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
-                globalProfitPercentage: quotation.globalProfitPercentage || '',
-                globalOtherCosts: quotation.globalOtherCosts || ''
-            });
+            const newData = (prevData) => {
+                const selectedCompany = companyProfiles.find(p => String(p.id) === String(selectedCompanyProfileId)) ||
+                    companyProfiles.find(p => p.isDefault) || {};
+                
+                return {
+                    ...quotation,
+                    companyProfiles,
+                    clientProfiles,
+                    companyProfileId: selectedCompanyProfileId,
+                    clientProfileId: selectedClientProfileId,
+                    clientName: quotation.clientName || prevData.clientName || '',
+                    clientRuc: quotation.clientRuc || prevData.clientRuc || '',
+                    clientAddress: quotation.clientAddress || prevData.clientAddress || '',
+                    items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
+                    globalProfitPercentage: quotation.globalProfitPercentage || '',
+                    globalOtherCosts: quotation.globalOtherCosts || '',
+                    notes: (quotation.notes !== undefined && quotation.notes !== null && quotation.notes !== '')
+                        ? quotation.notes
+                        : (selectedCompany?.conditions || '')
+                };
+            };
 
             setData(newData);
             // Only initialize pdfData once companyProfiles has actual data loaded
@@ -363,7 +371,9 @@ export default function QuotationEditor() {
             clientName: pdfSelectedClient.name || safePdfData.clientName || '',
             clientRuc: pdfSelectedClient.ruc || safePdfData.clientRuc || '',
             clientAddress: pdfSelectedClient.address || safePdfData.clientAddress || '',
-            notes: safePdfData.notes !== undefined ? safePdfData.notes : (safePdfData.generalConditions?.text || '')
+            notes: (safePdfData.notes !== undefined && safePdfData.notes !== null && safePdfData.notes !== '')
+                ? safePdfData.notes
+                : (pdfSelectedCompany?.conditions || safePdfData.generalConditions?.text || '')
         };
     }, [pdfData]); // ONLY recomputes when user presses the refresh button
 
@@ -821,7 +831,7 @@ export default function QuotationEditor() {
                     <div className="card-editor" style={{ position: 'relative' }}>
                         {renderRemoteCursorLabel('notes')}
                         <textarea
-                            value={data.notes !== undefined ? data.notes : (data.generalConditions?.text || '')}
+                            value={data.notes !== undefined && data.notes !== null && data.notes !== '' ? data.notes : (selectedCompany?.conditions || '')}
                             onChange={(e) => handleChange('notes', e.target.value)}
                             onFocus={() => handleFocus('notes')}
                             onBlur={() => handleBlur('notes')}
