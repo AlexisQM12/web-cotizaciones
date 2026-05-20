@@ -866,7 +866,7 @@ export default function QuotationEditor() {
                             )}
                         </div>
                     </div>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', minHeight: 0 }}>
                         <PdfPreview dataForPdf={dataForPdf} />
                     </div>
                 </div>

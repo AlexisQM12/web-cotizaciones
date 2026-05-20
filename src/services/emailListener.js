@@ -29,6 +29,7 @@ const QUOTE_KEYWORDS = [
   /\brfq\b/i,
   /presupuesto\s+para\b/i,
   /\bproforma\b/i,
+  /invitaci[oó]n\s+(de\s+)?(compra|licitaci[oó]n|concurso)/i,
 ];
 
 function isLikelyQuoteRequest(subject) {
@@ -61,6 +62,7 @@ async function saveQuoteLead(uid, subject, fromRaw, dateRaw, io) {
 export const poLogs         = [];
 const processedUids         = new Set();
 const processedSentUids     = new Set();
+const quoteLeadCheckedUids  = new Set();
 
 async function loadFromFirestore() {
   try {
@@ -70,8 +72,9 @@ async function loadFromFirestore() {
     ]);
     if (cacheSnap.exists) {
       const d = cacheSnap.data();
-      (d.inboxUids || []).forEach(u => processedUids.add(u));
-      (d.sentUids  || []).forEach(u => processedSentUids.add(u));
+      (d.inboxUids       || []).forEach(u => processedUids.add(u));
+      (d.sentUids        || []).forEach(u => processedSentUids.add(u));
+      (d.quoteLeadUids   || []).forEach(u => quoteLeadCheckedUids.add(u));
     }
     if (logsSnap.exists) {
       const entries = logsSnap.data().entries || [];
@@ -92,9 +95,10 @@ async function loadFromFirestore() {
 async function saveCache() {
   try {
     await firestore.collection(STATE_COL).doc(CACHE_DOC).set({
-      inboxUids: [...processedUids],
-      sentUids:  [...processedSentUids],
-      updatedAt: new Date().toISOString(),
+      inboxUids:     [...processedUids],
+      sentUids:      [...processedSentUids],
+      quoteLeadUids: [...quoteLeadCheckedUids],
+      updatedAt:     new Date().toISOString(),
     });
   } catch (e) {
     console.warn('[Lector] Error guardando caché:', e.message);
@@ -271,8 +275,40 @@ export async function startEmailListener(io) {
       console.log(`[Lector] ${pdfQueue.length} PDFs extraídos de ${withPdf.length} correos. Cerrando IMAP...`);
 
       // ── Fase 2b: detectar solicitudes de cotización por asunto ──────────
-      // Usamos los headers ya descargados (sin nueva conexión IMAP).
-      for (const m of unprocessed) {
+      // Corre sobre TODOS los correos (incluye ya leídos / ciclos anteriores)
+      // usando un set independiente de processedUids para no interferir con OC.
+      const uncheckedForLeads = allMessages.filter(m => !quoteLeadCheckedUids.has(m.attributes.uid));
+      uncheckedForLeads.forEach(m => quoteLeadCheckedUids.add(m.attributes.uid));
+      if (uncheckedForLeads.length > 0) saveCache();
+
+      // Construir set de UIDs respondidos para filtrar leads
+      const answeredUids = new Set(
+        allMessages
+          .filter(m => (m.attributes.flags || []).includes('\\Answered'))
+          .map(m => String(m.attributes.uid))
+      );
+
+      // Auto-descartar leads pendientes cuyo correo ya fue respondido
+      if (answeredUids.size > 0) {
+        try {
+          const pendingSnap = await firestore.collection(LEADS_COL)
+            .where('status', '==', 'pending').get();
+          for (const doc of pendingSnap.docs) {
+            if (answeredUids.has(String(doc.data().emailUid))) {
+              await doc.ref.update({ status: 'dismissed', dismissedReason: 'replied', updatedAt: new Date().toISOString() });
+              console.log(`[Lector] Lead auto-descartado (correo respondido): ${doc.id}`);
+              if (io) io.emit('quote_lead_dismissed', { id: doc.id });
+            }
+          }
+        } catch (e) {
+          console.warn('[Lector] Error auto-descartando leads respondidos:', e.message);
+        }
+      }
+
+      console.log(`[Lector] Revisando ${uncheckedForLeads.length} correos para detección de leads de cotización`);
+      for (const m of uncheckedForLeads) {
+        // Saltar si el correo ya fue respondido
+        if (answeredUids.has(String(m.attributes.uid))) continue;
         const headerPart = m.parts?.find(p => String(p.which || '').includes('HEADER'));
         const subject = (headerPart?.body?.subject?.[0] || '').trim();
         if (isLikelyQuoteRequest(subject)) {
@@ -280,7 +316,7 @@ export async function startEmailListener(io) {
           const dateRaw = (headerPart?.body?.date?.[0] || '').trim();
           await saveQuoteLead(m.attributes.uid, subject, fromRaw, dateRaw, io);
         }
-      };
+      }
 
       // ── FASE 2: Procesar PDFs — sin conexión IMAP abierta ──
       if (pdfQueue.length === 0) return;
@@ -716,6 +752,7 @@ export async function startEmailListener(io) {
         console.log('[Lector] Re-escaneo forzado: limpiando cachés...');
         processedUids.clear();
         processedSentUids.clear();
+        quoteLeadCheckedUids.clear();
         await saveCache();
         runScanCycle();
       });
@@ -885,6 +922,7 @@ export async function startEmailListener(io) {
           poLogs.length = 0;
           processedUids.clear();
           processedSentUids.clear();
+          quoteLeadCheckedUids.clear();
           await Promise.all([saveLogs(), saveCache()]);
           io.emit('po_logs_list', poLogs);
 

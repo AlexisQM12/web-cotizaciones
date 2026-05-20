@@ -366,6 +366,53 @@ textarea:focus,
   overflow-x: auto;
 }
 
+/* ── Editor de cotización — layout desktop ──────────────────────────────── */
+.editor-container {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+  margin-left: 72px; /* ancho del UserSidebar */
+}
+
+.editor-left {
+  width: 52%;
+  min-width: 420px;
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid #e2e8f0;
+  padding: 1.75rem 2rem;
+  background: #fff;
+}
+
+.editor-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #2d2f31;
+  overflow: hidden;
+}
+
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.grid-3-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.item-grid-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
+  gap: 0.5rem;
+  align-items: end;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .scanner-modal-content {
