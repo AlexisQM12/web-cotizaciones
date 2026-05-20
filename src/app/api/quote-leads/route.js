@@ -8,11 +8,12 @@ export async function GET(req) {
 
         const snap = await firestore.collection('quote_leads')
             .where('status', '==', status)
-            .orderBy('receivedAt', 'desc')
             .limit(50)
             .get();
 
-        const leads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const leads = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => (b.receivedAt || '').localeCompare(a.receivedAt || ''));
         return Response.json({ leads });
     } catch (err) {
         console.error('[quote-leads] GET error:', err);

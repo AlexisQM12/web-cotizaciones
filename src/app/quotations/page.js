@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { io } from 'socket.io-client'
+import { getSocket } from '@/lib/socket'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { QuotationDocument } from '@/components/QuotationDocument'
@@ -140,7 +140,7 @@ export default function Dashboard() {
             .catch(() => {});
 
         // Socket.io for Real-time Updates
-        const newSocket = io();
+        const newSocket = getSocket();
         setSocketInstance(newSocket);
 
         newSocket.on('quotation_updated', (changes) => {
@@ -159,6 +159,11 @@ export default function Dashboard() {
             const toastId = `${lead.id}-${Date.now()}`;
             setToasts(prev => [...prev, { ...lead, toastId }]);
             setTimeout(() => setToasts(prev => prev.filter(t => t.toastId !== toastId)), 8000);
+        });
+
+        newSocket.on('quote_lead_dismissed', ({ id }) => {
+            setLeads(prev => prev.filter(l => l.id !== id));
+            setToasts(prev => prev.filter(t => t.id !== id));
         });
 
         return () => newSocket.disconnect();

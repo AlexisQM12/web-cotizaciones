@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { io } from 'socket.io-client'
+import { getSocket } from '@/lib/socket'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 
@@ -16,8 +16,9 @@ export default function Home() {
             .then(d => setPendingLeads(d.leads?.length || 0))
             .catch(() => {});
 
-        const socket = io()
+        const socket = getSocket()
         socket.on('quote_lead_detected', () => setPendingLeads(n => n + 1))
+        socket.on('quote_lead_dismissed', () => setPendingLeads(n => Math.max(0, n - 1)))
         return () => socket.disconnect()
     }, [])
 
