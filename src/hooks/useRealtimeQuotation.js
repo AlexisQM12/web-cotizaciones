@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { doc, onSnapshot, updateDoc, setDoc, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { doc, onSnapshot, updateDoc, setDoc, collection, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { clientDb } from '@/lib/firestoreClient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -14,7 +14,9 @@ export function useRealtimeQuotation(quotationId) {
     const { user } = useAuth();
 
     useEffect(() => {
-        if (!quotationId || !clientDb) return;
+        if (!quotationId || !clientDb || !user?.empresaId) return;
+
+        const empresaId = user.empresaId;
 
         // Listen to quotation changes
         const quotationRef = doc(clientDb, 'quotations', quotationId);
@@ -36,22 +38,16 @@ export function useRealtimeQuotation(quotationId) {
             }
         );
 
-        // Listen to company profiles
-        const companyProfilesRef = collection(clientDb, 'company_profiles');
+        // Listen to company profile — document ID equals empresaId
+        const companyProfileRef = doc(clientDb, 'company_profiles', empresaId);
         const unsubscribeCompanyProfiles = onSnapshot(
-            companyProfilesRef,
+            companyProfileRef,
             (snapshot) => {
-                const profiles = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                // Sort: defaults first, then alphabetically by name
-                profiles.sort((a, b) => {
-                    if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
-                    return (a.name || '').localeCompare(b.name || '');
-                });
-                console.log('🏢 Company Profiles Loaded:', profiles.length);
-                setCompanyProfiles(profiles);
+                if (snapshot.exists()) {
+                    setCompanyProfiles([{ id: snapshot.id, ...snapshot.data() }]);
+                } else {
+                    setCompanyProfiles([]);
+                }
             },
             (error) => {
                 console.error('Error loading company profiles:', error);
@@ -59,21 +55,22 @@ export function useRealtimeQuotation(quotationId) {
             }
         );
 
-        // Listen to client profiles
-        const clientProfilesRef = collection(clientDb, 'client_profiles');
+        // Listen to client profiles filtered by empresaId
+        const clientProfilesQuery = query(
+            collection(clientDb, 'client_profiles'),
+            where('empresaId', '==', empresaId)
+        );
         const unsubscribeClientProfiles = onSnapshot(
-            clientProfilesRef,
+            clientProfilesQuery,
             (snapshot) => {
                 const profiles = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
-                // Sort: defaults first, then alphabetically by name
                 profiles.sort((a, b) => {
                     if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
                     return (a.name || '').localeCompare(b.name || '');
                 });
-                console.log('👤 Client Profiles Loaded:', profiles.length);
                 setClientProfiles(profiles);
             },
             (error) => {
