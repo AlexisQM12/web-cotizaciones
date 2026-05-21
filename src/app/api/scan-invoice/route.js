@@ -70,12 +70,19 @@ export async function POST(req) {
                     console.log('[scan-invoice] PDF escaneado o sin capa de texto clara. Usando Vision API...');
                     const client = getVisionClient();
                     
-                    const [result] = await client.documentTextDetection({
-                        image: { content: buffer.toString('base64') },
-                        imageContext: { languageHints: ['es', 'en'] },
+                    const [result] = await client.batchAnnotateFiles({
+                        requests: [{
+                            inputConfig: {
+                                mimeType: 'application/pdf',
+                                content: buffer.toString('base64'),
+                            },
+                            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                            pages: [1, 2, 3] // limit to first 3 pages to avoid timeouts/overcharging
+                        }]
                     });
                     
-                    extractedText = result.fullTextAnnotation?.text || '';
+                    const responses = result.responses?.[0]?.responses || [];
+                    extractedText = responses.map(r => r.fullTextAnnotation?.text || '').filter(Boolean).join('\n');
                     textSource = 'google-vision-pdf';
                 } catch (visionPdfErr) {
                     console.error('[scan-invoice] Fallo en Vision PDF:', visionPdfErr?.message);
