@@ -115,6 +115,24 @@ export default function Home() {
                             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mi Contador y Adm.</h2>
                             <p style={{ color: '#667085', fontSize: '0.95rem' }}>Reportes financieros, métricas e integraciones contables.</p>
                         </div>
+
+                        {/* Card 4: Mis Proveedores */}
+                        <div
+                            className="card"
+                            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}
+                            onClick={() => router.push('/suppliers')}
+                        >
+                            <div style={{ background: '#fdf4ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d946ef" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                  <circle cx="9" cy="7" r="4"></circle>
+                                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mis Proveedores</h2>
+                            <p style={{ color: '#667085', fontSize: '0.95rem' }}>Directorio de proveedores, rubros y contactos clave.</p>
+                        </div>
                     </div>
                 </div>
             </main>

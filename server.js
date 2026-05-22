@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { startEmailListener } from './src/services/emailListener.js';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+const hostname = process.env.HOSTNAME || '0.0.0.0';
 const port = process.env.PORT || 3001;
 
 // Initialize Next.js app

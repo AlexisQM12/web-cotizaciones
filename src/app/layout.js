@@ -1,5 +1,6 @@
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { InstallPWA } from '@/components/InstallPWA'
 
 export const metadata = {
     title: 'CGO Pymes - Dashboard',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }) {
                 <AuthProvider>
                     {children}
                 </AuthProvider>
+                <InstallPWA />
             </body>
         </html>
     )
