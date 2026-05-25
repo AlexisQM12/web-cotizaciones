@@ -106,20 +106,22 @@ export default function EmpresarioDashboard() {
 
     return (
         <AccountingShell>
-            <div style={{ marginBottom: '1.5rem' }}>
-                <button onClick={() => router.push('/')} className="btn" style={{ background: '#4b5563', color: 'white' }}>
-                    ← Volver al Dashboard
-                </button>
-            </div>
             <div className="acc-page-head">
-                <div>
-                    <h1 className="acc-page-title">
-                        <Icon name="briefcase" size={26} />
-                        Resumen del Negocio
-                    </h1>
-                    <p className="acc-page-subtitle">
-                        Cómo va tu empresa este mes — explicado simple.
-                    </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <button onClick={() => router.push('/')} className="btn-back-square" title="Volver al Dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 className="acc-page-title" style={{ margin: 0 }}>
+                            <Icon name="briefcase" size={26} />
+                            Resumen del Negocio
+                        </h1>
+                        <p className="acc-page-subtitle" style={{ margin: 0, marginTop: '0.25rem' }}>
+                            Cómo va tu empresa este mes — explicado simple.
+                        </p>
+                    </div>
                 </div>
                 <div className="acc-page-actions">
                     <select className="acc-select" style={{ width: 230 }} value={period} onChange={e => setPeriod(e.target.value)}>

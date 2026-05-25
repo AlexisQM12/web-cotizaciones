@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // GET /api/accounting/sales?companyProfileId=xxx&period=YYYY-MM
 // Lista las ventas de un periodo
@@ -9,7 +9,7 @@ export async function GET(req) {
         const period           = searchParams.get('period');
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
-        let q = firestore.collection('sales_ledger').where('companyProfileId', '==', companyProfileId);
+        let q = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').where('companyProfileId', '==', companyProfileId);
         if (period) q = q.where('period', '==', period);
 
         const snap = await q.get();
@@ -65,7 +65,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = await firestore.collection('sales_ledger').add(data);
+        const ref = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').add(data);
         return Response.json({ id: ref.id, ...data });
     } catch (err) {
         console.error('[accounting/sales] POST error:', err);
@@ -87,7 +87,7 @@ export async function PUT(req) {
         }
         update.updatedAt = new Date().toISOString();
 
-        await firestore.collection('sales_ledger').doc(id).update(update);
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').doc(id).update(update);
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/sales] PUT error:', err);
@@ -101,7 +101,7 @@ export async function DELETE(req) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
         if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
-        await firestore.collection('sales_ledger').doc(id).delete();
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').doc(id).delete();
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/sales] DELETE error:', err);

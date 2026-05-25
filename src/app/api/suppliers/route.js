@@ -1,11 +1,11 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = firestore.collection('suppliers');
+        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'suppliers');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -34,7 +34,7 @@ export async function POST(req) {
         const body = await req.json();
         const { name, category, whatsapp, city, email, notes, empresaId, supplierType } = body;
 
-        const newSupplierRef = firestore.collection('suppliers').doc();
+        const newSupplierRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'suppliers').doc();
         const supplierData = {
             name,
             category: category || '',

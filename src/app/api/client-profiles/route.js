@@ -1,11 +1,11 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = firestore.collection('client_profiles');
+        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -42,7 +42,7 @@ export async function POST(req) {
 
         // If this is set as default, unset others for this empresaId
         if (isDefault && empresaId) {
-            const defaultQuery = await firestore.collection('client_profiles')
+            const defaultQuery = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles')
                 .where('empresaId', '==', empresaId)
                 .where('isDefault', '==', true)
                 .get();
@@ -51,7 +51,7 @@ export async function POST(req) {
             });
         }
 
-        const newProfileRef = firestore.collection('client_profiles').doc();
+        const newProfileRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles').doc();
         batch.set(newProfileRef, {
             name,
             ruc,

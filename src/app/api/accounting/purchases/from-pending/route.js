@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // POST /api/accounting/purchases/from-pending
 // Crea una entrada en purchases_ledger a partir de un material escaneado en Pendings.
@@ -17,7 +17,7 @@ export async function POST(req) {
         const sourceKey = `pending:${quotationId}:${materialId}`;
 
         // Evitar duplicados
-        const existing = await firestore.collection('purchases_ledger')
+        const existing = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger')
             .where('companyProfileId', '==', companyProfileId)
             .where('sourceKey', '==', sourceKey)
             .limit(1).get();
@@ -65,7 +65,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = await firestore.collection('purchases_ledger').add(data);
+        const ref = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger').add(data);
 
         // Directorio de proveedores
         if (ocrData.ruc) {

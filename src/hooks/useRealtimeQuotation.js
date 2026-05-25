@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, updateDoc, setDoc, collection, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
-import { clientDb } from '@/lib/firestoreClient';
+import { clientDb, getTenantCollectionClient, getTenantDocClient } from '@/lib/firestoreClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useRealtimeQuotation(quotationId) {
@@ -19,7 +19,7 @@ export function useRealtimeQuotation(quotationId) {
         const empresaId = user.empresaId;
 
         // Listen to quotation changes
-        const quotationRef = doc(clientDb, 'quotations', quotationId);
+        const quotationRef = doc(getTenantCollectionClient(user?.empresaId || '6', 'quotations'), quotationId);
         const unsubscribeQuotation = onSnapshot(
             quotationRef,
             (snapshot) => {
@@ -39,7 +39,7 @@ export function useRealtimeQuotation(quotationId) {
         );
 
         // Listen to company profile — document ID equals empresaId
-        const companyProfileRef = doc(clientDb, 'company_profiles', empresaId);
+        const companyProfileRef = getTenantDocClient(empresaId);
         const unsubscribeCompanyProfiles = onSnapshot(
             companyProfileRef,
             (snapshot) => {
@@ -57,7 +57,7 @@ export function useRealtimeQuotation(quotationId) {
 
         // Listen to client profiles filtered by empresaId
         const clientProfilesQuery = query(
-            collection(clientDb, 'client_profiles'),
+            getTenantCollectionClient(empresaId, 'client_profiles'),
             where('empresaId', '==', empresaId)
         );
         const unsubscribeClientProfiles = onSnapshot(
@@ -80,7 +80,7 @@ export function useRealtimeQuotation(quotationId) {
         );
 
         // Listen to active users
-        const activeUsersRef = collection(clientDb, 'quotations', quotationId, 'activeUsers');
+        const activeUsersRef = collection(getTenantCollectionClient(user?.empresaId || '6', 'quotations'), quotationId, 'activeUsers');
         const unsubscribeUsers = onSnapshot(activeUsersRef, (snapshot) => {
             const users = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -149,7 +149,7 @@ export function useRealtimeQuotation(quotationId) {
         if (!quotationId || !clientDb) return;
 
         try {
-            const quotationRef = doc(clientDb, 'quotations', quotationId);
+            const quotationRef = doc(getTenantCollectionClient(user?.empresaId || '6', 'quotations'), quotationId);
             await updateDoc(quotationRef, {
                 ...updates,
                 updatedAt: new Date().toISOString()

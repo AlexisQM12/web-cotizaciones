@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { storage } from '@/lib/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export default function Settings() {
     const { user } = useAuth();
     const [companyProfiles, setCompanyProfiles] = useState([]);
     const [clientProfiles, setClientProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('empresa');
     const [companyFormData, setCompanyFormData] = useState({
         name: '',
         address: '',
@@ -226,28 +229,77 @@ export default function Settings() {
 
     return (
         <main className="container">
-            <div style={{ marginBottom: '2rem' }}>
-                <button onClick={() => router.push('/')} className="btn" style={{ marginBottom: '1rem', background: '#4b5563', color: 'white' }}>
-                    ← Volver al Dashboard
+            <div style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <button onClick={() => router.push('/')} className="btn-back-square" title="Volver al Dashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
                 </button>
-                <h1 style={{ color: '#111827' }}>Configuración de Empresa</h1>
-                <p style={{ color: '#475569' }}>Administra los datos de tu empresa para las cotizaciones.</p>
+                <div>
+                    <h1 style={{ color: '#111827', lineHeight: '1.2' }}>Configuración de Empresa</h1>
+                    <p style={{ color: '#475569' }}>Administra los datos de tu empresa para las cotizaciones.</p>
+                </div>
             </div>
 
-            <div className="content-frame">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+            <style jsx>{`
+                .sidebar-nav-btn {
+                    display: flex; align-items: center; gap: 0.7rem;
+                    padding: 0.7rem 0.85rem;
+                    border-radius: 10px; border: none; cursor: pointer; text-align: left;
+                    font-size: 0.875rem; font-weight: 500; transition: all 0.15s; width: 100%;
+                }
+                .sidebar-nav-btn:hover:not(.active) {
+                    background: #f1f5f9;
+                }
+                .sidebar-nav-btn.active {
+                    background: var(--primary, #3b82f6);
+                    color: white !important;
+                }
+            `}</style>
 
-                    {/* ─── LOGO DE EMPRESA ─── */}
-                    <div>
-                        <h2 style={{ color: '#101828', marginBottom: '0.5rem', fontSize: '1.5rem' }}>Logo de Empresa</h2>
-                        <p style={{ color: '#475569', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                            Este logo aparecerá en la barra de navegación y en tus cotizaciones.
-                        </p>
-                        <LogoUploader empresaId={user?.empresaId} profiles={companyProfiles} onUpdated={fetchCompanyProfiles} />
+            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '2rem', alignItems: 'start' }}>
+                {/* Sidebar Navigation */}
+                <div className="card" style={{ padding: '1.25rem 1rem', position: 'sticky', top: '2rem' }}>
+                    <h2 style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', paddingLeft: '0.85rem' }}>Configuración</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <button 
+                            className={`sidebar-nav-btn ${activeTab === 'empresa' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('empresa')}
+                            style={{ color: activeTab === 'empresa' ? '#fff' : '#475569' }}
+                        >
+                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+                            <span style={{ flex: 1 }}>Mi Empresa</span>
+                            {activeTab === 'empresa' && <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>}
+                        </button>
+
+                        <button 
+                            className={`sidebar-nav-btn ${activeTab === 'clientes' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('clientes')}
+                            style={{ color: activeTab === 'clientes' ? '#fff' : '#475569' }}
+                        >
+                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span style={{ flex: 1 }}>Mis Clientes</span>
+                            {activeTab === 'clientes' && <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>}
+                        </button>
+
+                        <button 
+                            className={`sidebar-nav-btn ${activeTab === 'correos' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('correos')}
+                            style={{ color: activeTab === 'correos' ? '#fff' : '#475569' }}
+                        >
+                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            <span style={{ flex: 1 }}>Correos</span>
+                            {activeTab === 'correos' && <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>}
+                        </button>
                     </div>
+                </div>
 
-                    <div>
-                        <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Empresa</h2>
+                {/* Main Content Area */}
+                <div className="content-frame" style={{ margin: 0, minHeight: '600px' }}>
+                    
+                    {activeTab === 'empresa' && (
+                        <div>
+                            <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Empresa</h2>
                         <div className="grid-2-col" style={{ gap: '2.5rem' }}>
                             <div className="card">
                                 <h3>{editingCompanyId ? 'Editar Perfil de Empresa' : 'Añadir Nuevo Perfil de Empresa'}</h3>
@@ -454,12 +506,14 @@ export default function Settings() {
                                 )}
                             </div>
                         </div>
-                    </div>
+                        </div>
+                    )}
 
-                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '4rem' }}>
-                        <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Cliente</h2>
-                        <div className="grid-2-col" style={{ gap: '2.5rem' }}>
-                            <div className="card">
+                    {activeTab === 'clientes' && (
+                        <div>
+                            <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Perfiles de Cliente</h2>
+                            <div className="grid-2-col" style={{ gap: '2.5rem' }}>
+                                <div className="card">
                                 <h3>{editingClientId ? 'Editar Perfil de Cliente' : 'Añadir Nuevo Cliente'}</h3>
                                 <form onSubmit={handleClientSubmit} style={{ marginTop: '2rem' }}>
                                     <div className="input-group">
@@ -551,7 +605,16 @@ export default function Settings() {
                                 )}
                             </div>
                         </div>
-                    </div>
+                        </div>
+                    )}
+                    
+                    {/* ─── CONFIGURACIÓN DE CORREO ─── */}
+                    {activeTab === 'correos' && (
+                        <div>
+                            <h2 style={{ color: '#101828', marginBottom: '1.5rem', fontSize: '1.5rem' }}>Configuración de Envío de Correos</h2>
+                            <EmailSettingsManager empresaId={user?.empresaId} />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -559,112 +622,293 @@ export default function Settings() {
     );
 }
 
-// ─── Componente: subir/cambiar logo de la empresa ────────────────────────
-import { useState as useLocalState, useRef } from 'react';
+// ─── Componente: Configuración de Correos ────────────────────────
 
-function LogoUploader({ empresaId, profiles, onUpdated }) {
-    const [file, setFile] = useLocalState(null);
-    const [preview, setPreview] = useLocalState(null);
-    const [saving, setSaving] = useLocalState(false);
-    const [savedOk, setSavedOk] = useLocalState(false);
-    const [error, setError] = useLocalState(null);
-    const inputRef = useRef(null);
+function EmailSettingsManager({ empresaId }) {
+    const [formData, setFormData] = useState({
+        smtpUser: '',
+        smtpPassword: '',
+        senderName: '',
+        emailSignature: '',
+        sigName: '',
+        sigRole: '',
+        sigPhone: '',
+        sigWebsite: '',
+        sigEmail: '',
+        sigLogoUrl: '',
+        senderAliases: [],
+        defaultTemplate: ''
+    });
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [newAlias, setNewAlias] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState(null);
 
-    // Obtener logo actual del perfil de empresa
-    const currentLogo = profiles?.[0]?.logoUrl || null;
-    const profileId = empresaId || profiles?.[0]?.id;
-    const profile = profiles?.[0] || {};
+    useEffect(() => {
+        if (!empresaId) return;
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch(`/api/settings/email?empresaId=${empresaId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setFormData(data);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSettings();
+    }, [empresaId]);
 
-    const handleFileChange = (e) => {
-        const f = e.target.files[0];
-        if (!f) return;
-        setFile(f);
-        setPreview(URL.createObjectURL(f));
-        setSavedOk(false);
-        setError(null);
-    };
-
-    const handleSave = async () => {
-        if (!file || !profileId) return;
+    const handleSave = async (e) => {
+        e.preventDefault();
         setSaving(true);
-        setError(null);
+        setMessage(null);
         try {
-            const formData = new FormData();
-            formData.append('name', profile.name || '');
-            formData.append('address', profile.address || '');
-            formData.append('email', profile.email || '');
-            formData.append('phone', profile.phone || '');
-            formData.append('ruc', profile.ruc || '');
-            formData.append('website', profile.website || '');
-            formData.append('accounts', JSON.stringify(profile.accounts || []));
-            formData.append('conditions', profile.conditions || '');
-            formData.append('isDefault', String(profile.isDefault || true));
-            formData.append('existingLogoUrl', profile.logoUrl || '');
-            formData.append('logo', file);
-
-            const res = await fetch(`/api/company-profiles/${profileId}`, {
+            const res = await fetch(`/api/settings/email`, {
                 method: 'PUT',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empresaId, ...formData })
             });
-
-            if (!res.ok) throw new Error('Error al guardar');
-            setSavedOk(true);
-            setFile(null);
-            if (onUpdated) await onUpdated();
-        } catch (e) {
-            setError(e.message);
+            if (res.ok) {
+                setMessage({ type: 'success', text: 'Configuración guardada correctamente.' });
+            } else {
+                setMessage({ type: 'error', text: 'Error al guardar la configuración.' });
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Error de red.' });
         } finally {
             setSaving(false);
         }
     };
 
+    const handleAddAlias = () => {
+        if (!newAlias.trim() || !newAlias.includes('@')) return;
+        setFormData({
+            ...formData,
+            senderAliases: [...formData.senderAliases, newAlias.trim()]
+        });
+        setNewAlias('');
+    };
+
+    const handleRemoveAlias = (index) => {
+        const newAliases = [...formData.senderAliases];
+        newAliases.splice(index, 1);
+        setFormData({ ...formData, senderAliases: newAliases });
+    };
+
+    const uploadSigLogo = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !storage || !empresaId) return;
+        setUploadingLogo(true);
+        try {
+            const ext = file.name.split('.').pop();
+            const storageRef = ref(storage, `signature-logos/${empresaId}/logo-${Date.now()}.${ext}`);
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            updateSignature('sigLogoUrl', url);
+        } catch (err) {
+            console.error('Error uploading signature logo:', err);
+            alert('Error al subir el logo de la firma.');
+        } finally {
+            setUploadingLogo(false);
+        }
+    };
+
+    const removeSigLogo = async () => {
+        try {
+            if (formData.sigLogoUrl) {
+                const storageRef = ref(storage, formData.sigLogoUrl);
+                await deleteObject(storageRef).catch(() => {});
+            }
+            updateSignature('sigLogoUrl', '');
+        } catch (err) {
+            console.error('Error removing signature logo:', err);
+        }
+    };
+
+    const updateSignature = (field, value) => {
+        const newForm = { ...formData, [field]: value };
+        
+        // Auto-generate HTML signature
+        const { sigName, sigRole, sigPhone, sigWebsite, sigEmail, sigLogoUrl } = newForm;
+        
+        let html = '<div style="font-family: Arial, sans-serif; font-size: 13px; color: #333; margin-top: 20px; display: flex; align-items: center; gap: 15px;">';
+        
+        if (sigLogoUrl) {
+            html += `<img src="${sigLogoUrl}" alt="Logo" style="width: 80px; height: auto; object-fit: contain; border-right: 2px solid #e2e8f0; padding-right: 15px;" />`;
+        }
+        
+        html += '<div style="line-height: 1.5;">';
+        if (sigName) html += `<strong style="font-size: 15px; color: #000;">${sigName}</strong><br>`;
+        if (sigRole) html += `<span style="color: #64748b;">${sigRole}</span><br>`;
+        
+        const details = [];
+        if (sigPhone) details.push(sigPhone);
+        if (sigWebsite) details.push(`<a href="https://${sigWebsite.replace('https://', '').replace('http://', '')}" style="color: #2563eb; text-decoration: none;">${sigWebsite}</a>`);
+        if (sigEmail) details.push(`<a href="mailto:${sigEmail}" style="color: #2563eb; text-decoration: none;">${sigEmail}</a>`);
+        
+        if (details.length > 0) {
+            html += `<div style="margin-top: 5px; font-size: 12px; color: #475569;">${details.join(' &nbsp;|&nbsp; ')}</div>`;
+        }
+        
+        html += '</div></div>';
+        
+        newForm.emailSignature = html;
+        setFormData(newForm);
+    };
+
+    if (loading) return <p>Cargando configuración de correos...</p>;
+
     return (
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '2rem', padding: '1.5rem 2rem', flexWrap: 'wrap' }}>
-            {/* Preview */}
-            <div
-                onClick={() => inputRef.current?.click()}
-                style={{
-                    width: 90, height: 90, borderRadius: 16, cursor: 'pointer',
-                    border: '2px dashed #cbd5e1', background: '#f8fafc',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    overflow: 'hidden', flexShrink: 0, transition: 'border-color 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.borderColor = '#94a3b8'}
-                onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-            >
-                {(preview || currentLogo) ? (
-                    <img src={preview || currentLogo} alt="Logo"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                    <span style={{ fontSize: 32, color: '#cbd5e1' }}>🖼️</span>
-                )}
-            </div>
-
-            <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={handleFileChange} />
-
-            <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontWeight: 700, color: '#101828', marginBottom: 6 }}>
-                    {currentLogo ? 'Logo actual' : 'Sin logo cargado'}
+        <div className="card">
+            <form onSubmit={handleSave} style={{ marginTop: '1rem' }}>
+                <div className="grid-2-col" style={{ gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div className="input-group">
+                        <label className="label">Correo Principal (Cuenta de Gmail)</label>
+                        <input
+                            className="input"
+                            type="email"
+                            value={formData.smtpUser}
+                            onChange={(e) => setFormData({ ...formData, smtpUser: e.target.value })}
+                            placeholder="ej: info@miempresa.com"
+                        />
+                    </div>
+                    <div className="input-group">
+                        <label className="label">Clave de Aplicación (App Password)</label>
+                        <input
+                            className="input"
+                            type="password"
+                            value={formData.smtpPassword}
+                            onChange={(e) => setFormData({ ...formData, smtpPassword: e.target.value })}
+                            placeholder="16 caracteres sin espacios"
+                        />
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                            Generada desde la seguridad de tu cuenta de Google.
+                        </p>
+                    </div>
                 </div>
-                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: 12 }}>
-                    Haz clic en la imagen o en el botón para subir tu logo (PNG, JPG, SVG — recomendado fondo transparente).
-                </p>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button className="btn" onClick={() => inputRef.current?.click()}
-                        style={{ background: '#f1f5f9', color: '#334155', padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                        {file ? '📎 Cambiar imagen' : '📎 Seleccionar imagen'}
+                <div className="grid-2-col" style={{ gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div className="input-group">
+                        <label className="label">Nombre del Remitente</label>
+                        <input
+                            className="input"
+                            type="text"
+                            value={formData.senderName}
+                            onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
+                            placeholder="Ej: Equipo de Ventas AyaTech"
+                        />
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                            Aparecerá junto al correo, ej: "Ventas AyaTech &lt;ventas@...&gt;"
+                        </p>
+                    </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', margin: '2rem 0', paddingTop: '1.5rem' }}>
+                    <h3 style={{ marginBottom: '0.5rem' }}>Generador de Firma Automática</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
+                        Completa estos datos y generaremos una firma HTML profesional automáticamente.
+                    </p>
+
+                    <div className="grid-2-col" style={{ gap: '1.5rem', marginBottom: '1.5rem' }}>
+                        <div className="input-group">
+                            <label className="label">Nombre y Apellido</label>
+                            <input className="input" type="text" value={formData.sigName} onChange={(e) => updateSignature('sigName', e.target.value)} placeholder="Ej: Ken Alexis Quispe Mamani" />
+                        </div>
+                        <div className="input-group">
+                            <label className="label">Cargo y Empresa</label>
+                            <input className="input" type="text" value={formData.sigRole} onChange={(e) => updateSignature('sigRole', e.target.value)} placeholder="Ej: Departamento de ventas, AYA Technologies" />
+                        </div>
+                        <div className="input-group">
+                            <label className="label">Teléfono</label>
+                            <input className="input" type="text" value={formData.sigPhone} onChange={(e) => updateSignature('sigPhone', e.target.value)} placeholder="Ej: +51 952487700" />
+                        </div>
+                        <div className="input-group">
+                            <label className="label">Sitio Web</label>
+                            <input className="input" type="text" value={formData.sigWebsite} onChange={(e) => updateSignature('sigWebsite', e.target.value)} placeholder="Ej: www.ayatech.com.pe" />
+                        </div>
+                        <div className="input-group">
+                            <label className="label">Correo de contacto</label>
+                            <input className="input" type="email" value={formData.sigEmail} onChange={(e) => updateSignature('sigEmail', e.target.value)} placeholder="Ej: ken.qm@ayatech.com.pe" />
+                        </div>
+                        <div className="input-group">
+                            <label className="label">Logo de la Empresa</label>
+                            {formData.sigLogoUrl ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <img src={formData.sigLogoUrl} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white' }} />
+                                    <button type="button" onClick={removeSigLogo} className="btn btn-danger" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Quitar</button>
+                                </div>
+                            ) : (
+                                <label style={{ cursor: uploadingLogo ? 'wait' : 'pointer', display: 'inline-block', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600' }}>
+                                    {uploadingLogo ? 'Subiendo...' : 'Subir Imagen'}
+                                    <input type="file" accept="image/*" disabled={uploadingLogo} onChange={uploadSigLogo} style={{ display: 'none' }} />
+                                </label>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="input-group" style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <label className="label">Vista Previa / Código HTML de la Firma</label>
+                    <textarea
+                        className="input"
+                        rows={6}
+                        value={formData.emailSignature}
+                        onChange={(e) => setFormData({ ...formData, emailSignature: e.target.value })}
+                        placeholder="El código HTML se generará aquí..."
+                    />
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'white', borderRadius: '6px', border: '1px dashed #cbd5e1' }} dangerouslySetInnerHTML={{ __html: formData.emailSignature || '<span style="color: #94a3b8">La vista previa aparecerá aquí...</span>' }} />
+                </div>
+
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="label">Alias Autorizados (Remitentes)</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <input
+                            className="input"
+                            type="email"
+                            value={newAlias}
+                            onChange={(e) => setNewAlias(e.target.value)}
+                            placeholder="ej: ventas@miempresa.com"
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddAlias(); } }}
+                        />
+                        <button type="button" className="btn btn-secondary" onClick={handleAddAlias}>Agregar</button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {formData.senderAliases.map((alias, idx) => (
+                            <div key={idx} style={{ background: '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                {alias}
+                                <button type="button" onClick={() => handleRemoveAlias(idx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                            </div>
+                        ))}
+                        {formData.senderAliases.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No hay alias configurados.</span>}
+                    </div>
+                </div>
+
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="label">Plantilla Predeterminada de Cotización</label>
+                    <textarea
+                        className="input"
+                        rows={6}
+                        value={formData.defaultTemplate}
+                        onChange={(e) => setFormData({ ...formData, defaultTemplate: e.target.value })}
+                        placeholder="Escribe el texto que acompañará al PDF por defecto..."
+                    />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button type="submit" className="btn btn-primary" disabled={saving}>
+                        {saving ? 'Guardando...' : 'Guardar Configuración'}
                     </button>
-                    {file && (
-                        <button className="btn" onClick={handleSave} disabled={saving}
-                            style={{ background: '#101828', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
-                            {saving ? 'Guardando...' : savedOk ? '✓ Guardado' : 'Guardar logo'}
-                        </button>
+                    {message && (
+                        <span style={{ color: message.type === 'success' ? '#10b981' : '#ef4444', fontWeight: 500 }}>
+                            {message.type === 'success' ? '✓ ' : '✕ '}{message.text}
+                        </span>
                     )}
-                    {error && <span style={{ color: '#ef4444', fontSize: '0.85rem' }}>{error}</span>}
-                    {savedOk && !file && <span style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>✓ Logo actualizado</span>}
                 </div>
-            </div>
+            </form>
         </div>
     );
 }

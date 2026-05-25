@@ -8,7 +8,7 @@ export async function GET(req) {
         let snapshot;
         if (empresaId) {
             // Return only the company profile matching the user's empresaId
-            const docRef = await firestore.collection('company_profiles').doc(empresaId).get();
+            const docRef = await getTenantDoc(empresaId).get();
             snapshot = { docs: docRef.exists ? [docRef] : [] };
         } else {
             // Fallback (only for admins or legacy)
@@ -84,7 +84,7 @@ export async function POST(req) {
             });
         }
 
-        const newProfileRef = firestore.collection('company_profiles').doc();
+        const newProfileRef = getTenantDoc();
         batch.set(newProfileRef, {
             name,
             address,

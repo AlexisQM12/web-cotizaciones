@@ -30,3 +30,24 @@ if (admin.apps.length > 0) {
 }
 
 export { firestore, storage, admin };
+
+// ── Multi-Tenant SaaS Helpers ──
+export const getTenantCollection = (empresaId, collectionName) => {
+    if (!empresaId) throw new Error(`empresaId is required for collection ${collectionName}`);
+
+    const map = {
+        'quotations': 'cgo_quotations',
+        'client_profiles': 'cgo_clients',
+        'suppliers': 'cgo_suppliers',
+        'accounting_config': 'cgo_accounting_config',
+        'purchases_ledger': 'cgo_purchases',
+        'sales_ledger': 'cgo_sales'
+    };
+    const cgoCollection = map[collectionName] || collectionName;
+    return firestore.collection('tenants').doc(String(empresaId)).collection(cgoCollection);
+};
+
+export const getTenantDoc = (empresaId) => {
+    if (!empresaId) throw new Error('empresaId is required');
+    return firestore.collection('tenants').doc(String(empresaId));
+};

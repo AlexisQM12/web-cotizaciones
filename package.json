@@ -27,6 +27,7 @@
     "imap-simple": "^5.1.0",
     "mailparser": "^3.9.8",
     "next": "15.5.18",
+    "nodemailer": "^8.0.7",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.4.296",
     "react": "^19.2.3",

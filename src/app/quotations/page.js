@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { QuotationDocument } from '@/components/QuotationDocument'
 import { ScannerLogsModal } from '@/components/ScannerLogsModal'
+import { SendEmailModal } from '@/components/SendEmailModal'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Dashboard() {
@@ -20,6 +21,8 @@ export default function Dashboard() {
     const [stageFilter, setStageFilter] = useState('todas')
     const [leads, setLeads] = useState([])
     const [toasts, setToasts] = useState([]) // notificaciones flotantes transitorias
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
+    const [selectedQuotationForEmail, setSelectedQuotationForEmail] = useState(null)
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -171,6 +174,15 @@ export default function Dashboard() {
         return () => newSocket.disconnect();
     }, [router, user?.empresaId]);
 
+    const handleOpenEmailModal = (q) => {
+        setSelectedQuotationForEmail(q);
+        setIsEmailModalOpen(true);
+    };
+
+    const handleEmailSent = (quotationId) => {
+        setQuotations(prev => prev.map(q => q.id === quotationId ? { ...q, isSent: true } : q));
+    };
+
     const createNewQuotation = async () => {
         if (!user?.empresaId) {
             alert('Debes configurar tu empresa primero.');
@@ -244,13 +256,17 @@ export default function Dashboard() {
         <ProtectedRoute>
             <NavBar />
             <main className="container">
-                <button onClick={() => router.push('/')} className="btn" style={{ marginBottom: '1.5rem', background: '#4b5563', color: 'white' }}>
-                    ← Volver al Dashboard
-                </button>
                 <div className="dashboard-header">
-                    <div className="dashboard-title-area">
-                        <h1>Mis Cotizaciones</h1>
-                        <p>Administra y crea nuevas propuestas profesionales.</p>
+                    <div className="dashboard-title-area" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        <button onClick={() => router.push('/')} className="btn-back-square" title="Volver al Dashboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h1 style={{ lineHeight: '1.2' }}>Mis Cotizaciones</h1>
+                            <p>Administra y crea nuevas propuestas profesionales.</p>
+                        </div>
                     </div>
                     <div className="dashboard-actions">
                         <button className="btn btn-secondary" onClick={() => setIsScannerModalOpen(true)}>
@@ -272,58 +288,12 @@ export default function Dashboard() {
                     quotations={quotations}
                 />
 
-                {/* ── Solicitudes de cotización detectadas por email ── */}
-                {leads.length > 0 && (
-                    <div style={{
-                        background: '#fffbeb', border: '1px solid #fde68a',
-                        borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.5rem',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                            <span style={{
-                                width: 10, height: 10, borderRadius: '50%', background: '#f59e0b',
-                                animation: 'pulse-dot 1.4s ease-in-out infinite', display: 'inline-block',
-                            }} />
-                            <strong style={{ color: '#92400e', fontSize: '0.95rem' }}>
-                                {leads.length} posible{leads.length > 1 ? 's' : ''} solicitud{leads.length > 1 ? 'es' : ''} de cotización detectada{leads.length > 1 ? 's' : ''} en tu correo
-                            </strong>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            {leads.map(lead => (
-                                <div key={lead.id} style={{
-                                    background: '#fff', borderRadius: 10,
-                                    padding: '0.75rem 1rem',
-                                    border: '1px solid #fde68a',
-                                    display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
-                                }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {lead.subject}
-                                        </div>
-                                        <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>
-                                            De: {lead.from} · {formatLeadDate(lead.receivedAt)}
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                                        <button
-                                            className="btn btn-primary"
-                                            style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
-                                            onClick={() => createQuotationFromLead(lead)}
-                                        >
-                                            ＋ Crear cotización
-                                        </button>
-                                        <button
-                                            className="btn btn-secondary"
-                                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-                                            onClick={() => dismissLead(lead.id)}
-                                        >
-                                            Descartar
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <SendEmailModal 
+                    isOpen={isEmailModalOpen}
+                    onClose={() => setIsEmailModalOpen(false)}
+                    quotation={selectedQuotationForEmail}
+                    onSent={handleEmailSent}
+                />
 
                 {/* ── Toasts flotantes para leads en tiempo real ── */}
                 <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -519,6 +489,15 @@ export default function Dashboard() {
                                                 </a>
                                             )}
                                             <button
+                                                onClick={(e) => { e.stopPropagation(); handleOpenEmailModal(q); }}
+                                                style={{ background: '#f59e0b', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = '#d97706'}
+                                                onMouseOut={(e) => e.currentTarget.style.background = '#f59e0b'}
+                                                title="Enviar a Cliente por Correo"
+                                            >
+                                                ✉️
+                                            </button>
+                                            <button
                                                 onClick={(e) => downloadPdf(q, e)}
                                                 disabled={downloadingId === q.id}
                                                 style={{ background: downloadingId === q.id ? '#93c5fd' : '#3b82f6', border: 'none', color: 'white', cursor: downloadingId === q.id ? 'wait' : 'pointer', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
@@ -611,6 +590,75 @@ export default function Dashboard() {
                     )}
                 </div>
             </main>
+
+            {/* ── GADGETS FLOTANTES (Fuera del contenedor principal) ── */}
+            <aside className="gadgets-sidebar" style={{ 
+                position: 'fixed', 
+                top: '100px', 
+                right: '2rem', 
+                width: '340px', 
+                zIndex: 90, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '1.5rem',
+                maxHeight: 'calc(100vh - 120px)',
+                overflowY: 'auto'
+            }}>
+                
+                {/* Gadget de Gmail Leads */}
+                {leads.length > 0 && (
+                    <div className="card" style={{ padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', borderRadius: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="28px" height="28px">
+                                <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75V40h7.5C43.883,40,45,38.883,45,37.5V16.2z"/>
+                                <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H5.5C4.118,40,3,38.883,3,37.5V16.2z"/>
+                                <path fill="#e53935" d="M35,11.2l-11,8.25L13,11.2l-3,2.41L3,16.2l10.879,8.428L24,32.25l10.121-7.622L45,16.2l-7-5.01V11.2z"/>
+                                <path fill="#c62828" d="M35,11.2l-11,8.25L13,11.2l-2.091-1.631L13,7.5l11,8.25L35,7.5l2.091,2.069L35,11.2z"/>
+                                <path fill="#fbc02d" d="M45,16.2l-7-5.01L35,11.2v12.5l10-7.5V16.2z"/>
+                                <path fill="#1565c0" d="M3,16.2l7-5.01L13,11.2v12.5l-10-7.5V16.2z"/>
+                            </svg>
+                            <h3 style={{ fontSize: '1rem', color: '#1e293b', margin: 0 }}>Gmail Leads</h3>
+                            <span style={{ background: '#ef4444', color: 'white', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', marginLeft: 'auto' }}>
+                                {leads.length} Nuevo{leads.length > 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {leads.map(lead => (
+                                <div key={lead.id} style={{
+                                    background: '#f8fafc', borderRadius: '12px', padding: '1rem',
+                                    border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '0.75rem'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0f172a', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {lead.subject}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                                            De: {lead.from}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', borderRadius: '8px' }}
+                                            onClick={() => createQuotationFromLead(lead)}
+                                        >
+                                            Cotizar
+                                        </button>
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', borderRadius: '8px' }}
+                                            onClick={() => dismissLead(lead.id)}
+                                        >
+                                            Ignorar
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </aside>
         </ProtectedRoute>
     )
 }

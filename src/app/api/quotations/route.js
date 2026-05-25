@@ -1,11 +1,11 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = firestore.collection('quotations');
+        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'quotations');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -49,8 +49,8 @@ export async function POST(req) {
         const { clientName, empresaId } = await req.json();
 
         // Fetch default profiles
-        const companySnap = await firestore.collection('company_profiles').doc(empresaId).get();
-        const clientSnap = await firestore.collection('client_profiles').where('empresaId', '==', empresaId).where('isDefault', '==', true).limit(1).get();
+        const companySnap = await getTenantDoc(empresaId).get();
+        const clientSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles').where('empresaId', '==', empresaId).where('isDefault', '==', true).limit(1).get();
 
         const defaultCompany = companySnap.exists ? companySnap : null;
         const defaultClient = !clientSnap.empty ? clientSnap.docs[0] : null;
@@ -71,7 +71,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString()
         };
 
-        const docRef = await firestore.collection('quotations').add(newQuote);
+        const docRef = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'quotations').add(newQuote);
 
         return Response.json({ id: docRef.id, ...newQuote });
     } catch (error) {

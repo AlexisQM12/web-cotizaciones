@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 import { calculateMonthlyTaxes } from '@/lib/accounting/taxCalculator';
 import { buildSalesEntry, buildPurchaseEntry, buildLibroDiario, buildLibroMayor, resetEntryNumber } from '@/lib/accounting/journalGenerator';
 
@@ -14,7 +14,7 @@ export async function GET(req) {
         }
 
         // 1) Cargar configuración
-        const configDoc = await firestore.collection('accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) {
             return Response.json({ error: 'Configuración contable no encontrada. Completa el setup.' }, { status: 404 });
         }
@@ -22,9 +22,9 @@ export async function GET(req) {
 
         // 2) Cargar ventas y compras del periodo
         const [salesSnap, purchasesSnap] = await Promise.all([
-            firestore.collection('sales_ledger')
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get(),
-            firestore.collection('purchases_ledger')
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get(),
         ]);
         const sales     = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -32,7 +32,7 @@ export async function GET(req) {
 
         // 3) Calcular ingresos acumulados del año (para tasa RMT 1% vs 1.5%)
         const year = period.split('-')[0];
-        const yearSnap = await firestore.collection('sales_ledger')
+        const yearSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const ingresosAnualesAcumulados = yearSnap.docs
             .filter(d => (d.data().period || '').startsWith(year))

@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req, { params }) {
     try {
@@ -6,9 +6,9 @@ export async function GET(req, { params }) {
 
         // Fetch everything in parallel without server-side sorting
         const [quoteDoc, companySnap, clientSnap, settingsSnap] = await Promise.all([
-            firestore.collection('quotations').doc(id).get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'quotations').doc(id).get(),
             firestore.collection('company_profiles').get(),
-            firestore.collection('client_profiles').get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'client_profiles').get(),
             firestore.collection('settings').doc('general_conditions').get()
         ]);
 
@@ -74,7 +74,7 @@ export async function PUT(req, { params }) {
             updateData.total = body.items.reduce((acc, item) => acc + (parseFloat(item.quantity || 0) * parseFloat(item.price || 0)), 0);
         }
 
-        await firestore.collection('quotations').doc(id).update(updateData);
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'quotations').doc(id).update(updateData);
 
         return Response.json({ success: true });
     } catch (error) {
@@ -86,7 +86,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await firestore.collection('quotations').doc(id).delete();
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'quotations').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

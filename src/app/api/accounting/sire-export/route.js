@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 import { buildSire141, buildSire81 } from '@/lib/accounting/sireExporter';
 
 // GET /api/accounting/sire-export?companyProfileId=xxx&period=YYYY-MM&libro=14.1|8.1
@@ -13,7 +13,7 @@ export async function GET(req) {
             return Response.json({ error: 'companyProfileId, period y libro requeridos' }, { status: 400 });
         }
 
-        const configDoc = await firestore.collection('accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) {
             return Response.json({ error: 'Configuración no encontrada' }, { status: 404 });
         }
@@ -22,13 +22,13 @@ export async function GET(req) {
 
         let payload;
         if (libro === '14.1') {
-            const snap = await firestore.collection('sales_ledger')
+            const snap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
             payload = buildSire141({ ruc, period, sales });
         } else if (libro === '8.1') {
-            const snap = await firestore.collection('purchases_ledger')
+            const snap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));

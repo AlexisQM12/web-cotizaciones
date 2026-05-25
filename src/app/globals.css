@@ -156,6 +156,37 @@ textarea:focus,
   background-color: #e2e8f0;
 }
 
+.btn-back-square {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.btn-back-square:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.btn-back-square svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+}
+
+
 /* Status Badges */
 .status-badge {
   padding: 0.4rem 0.8rem;

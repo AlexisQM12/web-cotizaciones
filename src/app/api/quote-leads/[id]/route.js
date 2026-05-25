@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // PATCH /api/quote-leads/[id]  { status: 'dismissed' | 'converted' }
 export async function PATCH(req, { params }) {

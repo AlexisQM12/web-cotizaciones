@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // GET /api/accounting/daily-summary?companyProfileId=xxx&period=YYYY-MM
 // Devuelve los totales de ventas y compras desglosados por día del mes.
@@ -15,10 +15,10 @@ export async function GET(req) {
         }
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            firestore.collection('sales_ledger')
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
-            firestore.collection('purchases_ledger')
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
         ]);

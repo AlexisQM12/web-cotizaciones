@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 import { COMPANY_TYPES, TAX_REGIMES, isRegimeAllowed } from '@/lib/accounting/sunatRules';
 
 // GET /api/accounting/config?companyProfileId=xxx
@@ -16,7 +16,7 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const doc = await firestore.collection('accounting_config').doc(empresaId).get();
+        const doc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'accounting_config').doc(empresaId).get();
         if (!doc.exists) {
             return Response.json({ exists: false, companyProfileId: empresaId });
         }
@@ -70,7 +70,7 @@ export async function PUT(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = firestore.collection('accounting_config').doc(resolvedId);
+        const ref = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'accounting_config').doc(resolvedId);
         const existing = await ref.get();
         if (!existing.exists) data.createdAt = data.updatedAt;
 

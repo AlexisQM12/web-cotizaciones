@@ -1,9 +1,9 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
-        const doc = await firestore.collection('client_profiles').doc(id).get();
+        const doc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'client_profiles').doc(id).get();
 
         if (!doc.exists) return Response.json({ error: 'Not found' }, { status: 404 });
 
@@ -24,7 +24,7 @@ export async function PUT(req, { params }) {
 
         // If this is set as default, unset others
         if (isDefault) {
-            const defaultQuery = await firestore.collection('client_profiles').where('isDefault', '==', true).get();
+            const defaultQuery = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'client_profiles').where('isDefault', '==', true).get();
             defaultQuery.forEach(doc => {
                 if (doc.id !== id) {
                     batch.update(doc.ref, { isDefault: false });
@@ -32,7 +32,7 @@ export async function PUT(req, { params }) {
             });
         }
 
-        const docRef = firestore.collection('client_profiles').doc(id);
+        const docRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'client_profiles').doc(id);
         batch.update(docRef, {
             name,
             ruc,
@@ -53,7 +53,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await firestore.collection('client_profiles').doc(id).delete();
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'client_profiles').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

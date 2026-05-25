@@ -3,7 +3,7 @@ import { firestore, storage } from '@/lib/firebase-admin';
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
-        const doc = await firestore.collection('company_profiles').doc(id).get();
+        const doc = await getTenantDoc(id).get();
 
         if (!doc.exists) return Response.json({ error: 'Not found' }, { status: 404 });
 
@@ -65,7 +65,7 @@ export async function PUT(req, { params }) {
             });
         }
 
-        const docRef = firestore.collection('company_profiles').doc(id);
+        const docRef = getTenantDoc(id);
         batch.update(docRef, {
             name,
             address,
@@ -92,7 +92,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await firestore.collection('company_profiles').doc(id).delete();
+        await getTenantDoc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

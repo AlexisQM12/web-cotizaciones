@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // POST /api/accounting/ingest-quotations
 // Importa al sales_ledger todas las cotizaciones con quotationStatus='completado'
@@ -14,15 +14,15 @@ export async function POST(req) {
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         // 1) Cotizaciones completadas
-        const quotsSnap = await firestore.collection('quotations')
+        const quotsSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'quotations')
             .where('quotationStatus', '==', 'completado').get();
 
         // 2) Cargar clientes para resolver RUC
-        const clientsSnap = await firestore.collection('client_profiles').get();
+        const clientsSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles').get();
         const clients = Object.fromEntries(clientsSnap.docs.map(d => [d.id, d.data()]));
 
         // 3) Ventas ya ingresadas (para no duplicar)
-        const existingSnap = await firestore.collection('sales_ledger')
+        const existingSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const existingBySource = new Map();
         existingSnap.docs.forEach(d => {
@@ -91,10 +91,10 @@ export async function POST(req) {
 
             if (exists && overwrite) {
                 const existingId = existingBySource.get(doc.id);
-                batch.update(firestore.collection('sales_ledger').doc(existingId), data);
+                batch.update(getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').doc(existingId), data);
                 ingested.push({ id: existingId, source: doc.id, code: q.code, action: 'updated' });
             } else {
-                const ref = firestore.collection('sales_ledger').doc();
+                const ref = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').doc();
                 batch.set(ref, data);
                 ingested.push({ id: ref.id, source: doc.id, code: q.code, action: 'created' });
             }
@@ -103,7 +103,7 @@ export async function POST(req) {
         await batch.commit();
 
         // Desglose por periodo de TODAS las ventas asociadas (nuevas + ya existentes)
-        const allRelevant = await firestore.collection('sales_ledger')
+        const allRelevant = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const byPeriod = {};
         let latestPeriod = null;

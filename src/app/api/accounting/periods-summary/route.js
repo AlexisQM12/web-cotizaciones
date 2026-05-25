@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // GET /api/accounting/periods-summary?companyProfileId=xxx
 // Devuelve un resumen de qué periodos tienen movimientos (ventas/compras)
@@ -10,8 +10,8 @@ export async function GET(req) {
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            firestore.collection('sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
-            firestore.collection('purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
         ]);
 
         const periods = {};

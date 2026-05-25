@@ -113,13 +113,17 @@ export default function PendingsDashboard() {
         <ProtectedRoute>
             <NavBar />
             <main className="container">
-                <button onClick={() => router.push('/')} className="btn" style={{ marginBottom: '1.5rem', background: '#4b5563', color: 'white' }}>
-                    ← Volver al Dashboard
-                </button>
                 <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div className="dashboard-title-area">
-                        <h1>Mis Pendientes</h1>
-                        <p>Órdenes de compra recibidas listas para ejecución operativa.</p>
+                    <div className="dashboard-title-area" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        <button onClick={() => router.push('/')} className="btn-back-square" title="Volver al Dashboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h1 style={{ lineHeight: '1.2' }}>Mis Pendientes</h1>
+                            <p>Órdenes de compra recibidas listas para ejecución operativa.</p>
+                        </div>
                     </div>
                     <button 
                         onClick={() => setShowAddModal(true)}
