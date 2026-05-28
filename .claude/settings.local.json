@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firebase deploy *)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({...p.dependencies,...p.devDependencies}, null, 2\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('tesseract.js'\\); require\\('pdfjs-dist'\\); require\\('@napi-rs/canvas'\\); console.log\\('OK'\\)\")"
+    ]
+  }
+}

@@ -324,7 +324,10 @@ export default function QuotationEditor() {
                 const res = await fetch('/api/quotations/publish', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quotationId: id })
+                    body: JSON.stringify({ 
+                        quotationId: id,
+                        empresaId: user?.empresaId || '6'
+                    })
                 });
                 const result = await res.json();
 

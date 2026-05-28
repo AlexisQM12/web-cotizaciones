@@ -5,7 +5,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = firestore.collection('portfolio_companies');
+        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'portfolio_companies');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -39,7 +39,7 @@ export async function POST(req) {
             return Response.json({ error: 'empresaId and companyName are required' }, { status: 400 });
         }
 
-        const newCompanyRef = firestore.collection('portfolio_companies').doc();
+        const newCompanyRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'portfolio_companies').doc();
         await newCompanyRef.set({
             empresaId,
             companyName: companyName || '',

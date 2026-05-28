@@ -10,7 +10,10 @@ export async function PATCH(req, { params }) {
             return Response.json({ error: 'status inválido' }, { status: 400 });
         }
 
-        await firestore.collection('quote_leads').doc(id).update({
+        const { searchParams } = new URL(req.url);
+        const empresaId = searchParams.get('empresaId');
+
+        await getTenantCollection(empresaId, 'quote_leads').doc(id).update({
             status,
             updatedAt: new Date().toISOString(),
         });

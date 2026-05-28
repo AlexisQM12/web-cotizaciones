@@ -1,6 +1,7 @@
 // Firestore Client for Browser (Realtime Listeners)
 import { initializeApp, getApps } from 'firebase/app';
 import { initializeFirestore, getFirestore, persistentLocalCache } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -34,10 +35,9 @@ export { clientDb };
 export default clientApp;
 
 // ── Multi-Tenant SaaS Helpers (Client Side) ──
-import { collection, doc } from 'firebase/firestore';
 
 export const getTenantCollectionClient = (empresaId, collectionName) => {
-    if (!empresaId) throw new Error(`empresaId is required for collection ${collectionName}`);
+    const finalEmpresaId = empresaId || '6';
 
     const map = {
         'quotations': 'cgo_quotations',
@@ -45,13 +45,15 @@ export const getTenantCollectionClient = (empresaId, collectionName) => {
         'suppliers': 'cgo_suppliers',
         'accounting_config': 'cgo_accounting_config',
         'purchases_ledger': 'cgo_purchases',
-        'sales_ledger': 'cgo_sales'
+        'sales_ledger': 'cgo_sales',
+        'portfolio_companies': 'cgo_portfolio_companies',
+        'quote_leads': 'cgo_quote_leads'
     };
     const cgoCollection = map[collectionName] || collectionName;
-    return collection(clientDb, 'tenants', String(empresaId), cgoCollection);
+    return collection(clientDb, 'tenants', String(finalEmpresaId), cgoCollection);
 };
 
 export const getTenantDocClient = (empresaId) => {
-    if (!empresaId) throw new Error('empresaId is required');
-    return doc(clientDb, 'tenants', String(empresaId));
+    const finalEmpresaId = empresaId || '6';
+    return doc(clientDb, 'tenants', String(finalEmpresaId));
 };

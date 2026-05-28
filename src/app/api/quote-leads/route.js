@@ -5,8 +5,9 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get('status') || 'pending';
+        const empresaId = searchParams.get('empresaId');
 
-        const snap = await firestore.collection('quote_leads')
+        const snap = await getTenantCollection(empresaId, 'quote_leads')
             .where('status', '==', status)
             .limit(50)
             .get();

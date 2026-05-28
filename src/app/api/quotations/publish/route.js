@@ -2,7 +2,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 
 export async function POST(req) {
     try {
-        const { quotationId } = await req.json();
+        const { quotationId, empresaId } = await req.json();
 
         if (!quotationId) {
             return Response.json({ error: 'Quotation ID is required' }, { status: 400 });
