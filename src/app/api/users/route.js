@@ -27,6 +27,8 @@ export async function POST(req) {
         let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
         let assignedRole = dbUser?.role || null;
 
+        console.log('[Auth API] Intento de login:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
+
         // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
         if (!assignedTenantId && email) {
             const normalizedEmail = email.trim().toLowerCase();
@@ -35,6 +37,7 @@ export async function POST(req) {
                 const tenantUserData = tenantUserDoc.data();
                 assignedTenantId = tenantUserData.tenantId;
                 assignedRole = tenantUserData.role || 'admin';
+                console.log('[Auth API] Encontrado en tenant_users (whitelist):', { assignedTenantId, assignedRole });
             }
         }
 
@@ -48,9 +51,12 @@ export async function POST(req) {
                 const tenantsSnap = await firestore.collection('tenants').where('customDomain', '==', domain).limit(1).get();
                 if (!tenantsSnap.empty) {
                     assignedTenantId = tenantsSnap.docs[0].id;
+                    console.log('[Auth API] Encontrado por dominio:', assignedTenantId);
                 }
             }
         }
+
+        console.log('[Auth API] Resultado de asignación:', { assignedTenantId, assignedRole });
 
         if (userDoc.exists) {
             // Update existing user
