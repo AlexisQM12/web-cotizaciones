@@ -25,6 +25,18 @@ export async function POST(req) {
 
         let dbUser = userDoc.exists ? userDoc.data() : null;
         let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
+        let assignedRole = dbUser?.role || null;
+
+        // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
+        if (!assignedTenantId && email) {
+            const normalizedEmail = email.trim().toLowerCase();
+            const tenantUserDoc = await firestore.collection('tenant_users').doc(normalizedEmail).get();
+            if (tenantUserDoc.exists) {
+                const tenantUserData = tenantUserDoc.data();
+                assignedTenantId = tenantUserData.tenantId;
+                assignedRole = tenantUserData.role || 'admin';
+            }
+        }
 
         // Auto-Join by Domain: if user has no tenant, check if their email domain matches any registered tenant
         if (!assignedTenantId && email.includes('@')) {
@@ -48,30 +60,31 @@ export async function POST(req) {
                 displayName: userData.displayName,
                 photoURL: userData.photoURL,
                 firstName: userData.firstName,
-                ...(assignedTenantId && !dbUser.empresaId ? { empresaId: assignedTenantId, tenantId: assignedTenantId } : {})
+                ...(assignedTenantId && !dbUser.empresaId ? { empresaId: assignedTenantId, tenantId: assignedTenantId } : {}),
+                ...(assignedRole && !dbUser.role ? { role: assignedRole } : {})
             });
             const updatedUser = (await userRef.get()).data();
             
-            // If they still don't have a tenant after auto-join attempt, reject them
+            // If they still don't have a tenant after all attempts, reject them
             if (!updatedUser.empresaId && !updatedUser.tenantId) {
-                return Response.json({ error: 'Acceso Denegado. Tu dominio no está registrado en Zentria.' }, { status: 403 });
+                return Response.json({ error: 'Acceso Denegado. Tu cuenta no está registrada en Zentria ni asociada a un dominio empresarial.' }, { status: 403 });
             }
             
             return Response.json({ success: true, user: updatedUser });
         } else {
-            // User doesn't exist. If we found a tenant via domain, let them in!
+            // User doesn't exist. If we found a tenant via whitelist or domain, let them in!
             if (assignedTenantId) {
                 const newUser = {
                     ...userData,
                     empresaId: assignedTenantId,
                     tenantId: assignedTenantId,
-                    role: 'employee',
+                    role: assignedRole || 'employee',
                     createdAt: new Date().toISOString()
                 };
                 await userRef.set(newUser);
                 return Response.json({ success: true, user: newUser });
             } else {
-                // Reject new user registration from CGO, users must be pre-registered or match a domain
+                // Reject new user registration from CGO
                 return Response.json({ error: 'Acceso Denegado. No estás registrado en Zentria y tu dominio no está asociado a ninguna empresa.' }, { status: 403 });
             }
         }
