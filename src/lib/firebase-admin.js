@@ -15,7 +15,7 @@ if (!admin.apps.length) {
                 credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
                 storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim().replace(/^["']|["']$/g, ''),
             });
-            console.log('[Firebase] Admin SDK iniciado correctamente.');
+            console.log('[Firebase] Admin SDK iniciado correctamente para el proyecto:', projectId);
         } else {
             console.warn('[Firebase] Sin credenciales — Admin SDK no iniciado.');
         }
