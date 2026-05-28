@@ -26,11 +26,6 @@ export async function POST(req) {
         let dbUser = userDoc.exists ? userDoc.data() : null;
         let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
 
-        // Auto-join bypass for Admin
-        if (email.toLowerCase() === 'ken.qm@ayatech.com.pe') {
-            assignedTenantId = '6';
-        }
-
         // Auto-Join by Domain: if user has no tenant, check if their email domain matches any registered tenant
         if (!assignedTenantId && email.includes('@')) {
             const domain = email.split('@')[1].toLowerCase();
