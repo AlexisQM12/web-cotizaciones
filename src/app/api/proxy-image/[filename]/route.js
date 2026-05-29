@@ -22,25 +22,8 @@ export async function GET(req, { params }) {
 
         // If the image is WEBP, we must convert it to JPEG because @react-pdf/renderer does not support WEBP.
         if (contentType.includes('webp') || url.toLowerCase().includes('.webp')) {
-            try {
-                // Dynamic import so it's only loaded when needed
-                const { loadImage, createCanvas } = await import('@napi-rs/canvas');
-                const image = await loadImage(Buffer.from(buffer));
-                const canvas = createCanvas(image.width, image.height);
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(image, 0, 0);
-                const jpegBuffer = await canvas.encode('jpeg');
-                
-                return new Response(jpegBuffer, {
-                    headers: {
-                        'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=86400, must-revalidate',
-                    },
-                });
-            } catch (err) {
-                console.error('Error converting webp to jpeg:', err);
-                // Fall back to original buffer if conversion fails, though it will likely fail to render in PDF
-            }
+            console.warn('WebP images are not natively supported by react-pdf and canvas conversion is disabled in Cloud Functions.');
+            // Fall back to original buffer, though it will likely fail to render in PDF
         }
 
         return new Response(buffer, {
