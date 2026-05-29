@@ -20,6 +20,8 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            setLoading(true); // Evitar que ProtectedRoute evalúe antes de terminar el fetch
+            
             if (firebaseUser) {
                 // User is signed in
                 const userData = {
@@ -30,7 +32,13 @@ export function AuthProvider({ children }) {
                     firstName: firebaseUser.displayName?.split(' ')[0] || 'Usuario'
                 };
 
-                setUser(userData);
+                // Preservar empresaId si ya lo teníamos
+                setUser(prev => {
+                    if (prev && prev.uid === userData.uid) {
+                        return { ...prev, ...userData };
+                    }
+                    return userData;
+                });
 
                 // Sync user data to Firestore and get full profile (including empresaId)
                 const res = await fetch('/api/users', {
