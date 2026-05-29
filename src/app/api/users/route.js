@@ -27,7 +27,7 @@ export async function POST(req) {
         let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
         let assignedRole = dbUser?.role || null;
 
-        console.log('[Auth API] Intento de login:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
+        console.log('[Auth API] Intento de inicio de sesión:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
 
         // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
         if (!assignedTenantId && email) {
