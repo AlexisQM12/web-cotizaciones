@@ -16,8 +16,12 @@ if (!admin.apps.length) {
                 storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim().replace(/^["']|["']$/g, ''),
             });
             console.log('[Firebase] Admin SDK iniciado correctamente para el proyecto:', projectId);
+            console.log('[DEBUG env] Keys starting with FIREBASE or NEXT_PUBLIC:', Object.keys(process.env).filter(k => k.includes('FIREBASE') || k.includes('NEXT_PUBLIC')));
+            console.log('[DEBUG env] FIREBASE_PROJECT_ID value:', process.env.FIREBASE_PROJECT_ID);
+            console.log('[DEBUG env] NEXT_PUBLIC_FIREBASE_PROJECT_ID value:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
         } else {
             console.warn('[Firebase] Sin credenciales — Admin SDK no iniciado.');
+            console.log('[DEBUG env] process.env.FIREBASE_PROJECT_ID is undefined. Available keys:', Object.keys(process.env).filter(k => k.includes('FIREBASE') || k.includes('NEXT_PUBLIC')));
         }
     } catch (error) {
         console.error('[Firebase] Error al inicializar:', error.message);
