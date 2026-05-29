@@ -35,62 +35,39 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   }, [status.nextScanAt]);
 
   useEffect(() => {
-    if (!isOpen || !socket) return;
+    if (!isOpen) return;
 
-    socket.emit('request_po_logs');
+    let unsubLogs = () => {};
+    let unsubStatus = () => {};
+    
+    // Importación dinámica para evitar problemas en SSR
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      import('@/lib/firestoreClient').then(({ clientDb }) => {
+        if (!clientDb) return;
+        
+        // Escuchar logs directamente desde Firestore
+        unsubLogs = onSnapshot(doc(clientDb, 'scanner_state', 'logs'), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data().entries || [];
+            const seen = new Set();
+            setLogs(data.filter(l => l.id && !seen.has(l.id) && seen.add(l.id)));
+          }
+        });
 
-    const handleLogsList  = (data) => {
-      const seen = new Set();
-      setLogs(data.filter(l => l.id && !seen.has(l.id) && seen.add(l.id)));
-    };
-    const showToast = (type, message) => {
-      clearTimeout(ocrToastRef.current);
-      setOcrToast({ type, message });
-      ocrToastRef.current = setTimeout(() => setOcrToast(null), 6000);
-    };
-
-    const handleLogAdded = (newLog) => {
-      setLogs(prev => {
-        const filtered = prev.filter(l => l.id !== newLog.id);
-        return [newLog, ...filtered];
+        // Escuchar estado (status)
+        unsubStatus = onSnapshot(doc(clientDb, 'scanner_state', 'status'), (snap) => {
+          if (snap.exists()) {
+            setStatus(snap.data());
+          }
+        });
       });
-    };
-
-    const handleOcrResult = ({ status, foundCode }) => {
-      setOcrProcessingId(null);
-      if (status === 'Factura - Completado') {
-        showToast('success', `✅ Asignado a ${foundCode || '—'}`);
-      } else if (status === 'Sin monto legible') {
-        showToast('warn', '⚠️ OCR completado pero no se encontraron montos legibles en el PDF.');
-      } else if (status === 'No Coincide') {
-        showToast('warn', `⚠️ Montos detectados (${foundCode || '—'}) pero ninguna OC coincide. Asigna manualmente.`);
-      } else if (status === 'Error Lectura') {
-        showToast('error', '❌ Error al leer el PDF. Revisa los logs del servidor.');
-      } else {
-        showToast('warn', `⚠️ Resultado: ${status}`);
-      }
-    };
-
-    const handleStatus   = (s) => setStatus(s);
-    const handleOcrError = ({ message }) => {
-      setOcrProcessingId(null);
-      showToast('error', `❌ ${message}`);
-    };
-
-    socket.on('po_logs_list', handleLogsList);
-    socket.on('po_scanner_log_added', handleLogAdded);
-    socket.on('scan_status', handleStatus);
-    socket.on('reprocess_ocr_result', handleOcrResult);
-    socket.on('reprocess_ocr_error', handleOcrError);
+    });
 
     return () => {
-      socket.off('po_logs_list', handleLogsList);
-      socket.off('po_scanner_log_added', handleLogAdded);
-      socket.off('scan_status', handleStatus);
-      socket.off('reprocess_ocr_result', handleOcrResult);
-      socket.off('reprocess_ocr_error', handleOcrError);
+      unsubLogs();
+      if (typeof unsubStatus === 'function') unsubStatus();
     };
-  }, [isOpen, socket]);
+  }, [isOpen]);
 
   const assignManually = async (logId, docId) => {
     if (!docId) return;
@@ -189,12 +166,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
           <h2 style={{ fontSize: '1.4rem', color: '#1e293b', margin: 0 }}>📡 Monitor de Escaneo de Órdenes de Compra</h2>
           <div className="scanner-modal-actions">
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('⚠️ Esto revertirá TODOS los estados "OC Recibida" asignados automáticamente a "Pendiente", limpiará el historial y re-escaneará desde cero.\n\n¿Continuar?')) return;
-                socket.emit('reset_and_rescan');
-              }}
-              disabled={isActive}
+              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
               style={{
                 background: isActive ? '#e2e8f0' : '#fef2f2',
                 border: '1px solid #fecaca',
@@ -210,12 +182,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               ⚠️ Resetear y re-escanear
             </button>
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('¿Re-escanear solo la carpeta de enviados? Útil para detectar facturas ya enviadas que el scanner no procesó.')) return;
-                socket.emit('rescan_sent');
-              }}
-              disabled={isActive}
+              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f0fdf4',
                 border: '1px solid #bbf7d0',
@@ -231,12 +198,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               📤 Re-escanear enviados
             </button>
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('¿Re-escanear todos los correos desde cero? Esto puede tardar varios minutos.')) return;
-                socket.emit('force_rescan');
-              }}
-              disabled={isActive}
+              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f1f5f9',
                 border: '1px solid #e2e8f0',
@@ -377,10 +339,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
                         {log.source === 'factura' && !log.docId && (
                           <button
                             onClick={() => {
-                              if (isOcrRunning) return;
-                              console.log('[OCR] Solicitando re-proceso para:', log.id, '| socket:', socket?.id);
-                              setOcrProcessingId(log.id);
-                              socket?.emit('reprocess_invoice_ocr', { logId: log.id });
+                              alert('El re-proceso de OCR manual está desactivado en Cloud Functions. El sistema lo reintentará automáticamente en el próximo ciclo si es necesario.');
                             }}
                             title={isOcrRunning ? 'Procesando OCR...' : 'Re-procesar con OCR para extraer montos y asignar automáticamente'}
                             disabled={isOcrRunning}

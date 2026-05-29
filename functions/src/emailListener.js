@@ -3,7 +3,7 @@ import { simpleParser } from 'mailparser';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { PDFParse } = require('pdf-parse');
-import { firestore, storage, admin } from '../lib/firebase-admin.js';
+import { firestore, storage, admin } from './firebase-admin.js';
 
 // ── Persistencia en Firestore (compatible con entornos sin sistema de archivos) ──
 const STATE_COL  = 'scanner_state';
@@ -201,7 +201,6 @@ export async function startEmailListener(io) {
       await scanSent();
     } finally {
       isScanning = false;
-      scheduleNext();
     }
   };
 
@@ -693,10 +692,9 @@ export async function startEmailListener(io) {
     }
   };
 
-  console.log(`Iniciando servicio IMAP escuchando en: ${emailUser}`);
+  console.log(`Iniciando servicio IMAP (Cloud Function) para: ${emailUser}`);
   await loadFromFirestore();
-  runScanCycle();
-  setInterval(runScanCycle, SCAN_INTERVAL_MS);
+  await runScanCycle();
 
   if (io) {
     io.on('connection', (socket) => {
