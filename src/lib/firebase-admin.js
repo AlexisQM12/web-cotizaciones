@@ -1,10 +1,11 @@
 import admin from 'firebase-admin';
+import { getApps } from 'firebase-admin/app';
 import 'dotenv/config';
 
 let firestore = null;
 let storage = null;
 
-if (!admin.apps.length) {
+if (!admin.apps.length && !getApps().length) {
     try {
         if (process.env.FIREBASE_PROJECT_ID) {
             const projectId  = process.env.FIREBASE_PROJECT_ID.trim().replace(/^["']|["']$/g, '');
@@ -28,7 +29,7 @@ if (!admin.apps.length) {
     }
 }
 
-if (admin.apps.length > 0) {
+if (admin.apps.length > 0 || getApps().length > 0) {
     firestore = admin.firestore();
     storage   = admin.storage();
 }
