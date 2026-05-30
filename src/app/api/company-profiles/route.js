@@ -15,15 +15,19 @@ export async function GET(req) {
             snapshot = await firestore.collection('company_profiles').get();
         }
 
-        let profiles = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        let profiles = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                name: data.name || data.businessName || data.razonSocial || 'Empresa sin nombre'
+            };
+        });
 
         // Sort: isDefault first, then name
         profiles.sort((a, b) => {
             if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
-            return a.name.localeCompare(b.name);
+            return (a.name || '').localeCompare(b.name || '');
         });
 
         return Response.json(profiles);
