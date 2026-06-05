@@ -16,6 +16,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const [ocrProcessingId, setOcrProcessingId] = useState(null); // logId siendo procesado por OCR
   const [debugRow, setDebugRow] = useState(null); // logId con panel de debug expandido
   const [ocrToast, setOcrToast] = useState(null); // { type: 'success'|'warn'|'error', message }
+  const [searchTerm, setSearchTerm] = useState('');
   const ocrToastRef = useRef(null);
   const countdownRef = useRef(null);
 
@@ -144,6 +145,17 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const pendingQuotations = quotations
     .filter(q => q.code)
     .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+  const filteredLogs = logs.filter(log => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (log.filename && log.filename.toLowerCase().includes(term)) ||
+      (log.foundCode && log.foundCode.toLowerCase().includes(term)) ||
+      (log.status && log.status.toLowerCase().includes(term)) ||
+      (log.source && log.source.toLowerCase().includes(term))
+    );
+  });
 
   // Cotizaciones con OC recibida (aprobada) — opciones para asignar facturas
   const ocOptions = quotations
@@ -301,10 +313,24 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
           Si el lector no detectó el código automáticamente (PDF con imagen), puedes emparejarlo manualmente con el selector.
         </p>
 
+        <div style={{ marginBottom: '1rem' }}>
+          <input 
+            type="text" 
+            placeholder="Buscar por archivo, código OC, estado o tipo (ej. Factura)..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+          />
+        </div>
+
         {/* Logs table */}
         {logs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>
             Aún no se han procesado PDFs. Aparecerán aquí cuando el escáner encuentre adjuntos.
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>
+            No se encontraron registros para la búsqueda: "{searchTerm}".
           </div>
         ) : (
           <div className="table-responsive">
@@ -320,7 +346,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => {
+              {filteredLogs.map((log) => {
                 const isOk  = log.status?.startsWith('Asignado') || log.status === 'Enviada' || log.status === 'Factura - Completado';
                 const isWarn = log.status === 'Sin monto legible';
                 const isErr = !isOk && !isWarn && (log.status === 'No Coincide' || log.status === 'No Existe' || log.status === 'Error Lectura');
