@@ -18,7 +18,15 @@ export async function POST(req) {
                 quoteLeadUids: [],
                 updatedAt: new Date().toISOString()
             });
-            return NextResponse.json({ success: true, message: 'Caché completo limpiado exitosamente.' });
+
+            // Disparar la Cloud Function inmediatamente sin esperar (fire-and-forget)
+            try {
+                fetch(`https://us-central1-web-cot-aya.cloudfunctions.net/triggerScanHttp`, { method: 'POST' }).catch(e => console.error(e));
+            } catch (e) {
+                console.error('Error triggering HTTP function', e);
+            }
+
+            return NextResponse.json({ success: true, message: 'Caché limpiado y escaneo forzado iniciado.' });
         } 
         
         if (action === 'rescan_sent') {
