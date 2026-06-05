@@ -7,7 +7,16 @@
       "Bash(git commit -m ' *)",
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({...p.dependencies,...p.devDependencies}, null, 2\\)\\)\")",
       "Bash(npm install *)",
-      "Bash(node -e \"require\\('tesseract.js'\\); require\\('pdfjs-dist'\\); require\\('@napi-rs/canvas'\\); console.log\\('OK'\\)\")"
+      "Bash(node -e \"require\\('tesseract.js'\\); require\\('pdfjs-dist'\\); require\\('@napi-rs/canvas'\\); console.log\\('OK'\\)\")",
+      "Bash(awk -F= '{ if\\($2==\"\"\\) print $1\"= \\(VACÍO\\)\"; else print $1\"= [tiene valor]\" }' .env.production)",
+      "Bash(npx eslint *)",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('src/app/quotations/page.js','utf8'\\); console.log\\('lines:', s.split\\('\\\\n'\\).length\\); console.log\\('useEffect count:', \\(s.match\\(/useEffect\\\\\\(/g\\)||[]\\).length\\); console.log\\('onSnapshot count:', \\(s.match\\(/onSnapshot\\\\\\(/g\\)||[]\\).length\\); console.log\\('getSocket refs:', \\(s.match\\(/getSocket/g\\)||[]\\).length\\); console.log\\('fetch\\(/api/quotations refs:', \\(s.match\\(/fetch\\\\\\(\\\\`\\\\/api\\\\/quotations\\\\?/g\\)||[]\\).length\\); console.log\\('computeTotalConIGV defined:', s.includes\\('function computeTotalConIGV'\\)\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('scripts:', JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -match 'next' } | Select-Object ProcessId, @{n='Cmd';e={$_.CommandLine.Substring\\(0,[Math]::Min\\(90,$_.CommandLine.Length\\)\\)}} | Format-Table -AutoSize; Write-Output \"--- .next existe? ---\"; Test-Path \".next\"; if \\(Test-Path \".next/BUILD_ID\"\\) { Write-Output \"Hay BUILD_ID \\(artefacto de produccion presente\\)\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/quotations\" -UseBasicParsing -TimeoutSec 60; Write-Output \"GET /quotations -> HTTP $\\($r.StatusCode\\)\" } catch { Write-Output \"GET /quotations -> $\\($_.Exception.Message\\)\" }; Start-Sleep -Seconds 2; $log = \"C:\\\\Users\\\\LENOVO\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-LENOVO-Documents-WEB-DE-cotizaciones\\\\7015d90c-8ca8-4fce-880c-561afbf93149\\\\tasks\\\\bqyb89bqe.output\"; Write-Output \"--- log dev \\(compilacion\\) ---\"; Get-Content $log -Tail 15)",
+      "PowerShell(Write-Output \"--- firebase CLI ---\"; try { npx --no-install firebase --version 2>$null } catch { Write-Output \"no firebase via npx\" }; Write-Output \"--- gcloud ---\"; $g = Get-Command gcloud -ErrorAction SilentlyContinue; if \\($g\\) { Write-Output $g.Source } else { Write-Output \"gcloud no instalado\" }; Write-Output \"--- firebase login state ---\"; if \\(Test-Path \"$env:USERPROFILE\\\\.config\\\\configstore\\\\firebase-tools.json\"\\) { Write-Output \"hay firebase-tools.json \\(sesion firebase CLI\\)\" } else { Write-Output \"sin sesion firebase CLI guardada\" })"
     ]
   }
 }

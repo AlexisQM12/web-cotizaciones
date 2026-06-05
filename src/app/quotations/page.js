@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSocket } from '@/lib/socket'
+import { query, where, onSnapshot } from 'firebase/firestore'
+import { clientDb, getTenantCollectionClient } from '@/lib/firestoreClient'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { QuotationDocument } from '@/components/QuotationDocument'
@@ -113,66 +115,89 @@ export default function Dashboard() {
         }
     };
 
+    // ── Cotizaciones en tiempo real (Firestore onSnapshot) ──
+    // El navegador lee directamente de zenlogic, el mismo proyecto donde el
+    // escáner de Gmail (Cloud Function) escribe los cambios de estado. Así las
+    // tarjetas se mueven solas sin depender de Socket.IO (inerte en producción).
     useEffect(() => {
-        if (!user?.empresaId) return;
+        if (!user?.empresaId || !clientDb) return;
+        setLoading(true);
 
-        fetch(`/api/quotations?empresaId=${user.empresaId}&t=${Date.now()}`)
-            .then(res => {
-                if (res.status === 401) {
-                    router.push('/login');
-                    return [];
-                }
-                return res.json();
-            })
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setQuotations(data);
-                } else {
-                    console.error('API Error:', data.error);
-                    setQuotations([]);
-                }
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
-            
-        // Cargar solicitudes de cotización pendientes desde el email
-        fetch(`/api/quote-leads?status=pending&t=${Date.now()}`)
-            .then(r => r.json())
-            .then(d => { if (Array.isArray(d.leads)) setLeads(d.leads); })
-            .catch(() => {});
+        const quotationsQuery = query(
+            getTenantCollectionClient(user.empresaId, 'quotations'),
+            where('empresaId', '==', String(user.empresaId))
+        );
 
-        // Socket.io for Real-time Updates
+        const unsubscribe = onSnapshot(
+            quotationsQuery,
+            (snapshot) => {
+                const list = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { id: doc.id, ...data, total: computeTotalConIGV(data) };
+                });
+                // Orden idéntico al de la API anterior: última edición primero
+                list.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+                setQuotations(list);
+                setLoading(false);
+            },
+            (err) => {
+                console.error('Error escuchando cotizaciones:', err);
+                setLoading(false);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [user?.empresaId]);
+
+    // ── Leads de Gmail en tiempo real (Firestore onSnapshot) ──
+    // Reemplaza el fetch + eventos socket 'quote_lead_detected/dismissed'.
+    useEffect(() => {
+        if (!user?.empresaId || !clientDb) return;
+
+        const leadsQuery = query(
+            getTenantCollectionClient(user.empresaId, 'quote_leads'),
+            where('status', '==', 'pending')
+        );
+
+        let isFirstSnapshot = true;
+        const unsubscribe = onSnapshot(
+            leadsQuery,
+            (snapshot) => {
+                const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                list.sort((a, b) => new Date(b.receivedAt || b.createdAt || 0) - new Date(a.receivedAt || a.createdAt || 0));
+                setLeads(list);
+
+                // No mostrar toasts para los leads ya existentes en la primera carga;
+                // solo para los que lleguen nuevos después.
+                if (!isFirstSnapshot) {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const lead = { id: change.doc.id, ...change.doc.data() };
+                            const toastId = `${lead.id}-${Date.now()}`;
+                            setToasts(prev => [...prev, { ...lead, toastId }]);
+                            setTimeout(() => setToasts(prev => prev.filter(t => t.toastId !== toastId)), 8000);
+                        } else if (change.type === 'removed') {
+                            // El lead dejó de estar pendiente (respondido/convertido/descartado)
+                            setToasts(prev => prev.filter(t => t.id !== change.doc.id));
+                        }
+                    });
+                }
+                isFirstSnapshot = false;
+            },
+            (err) => console.error('Error escuchando leads:', err)
+        );
+
+        return () => unsubscribe();
+    }, [user?.empresaId]);
+
+    // ── Socket.IO solo para el modal del escáner en desarrollo (localhost) ──
+    // En producción getSocket() devuelve un stub inerte; el modal lee sus logs
+    // y estado directamente de Firestore, así que esto no afecta a la lista.
+    useEffect(() => {
         const newSocket = getSocket();
         setSocketInstance(newSocket);
-
-        newSocket.on('quotation_updated', (changes) => {
-            if (changes.empresaId && changes.empresaId !== user.empresaId) return;
-            if (changes.quotationStatus === 'aprobada' && changes.ocPdfUrl) {
-                console.log(`📡 OC detectada automáticamente para cotización ${changes.id}`);
-            }
-            setQuotations(prev => prev.map(q =>
-                String(q.id) === String(changes.id) ? { ...q, ...changes } : q
-            ));
-        });
-
-        newSocket.on('quote_lead_detected', (lead) => {
-            setLeads(prev => [lead, ...prev]);
-            // Mostrar toast flotante que se auto-cierra en 8 segundos
-            const toastId = `${lead.id}-${Date.now()}`;
-            setToasts(prev => [...prev, { ...lead, toastId }]);
-            setTimeout(() => setToasts(prev => prev.filter(t => t.toastId !== toastId)), 8000);
-        });
-
-        newSocket.on('quote_lead_dismissed', ({ id }) => {
-            setLeads(prev => prev.filter(l => l.id !== id));
-            setToasts(prev => prev.filter(t => t.id !== id));
-        });
-
         return () => newSocket.disconnect();
-    }, [router, user?.empresaId]);
+    }, []);
 
     const handleOpenEmailModal = (q) => {
         setSelectedQuotationForEmail(q);
@@ -666,4 +691,17 @@ export default function Dashboard() {
 function formatLeadDate(iso) {
     if (!iso) return '';
     try { const d = new Date(iso); return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return iso; }
+}
+
+// Calcula el total con IGV (18%) a partir de los items, replicando exactamente
+// lo que hacía la API /api/quotations para que las tarjetas muestren el mismo
+// monto. Los documentos crudos de Firestore guardan `total` como subtotal sin IGV.
+function computeTotalConIGV(data) {
+    let total = data.total || 0;
+    if (Array.isArray(data.items) && data.items.length > 0) {
+        const subtotal = data.items.reduce((sum, item) =>
+            sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0), 0);
+        total = subtotal + subtotal * 0.18;
+    }
+    return total;
 }
