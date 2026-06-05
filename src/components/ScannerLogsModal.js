@@ -128,7 +128,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
       });
       const data = await res.json();
       if (data.success) {
-        setOcrToast({ type: 'success', message: `${data.message} El escáner re-procesará los correos en su próximo ciclo (máximo 3 minutos).` });
+        setOcrToast({ type: 'success', message: data.message });
       } else {
         setOcrToast({ type: 'error', message: `Error: ${data.error}` });
       }

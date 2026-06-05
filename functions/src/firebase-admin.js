@@ -1,7 +1,23 @@
 import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
-  admin.initializeApp();
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: projectId.replace(/^["']|["']$/g, ''),
+        clientEmail: clientEmail.replace(/^["']|["']$/g, ''),
+        privateKey: privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n'),
+      })
+    });
+    console.log(`[Firebase Admin] Conectado a base de datos externa: ${projectId}`);
+  } else {
+    admin.initializeApp();
+    console.log(`[Firebase Admin] Conectado al proyecto por defecto`);
+  }
 }
 
 export const firestore = admin.firestore();
