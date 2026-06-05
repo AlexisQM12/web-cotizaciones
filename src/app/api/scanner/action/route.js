@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase-admin';
 
 export async function POST(req) {
@@ -5,7 +6,7 @@ export async function POST(req) {
         const { action } = await req.json();
 
         if (!firestore) {
-            return Response.json({ error: 'Firebase Admin no está inicializado' }, { status: 500 });
+            return NextResponse.json({ error: 'Firebase Admin no está inicializado' }, { status: 500 });
         }
 
         const cacheRef = firestore.collection('scanner_state').doc('cache');
@@ -17,7 +18,7 @@ export async function POST(req) {
                 quoteLeadUids: [],
                 updatedAt: new Date().toISOString()
             });
-            return Response.json({ success: true, message: 'Caché completo limpiado exitosamente.' });
+            return NextResponse.json({ success: true, message: 'Caché completo limpiado exitosamente.' });
         } 
         
         if (action === 'rescan_sent') {
@@ -25,12 +26,12 @@ export async function POST(req) {
                 sentUids: [],
                 updatedAt: new Date().toISOString()
             });
-            return Response.json({ success: true, message: 'Caché de enviados limpiado exitosamente.' });
+            return NextResponse.json({ success: true, message: 'Caché de enviados limpiado exitosamente.' });
         }
 
-        return Response.json({ error: 'Acción no válida' }, { status: 400 });
+        return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
     } catch (error) {
         console.error('Error al limpiar caché de escáner:', error);
-        return Response.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
