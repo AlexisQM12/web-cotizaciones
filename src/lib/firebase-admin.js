@@ -5,7 +5,9 @@ import 'dotenv/config';
 let firestore = null;
 let storage = null;
 
-if (!admin.apps.length && !getApps().length) {
+const defaultApp = admin.apps.find(app => app.name === '[DEFAULT]') || getApps().find(app => app.name === '[DEFAULT]');
+
+if (!defaultApp) {
     try {
         const projectId  = (process.env.DB_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID).trim().replace(/^["']|["']$/g, '');
         const clientEmail = (process.env.DB_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL)?.trim().replace(/^["']|["']$/g, '');
@@ -30,7 +32,7 @@ if (!admin.apps.length && !getApps().length) {
     }
 }
 
-if (admin.apps.length > 0 || getApps().length > 0) {
+if (admin.apps.find(app => app.name === '[DEFAULT]') || getApps().find(app => app.name === '[DEFAULT]')) {
     firestore = admin.firestore();
     storage   = admin.storage();
 }
