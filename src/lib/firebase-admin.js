@@ -7,22 +7,19 @@ let storage = null;
 
 if (!admin.apps.length && !getApps().length) {
     try {
-        if (process.env.FIREBASE_PROJECT_ID) {
-            const projectId  = process.env.FIREBASE_PROJECT_ID.trim().replace(/^["']|["']$/g, '');
-            const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
-            let privateKey   = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+        if (process.env.DB_PROJECT_ID || process.env.FIREBASE_PROJECT_ID) {
+            const projectId  = (process.env.DB_PROJECT_ID || process.env.FIREBASE_PROJECT_ID).trim().replace(/^["']|["']$/g, '');
+            const clientEmail = (process.env.DB_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL)?.trim().replace(/^["']|["']$/g, '');
+            let privateKey   = (process.env.DB_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
 
             admin.initializeApp({
                 credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
                 storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim().replace(/^["']|["']$/g, ''),
             });
             console.log('[Firebase] Admin SDK iniciado correctamente para el proyecto:', projectId);
-            console.log('[DEBUG env] Keys starting with FIREBASE or NEXT_PUBLIC:', Object.keys(process.env).filter(k => k.includes('FIREBASE') || k.includes('NEXT_PUBLIC')));
-            console.log('[DEBUG env] FIREBASE_PROJECT_ID value:', process.env.FIREBASE_PROJECT_ID);
-            console.log('[DEBUG env] NEXT_PUBLIC_FIREBASE_PROJECT_ID value:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
         } else {
             console.warn('[Firebase] Sin credenciales — Admin SDK no iniciado.');
-            console.log('[DEBUG env] process.env.FIREBASE_PROJECT_ID is undefined. Available keys:', Object.keys(process.env).filter(k => k.includes('FIREBASE') || k.includes('NEXT_PUBLIC')));
+
         }
     } catch (error) {
         console.error('[Firebase] Error al inicializar:', error.message);

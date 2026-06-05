@@ -14,7 +14,7 @@
   "license": "ISC",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "20"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
