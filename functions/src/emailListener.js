@@ -40,7 +40,7 @@ async function saveQuoteLead(uid, subject, fromRaw, dateRaw, io) {
   if (!firestore) return;
   try {
     const docId = `inbox-${uid}`;
-    const ref   = firestore.collection(LEADS_COL).doc(docId);
+    const ref   = firestore.collection('tenants').doc('6').collection('cgo_quote_leads').doc(docId);
     const snap  = await ref.get();
     if (snap.exists) return; // ya guardado en ciclo anterior
 
@@ -294,7 +294,7 @@ export async function startEmailListener(io) {
       // Auto-descartar leads pendientes cuyo correo ya fue respondido
       if (answeredUids.size > 0) {
         try {
-          const pendingSnap = await firestore.collection(LEADS_COL)
+          const pendingSnap = await firestore.collection('tenants').doc('6').collection('cgo_quote_leads')
             .where('status', '==', 'pending').get();
           for (const doc of pendingSnap.docs) {
             if (answeredUids.has(String(doc.data().emailUid))) {
@@ -352,7 +352,7 @@ export async function startEmailListener(io) {
         try {
           const parser  = new PDFParse({ data: buffer });
           const pdfData = await parser.getText();
-          const match   = pdfData.text.match(/(COT-\d{4}-\d{4,})/i);
+          const match   = pdfData.text.match(/(COT-\d{4}-\d+)/i);
 
           if (match?.[1]) {
             // ── Coincidencia por código COT ──
@@ -516,8 +516,8 @@ export async function startEmailListener(io) {
             const nameClean = name.replace(/[‐-―−]/g, '-'); // normalizar guiones unicode
             const isInvoice = /^PDF-DOC-E\d{3}-\d+/i.test(nameClean)
                            || /^\d{8,11}-01-[A-Z]{1,2}\d{1,4}-\d+/i.test(nameClean);
-            console.log(`[Lector/Sent]   isInvoice=${isInvoice} isCot=${/COT-\d{4}-\d{4,}/i.test(nameClean)} para "${name}"`);
-            const isCot     = /COT-\d{4}-\d{4,}/i.test(name);
+            console.log(`[Lector/Sent]   isInvoice=${isInvoice} isCot=${/COT-\d{4}-\d+/i.test(nameClean)} para "${name}"`);
+            const isCot     = /COT-\d{4}-\d+/i.test(name);
 
             if (isInvoice) {
               invoiceQueue.push({ uid, filename: name, buffer: att.content });
@@ -545,7 +545,7 @@ export async function startEmailListener(io) {
             const parser  = new PDFParse({ data: item.buffer });
             const pdfData = await parser.getText();
             const text    = pdfData.text || '';
-            const cotMatch = text.match(/(COT-\d{4}-\d{4,})/i);
+            const cotMatch = text.match(/(COT-\d{4}-\d+)/i);
             if (/FACTURA/i.test(text)) {
               invoiceQueue.push(item);
               console.log(`[Lector/Sent] "${item.filename}" → FACTURA (por contenido)`);
@@ -656,7 +656,7 @@ export async function startEmailListener(io) {
 
         try {
           // Extraer código COT del nombre del archivo
-          const cotMatch = filename.match(/(COT-\d{4}-\d{4,})/i);
+          const cotMatch = filename.match(/(COT-\d{4}-\d+)/i);
           if (cotMatch?.[1]) {
             const cotCode = cotMatch[1].toUpperCase();
             logEntry.foundCode = cotCode;
@@ -670,7 +670,7 @@ export async function startEmailListener(io) {
             // Intentar extraer COT del contenido del PDF
             const parser  = new PDFParse({ data: buffer });
             const pdfData = await parser.getText();
-            const pdfCot  = pdfData.text.match(/(COT-\d{4}-\d{4,})/i);
+            const pdfCot  = pdfData.text.match(/(COT-\d{4}-\d+)/i);
             if (pdfCot?.[1]) {
               const cotCode = pdfCot[1].toUpperCase();
               logEntry.foundCode = cotCode;
@@ -707,8 +707,8 @@ export async function startEmailListener(io) {
         if (!firestore || !oldDocId || !newDocId || oldDocId === newDocId) return;
         try {
           const [oldSnap, newSnap] = await Promise.all([
-            firestore.collection('quotations').doc(oldDocId).get(),
-            firestore.collection('quotations').doc(newDocId).get(),
+            firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(oldDocId).get(),
+            firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(newDocId).get(),
           ]);
           if (!oldSnap.exists || !newSnap.exists) return;
 
@@ -892,8 +892,8 @@ export async function startEmailListener(io) {
 
           // Revertir aprobada Y completado — ambos fueron asignados por el scanner
           const [snapAprobada, snapCompletado] = await Promise.all([
-            firestore.collection('quotations').where('quotationStatus', '==', 'aprobada').get(),
-            firestore.collection('quotations').where('quotationStatus', '==', 'completado').get(),
+            firestore.collection('tenants').doc('6').collection('cgo_quotations').where('quotationStatus', '==', 'aprobada').get(),
+            firestore.collection('tenants').doc('6').collection('cgo_quotations').where('quotationStatus', '==', 'completado').get(),
           ]);
 
           const batch = firestore.batch();
@@ -951,7 +951,7 @@ async function findInvoiceMatch({ labeled, general }) {
   if (!amountToMatch) return null;
 
   try {
-    const snapshot = await firestore.collection('quotations')
+    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations')
       .where('quotationStatus', '==', 'aprobada')
       .get();
 
@@ -960,10 +960,8 @@ async function findInvoiceMatch({ labeled, general }) {
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      // Requiere código Y que el scanner haya subido una OC (ocPdfUrl presente).
-      // Sin ocPdfUrl la OC fue marcada manualmente vía dropdown — no es válida
-      // para auto-completar con factura, ya que el sistema no la verificó.
-      if (!data.code || !data.ocPdfUrl) continue;
+      // Requiere código. Una OC puede ser marcada manualmente sin subir PDF.
+      if (!data.code) continue;
 
       let subtotal = 0;
       if (data.items && data.items.length > 0) {
@@ -1006,7 +1004,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
       invoicePdfUrl: ocPdfUrl || null,
       updatedAt: new Date().toISOString(),
     };
-    await firestore.collection('quotations').doc(docId).update(updateData);
+    await firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(docId).update(updateData);
     if (io) io.emit('quotation_updated', { id: docId, ...updateData });
     return { success: true, docId };
   } catch (err) {
@@ -1019,7 +1017,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
 async function markQuotationSent(cotCode, io) {
   if (!firestore) return { success: false };
   try {
-    const snapshot = await firestore.collection('quotations')
+    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations')
       .where('code', '==', cotCode).get();
 
     if (snapshot.empty) return { success: false, reason: 'Not Found' };
@@ -1029,7 +1027,7 @@ async function markQuotationSent(cotCode, io) {
 
     if (data.isSent) return { success: false, reason: 'Already Sent', docId: doc.id };
 
-    await firestore.collection('quotations').doc(doc.id).update({
+    await firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(doc.id).update({
       isSent: true,
       updatedAt: new Date().toISOString(),
     });
@@ -1100,7 +1098,7 @@ async function findQuotationByAmount({ labeled, general }) {
   const maxGeneral = general.length > 0 ? Math.max(...general) : null;
 
   try {
-    const snapshot = await firestore.collection('quotations').get();
+    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations').get();
 
     // Solo tolerancia absoluta: sin porcentaje.
     // Las OC son documentos formales — los montos deben coincidir al centavo
@@ -1341,7 +1339,7 @@ async function updateQuotationStatus(quotationId, pdfBuffer, pdfFilename, io) {
   }
 
   try {
-    const quotesRef = firestore.collection('quotations');
+    const quotesRef = firestore.collection('tenants').doc('6').collection('cgo_quotations');
     const snapshot  = await quotesRef.where('code', '==', quotationId).get();
 
     if (snapshot.empty) {
