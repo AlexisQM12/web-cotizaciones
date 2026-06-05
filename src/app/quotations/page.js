@@ -116,7 +116,7 @@ export default function Dashboard() {
     useEffect(() => {
         if (!user?.empresaId) return;
 
-        fetch(`/api/quotations?empresaId=${user.empresaId}`)
+        fetch(`/api/quotations?empresaId=${user.empresaId}&t=${Date.now()}`)
             .then(res => {
                 if (res.status === 401) {
                     router.push('/login');
@@ -139,7 +139,7 @@ export default function Dashboard() {
             });
             
         // Cargar solicitudes de cotización pendientes desde el email
-        fetch('/api/quote-leads?status=pending')
+        fetch(`/api/quote-leads?status=pending&t=${Date.now()}`)
             .then(r => r.json())
             .then(d => { if (Array.isArray(d.leads)) setLeads(d.leads); })
             .catch(() => {});
