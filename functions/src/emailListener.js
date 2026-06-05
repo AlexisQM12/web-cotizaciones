@@ -142,6 +142,12 @@ export let scanStatus = {
 function emitStatus(io, update) {
   scanStatus = { ...scanStatus, ...update };
   if (io) io.emit('scan_status', scanStatus);
+  if (typeof firestore !== 'undefined' && firestore) {
+    firestore.collection('scanner_state').doc('status').set({
+      ...scanStatus,
+      updatedAt: new Date().toISOString()
+    }).catch(e => console.warn('[Lector] Error guardando status:', e.message));
+  }
 }
 
 function hasPdfInStruct(struct) {
