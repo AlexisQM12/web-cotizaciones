@@ -57,6 +57,11 @@ service cloud.firestore {
       allow create: if isAuth();
     }
 
+    // Scanner state
+    match /scanner_state/{docId} {
+      allow read: if isAuth();
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAuth();

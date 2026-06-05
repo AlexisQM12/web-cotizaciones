@@ -117,6 +117,25 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
     }
   };
 
+  const handleScannerAction = async (actionType) => {
+    try {
+      setOcrToast({ type: 'warn', message: 'Limpiando caché en la base de datos...' });
+      const res = await fetch('/api/scanner/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionType }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOcrToast({ type: 'success', message: `${data.message} El escáner re-procesará los correos en su próximo ciclo (máximo 3 minutos).` });
+      } else {
+        setOcrToast({ type: 'error', message: `Error: ${data.error}` });
+      }
+    } catch (err) {
+      setOcrToast({ type: 'error', message: `Error de red: ${err.message}` });
+    }
+  };
+
   if (!isOpen) return null;
 
   const phase = PHASE_CONFIG[status.phase] || PHASE_CONFIG.idle;
@@ -166,7 +185,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
           <h2 style={{ fontSize: '1.4rem', color: '#1e293b', margin: 0 }}>📡 Monitor de Escaneo de Órdenes de Compra</h2>
           <div className="scanner-modal-actions">
             <button
-              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
+              onClick={() => handleScannerAction('force_rescan')}
               style={{
                 background: isActive ? '#e2e8f0' : '#fef2f2',
                 border: '1px solid #fecaca',
@@ -182,7 +201,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               ⚠️ Resetear y re-escanear
             </button>
             <button
-              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
+              onClick={() => handleScannerAction('rescan_sent')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f0fdf4',
                 border: '1px solid #bbf7d0',
@@ -198,7 +217,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               📤 Re-escanear enviados
             </button>
             <button
-              onClick={() => alert('La lectura manual está desactivada. El lector automático en Cloud Functions procesa los correos cada 3 minutos automáticamente.')}
+              onClick={() => handleScannerAction('force_rescan')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f1f5f9',
                 border: '1px solid #e2e8f0',
