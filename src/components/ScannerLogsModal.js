@@ -278,6 +278,8 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
             </span>
           </div>
 
+
+
           {/* Progress bar */}
           {isActive && status.total > 0 && (
             <div>
