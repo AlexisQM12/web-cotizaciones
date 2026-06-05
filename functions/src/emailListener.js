@@ -74,11 +74,19 @@ async function loadFromFirestore() {
     ]);
     if (cacheSnap.exists) {
       const d = cacheSnap.data();
+      
+      // Limpiar memoria caché local antes de sincronizar con DB
+      // Esto es crucial porque Cloud Functions re-usa el estado global en RAM
+      processedUids.clear();
+      processedSentUids.clear();
+      quoteLeadCheckedUids.clear();
+
       (d.inboxUids       || []).forEach(u => processedUids.add(u));
       (d.sentUids        || []).forEach(u => processedSentUids.add(u));
       (d.quoteLeadUids   || []).forEach(u => quoteLeadCheckedUids.add(u));
     }
     if (logsSnap.exists) {
+      poLogs.length = 0; // Vaciar array global
       const entries = logsSnap.data().entries || [];
       const seen = new Set();
       for (const entry of entries) {
@@ -88,7 +96,7 @@ async function loadFromFirestore() {
         }
       }
     }
-    console.log(`[Lector] Firestore: ${processedUids.size} inbox | ${processedSentUids.size} sent | ${poLogs.length} logs`);
+    console.log(`[Lector] Firestore (Sincronizado): ${processedUids.size} inbox | ${processedSentUids.size} sent | ${poLogs.length} logs`);
   } catch (e) {
     console.warn('[Lector] Error cargando estado desde Firestore:', e.message);
   }
