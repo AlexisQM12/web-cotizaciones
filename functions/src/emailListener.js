@@ -215,6 +215,7 @@ export async function startEmailListener(io) {
       await scanSent();
     } finally {
       isScanning = false;
+      scheduleNextScan(); // Esto actualiza la UI a estado "idle" y muestra la cuenta regresiva
     }
   };
 
