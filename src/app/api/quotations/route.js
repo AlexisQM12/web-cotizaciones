@@ -1,5 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
-
+export const dynamic = 'force-dynamic';
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
