@@ -251,6 +251,12 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const renderTaskDetails = (t) => {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '-0.5rem' }}>
+                    <button onClick={() => setSelectedItem(null)} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 'bold' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Volver al Panel
+                    </button>
+                </div>
                 <div>
                     <h3 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '0 0 0.5rem 0', fontWeight: '600' }}>Detalles de la Tarea</h3>
                     <input 
@@ -331,6 +337,12 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const renderMaterialDetails = (m) => {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '-0.5rem' }}>
+                    <button onClick={() => setSelectedItem(null)} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 'bold' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Volver al Panel
+                    </button>
+                </div>
                 <div>
                     <h3 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '0 0 0.5rem 0', fontWeight: '600' }}>Detalles de Compra</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -453,27 +465,49 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     </div>
                 </div>
 
-                {tasks.length > 0 && (
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>Cronograma General</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {tasks.map(t => (
-                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })}>
-                                    <div style={{ width: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155', fontWeight: '500', cursor: 'pointer' }}>{t.title}</div>
-                                    <div style={{ flex: 1, height: '24px', background: '#f1f5f9', borderRadius: '4px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                                        {t.startDate && t.endDate ? (
-                                            <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, background: t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8', display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#fff', fontSize: '0.7rem', fontWeight: '600' }}>
-                                                {t.startDate.slice(5)} al {t.endDate.slice(5)}
+                {tasks.length > 0 && (() => {
+                    const tasksWithDates = tasks.filter(t => t.startDate && t.endDate);
+                    let minTime = null, maxTime = null, totalMs = 86400000;
+                    if (tasksWithDates.length > 0) {
+                        minTime = Math.min(...tasksWithDates.map(t => new Date(`${t.startDate}T00:00:00`).getTime()));
+                        maxTime = Math.max(...tasksWithDates.map(t => new Date(`${t.endDate}T23:59:59`).getTime()));
+                        totalMs = maxTime - minTime;
+                        if (totalMs === 0) totalMs = 86400000;
+                    }
+                    const paddedTotalMs = totalMs * 1.1;
+                    const paddedMinTime = minTime ? minTime - (totalMs * 0.05) : null;
+
+                    return (
+                        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>Cronograma General</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {tasks.map(t => {
+                                    let leftPct = 0, widthPct = 100, hasDates = !!(t.startDate && t.endDate);
+                                    if (hasDates && paddedMinTime !== null) {
+                                        const startMs = new Date(`${t.startDate}T00:00:00`).getTime();
+                                        const endMs = new Date(`${t.endDate}T23:59:59`).getTime();
+                                        leftPct = ((startMs - paddedMinTime) / paddedTotalMs) * 100;
+                                        widthPct = Math.max(2, ((endMs - startMs) / paddedTotalMs) * 100);
+                                    }
+                                    return (
+                                        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })}>
+                                            <div style={{ width: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155', fontWeight: '500', cursor: 'pointer' }}>{t.title}</div>
+                                            <div style={{ flex: 1, height: '24px', background: '#f1f5f9', borderRadius: '4px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+                                                {hasDates ? (
+                                                    <div style={{ position: 'absolute', left: `${Math.max(0, leftPct)}%`, width: `${Math.min(100 - leftPct, widthPct)}%`, top: 0, bottom: 0, background: t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8', display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#fff', fontSize: '0.7rem', fontWeight: '600', borderRadius: '4px', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                                        {widthPct > 10 ? `${t.startDate.slice(5)} al ${t.endDate.slice(5)}` : ''}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#94a3b8', fontSize: '0.7rem', fontStyle: 'italic' }}>Sin programar</div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#94a3b8', fontSize: '0.7rem' }}>Sin programar</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         );
     };
