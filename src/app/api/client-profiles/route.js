@@ -5,7 +5,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles');
+        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'client_profiles');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -42,7 +42,7 @@ export async function POST(req) {
 
         // If this is set as default, unset others for this empresaId
         if (isDefault && empresaId) {
-            const defaultQuery = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles')
+            const defaultQuery = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'client_profiles')
                 .where('empresaId', '==', empresaId)
                 .where('isDefault', '==', true)
                 .get();
@@ -51,7 +51,7 @@ export async function POST(req) {
             });
         }
 
-        const newProfileRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'client_profiles').doc();
+        const newProfileRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'client_profiles').doc();
         batch.set(newProfileRef, {
             name,
             ruc,

@@ -10,8 +10,8 @@ export async function GET(req) {
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
-            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
         ]);
 
         const periods = {};

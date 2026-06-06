@@ -62,6 +62,17 @@ service cloud.firestore {
       allow read: if isAuth();
     }
 
+    // ── Multi-tenant SaaS (modelo actual): datos bajo tenants/{empresaId}/cgo_* ──
+    // Permite a los miembros de una empresa leer/escribir los datos de SU tenant.
+    // Es path-based (depende de tenantId del path, no de resource.data), por lo que
+    // habilita también las consultas de lista (onSnapshot) que usa el dashboard.
+    match /tenants/{tenantId} {
+      allow read, write: if isUserInEmpresa(tenantId);
+      match /{document=**} {
+        allow read, write: if isUserInEmpresa(tenantId);
+      }
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAuth();

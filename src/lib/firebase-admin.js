@@ -41,7 +41,7 @@ export { firestore, storage, admin };
 
 // ── Multi-Tenant SaaS Helpers ──
 export const getTenantCollection = (empresaId, collectionName) => {
-    const finalEmpresaId = empresaId || '6';
+    const finalEmpresaId = empresaId || 'ayatech';
 
     const map = {
         'quotations': 'cgo_quotations',
@@ -58,6 +58,6 @@ export const getTenantCollection = (empresaId, collectionName) => {
 };
 
 export const getTenantDoc = (empresaId) => {
-    const finalEmpresaId = empresaId || '6';
+    const finalEmpresaId = empresaId || 'ayatech';
     return firestore.collection('tenants').doc(String(finalEmpresaId));
 };

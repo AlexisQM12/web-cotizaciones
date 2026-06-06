@@ -5,7 +5,7 @@ export async function PUT(req, { params }) {
         const id = await params.id;
         const body = await req.json();
         
-        const docRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'portfolio_companies').doc(id);
+        const docRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies').doc(id);
         
         // Remove id from body to prevent overwriting document ID logic
         const { id: _, ...updateData } = body;
@@ -25,7 +25,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const id = await params.id;
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'portfolio_companies').doc(id).delete();
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error('API Error (companies DELETE):', error);

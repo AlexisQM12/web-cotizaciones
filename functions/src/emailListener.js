@@ -11,6 +11,12 @@ const CACHE_DOC  = 'cache';
 const LOGS_DOC   = 'logs';
 const LEADS_COL  = 'quote_leads';
 
+// ── Tenant destino del escáner ──────────────────────────────────────────────
+// La empresa real es 'ayatech'. Antes estaba clavado '6' (tenant legado), por
+// eso el escáner actualizaba un tenant equivocado y las tarjetas no cambiaban.
+// Configurable por env para soportar otras empresas sin tocar el código.
+const TENANT_ID = process.env.SCANNER_TENANT_ID || 'ayatech';
+
 // ── Detección de solicitudes de cotización ────────────────────────────────
 const QUOTE_KEYWORDS = [
   /solicitud\s+de\s+cotizaci[oó]n/i,
@@ -40,7 +46,7 @@ async function saveQuoteLead(uid, subject, fromRaw, dateRaw, io) {
   if (!firestore) return;
   try {
     const docId = `inbox-${uid}`;
-    const ref   = firestore.collection('tenants').doc('6').collection('cgo_quote_leads').doc(docId);
+    const ref   = firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quote_leads').doc(docId);
     const snap  = await ref.get();
     if (snap.exists) return; // ya guardado en ciclo anterior
 
@@ -309,7 +315,7 @@ export async function startEmailListener(io) {
       // Auto-descartar leads pendientes cuyo correo ya fue respondido
       if (answeredUids.size > 0) {
         try {
-          const pendingSnap = await firestore.collection('tenants').doc('6').collection('cgo_quote_leads')
+          const pendingSnap = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quote_leads')
             .where('status', '==', 'pending').get();
           for (const doc of pendingSnap.docs) {
             if (answeredUids.has(String(doc.data().emailUid))) {
@@ -722,8 +728,8 @@ export async function startEmailListener(io) {
         if (!firestore || !oldDocId || !newDocId || oldDocId === newDocId) return;
         try {
           const [oldSnap, newSnap] = await Promise.all([
-            firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(oldDocId).get(),
-            firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(newDocId).get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(oldDocId).get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(newDocId).get(),
           ]);
           if (!oldSnap.exists || !newSnap.exists) return;
 
@@ -907,8 +913,8 @@ export async function startEmailListener(io) {
 
           // Revertir aprobada Y completado — ambos fueron asignados por el scanner
           const [snapAprobada, snapCompletado] = await Promise.all([
-            firestore.collection('tenants').doc('6').collection('cgo_quotations').where('quotationStatus', '==', 'aprobada').get(),
-            firestore.collection('tenants').doc('6').collection('cgo_quotations').where('quotationStatus', '==', 'completado').get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').where('quotationStatus', '==', 'aprobada').get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').where('quotationStatus', '==', 'completado').get(),
           ]);
 
           const batch = firestore.batch();
@@ -966,7 +972,7 @@ async function findInvoiceMatch({ labeled, general }) {
   if (!amountToMatch) return null;
 
   try {
-    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations')
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations')
       .where('quotationStatus', '==', 'aprobada')
       .get();
 
@@ -1019,7 +1025,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
       invoicePdfUrl: ocPdfUrl || null,
       updatedAt: new Date().toISOString(),
     };
-    await firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(docId).update(updateData);
+    await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(docId).update(updateData);
     if (io) io.emit('quotation_updated', { id: docId, ...updateData });
     return { success: true, docId };
   } catch (err) {
@@ -1032,7 +1038,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
 async function markQuotationSent(cotCode, io) {
   if (!firestore) return { success: false };
   try {
-    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations')
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations')
       .where('code', '==', cotCode).get();
 
     if (snapshot.empty) return { success: false, reason: 'Not Found' };
@@ -1042,7 +1048,7 @@ async function markQuotationSent(cotCode, io) {
 
     if (data.isSent) return { success: false, reason: 'Already Sent', docId: doc.id };
 
-    await firestore.collection('tenants').doc('6').collection('cgo_quotations').doc(doc.id).update({
+    await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(doc.id).update({
       isSent: true,
       updatedAt: new Date().toISOString(),
     });
@@ -1113,7 +1119,7 @@ async function findQuotationByAmount({ labeled, general }) {
   const maxGeneral = general.length > 0 ? Math.max(...general) : null;
 
   try {
-    const snapshot = await firestore.collection('tenants').doc('6').collection('cgo_quotations').get();
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').get();
 
     // Solo tolerancia absoluta: sin porcentaje.
     // Las OC son documentos formales — los montos deben coincidir al centavo
@@ -1354,7 +1360,7 @@ async function updateQuotationStatus(quotationId, pdfBuffer, pdfFilename, io) {
   }
 
   try {
-    const quotesRef = firestore.collection('tenants').doc('6').collection('cgo_quotations');
+    const quotesRef = firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations');
     const snapshot  = await quotesRef.where('code', '==', quotationId).get();
 
     if (snapshot.empty) {

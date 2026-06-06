@@ -513,9 +513,9 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                             onClick={() => setSelectedItem({ type: 'task', id: t.id })}
                                             style={{ 
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.8rem', 
-                                                background: isSelected ? '#eff6ff' : '#fff', border: `1px solid ${isSelected ? '#bfdbfe' : '#e2e8f0'}`, 
-                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
-                                                borderLeft: `3px solid ${t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#cbd5e1'}`
+                                                background: isSelected ? '#eff6ff' : '#fff', borderStyle: 'solid', borderWidth: '1px 1px 1px 3px',
+                                                borderColor: `${isSelected ? '#bfdbfe' : '#e2e8f0'} ${isSelected ? '#bfdbfe' : '#e2e8f0'} ${isSelected ? '#bfdbfe' : '#e2e8f0'} ${t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#cbd5e1'}`,
+                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
                                             }}
                                         >
                                             <span style={{ fontSize: '0.85rem', color: t.status === 'completed' ? '#64748b' : '#334155', textDecoration: t.status === 'completed' ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
@@ -546,9 +546,9 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                             onClick={() => setSelectedItem({ type: 'material', id: m.id })}
                                             style={{ 
                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.8rem', 
-                                                background: isSelected ? '#eff6ff' : '#fff', border: `1px solid ${isSelected ? '#bfdbfe' : '#e2e8f0'}`, 
-                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
-                                                borderLeft: `3px solid ${m.purchased ? '#10b981' : '#f59e0b'}`
+                                                background: isSelected ? '#eff6ff' : '#fff', borderStyle: 'solid', borderWidth: '1px 1px 1px 3px',
+                                                borderColor: `${isSelected ? '#bfdbfe' : '#e2e8f0'} ${isSelected ? '#bfdbfe' : '#e2e8f0'} ${isSelected ? '#bfdbfe' : '#e2e8f0'} ${m.purchased ? '#10b981' : '#f59e0b'}`,
+                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
                                             }}
                                         >
                                             <span style={{ fontSize: '0.85rem', color: m.purchased ? '#64748b' : '#334155', textDecoration: m.purchased ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>

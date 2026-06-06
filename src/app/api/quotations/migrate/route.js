@@ -5,7 +5,7 @@ export async function GET(req) {
     try {
         console.log('🔄 Starting migration of quotations...');
 
-        const quotationsRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : '6', 'quotations');
+        const quotationsRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations');
         const snapshot = await quotationsRef.get();
 
         console.log(`📊 Found ${snapshot.size} quotations`);

@@ -18,7 +18,7 @@ export async function PUT(req, { params }) {
         if (notes !== undefined) updateData.notes = notes;
         if (supplierType !== undefined) updateData.supplierType = supplierType;
 
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'suppliers').doc(id).update(updateData);
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'suppliers').doc(id).update(updateData);
 
         return Response.json({ success: true });
     } catch (error) {
@@ -30,7 +30,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : '6'), 'suppliers').doc(id).delete();
+        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'suppliers').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

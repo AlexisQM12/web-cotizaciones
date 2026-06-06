@@ -37,7 +37,7 @@ export default clientApp;
 // ── Multi-Tenant SaaS Helpers (Client Side) ──
 
 export const getTenantCollectionClient = (empresaId, collectionName) => {
-    const finalEmpresaId = empresaId || '6';
+    const finalEmpresaId = empresaId || 'ayatech';
 
     const map = {
         'quotations': 'cgo_quotations',
@@ -54,6 +54,6 @@ export const getTenantCollectionClient = (empresaId, collectionName) => {
 };
 
 export const getTenantDocClient = (empresaId) => {
-    const finalEmpresaId = empresaId || '6';
+    const finalEmpresaId = empresaId || 'ayatech';
     return doc(clientDb, 'tenants', String(finalEmpresaId));
 };
