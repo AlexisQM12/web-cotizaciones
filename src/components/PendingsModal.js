@@ -7,12 +7,12 @@ const actionBtnStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '0.4rem',
-    padding: '0.5rem 0.8rem',
+    padding: '0.4rem 0.8rem',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
+    borderRadius: '6px',
     background: '#ffffff',
     color: '#475569',
-    fontSize: '0.85rem',
+    fontSize: '0.8rem',
     fontWeight: '600',
     cursor: 'pointer',
     boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
@@ -20,16 +20,22 @@ const actionBtnStyle = {
 
 export function PendingsModal({ quotation, onClose, onSave }) {
     const { user } = useAuth();
-    const [tasks, setTasks] = useState(quotation.operationsData?.tasks || []);
+    const [tasks, setTasks] = useState(quotation.operationsData?.tasks?.map(t => ({
+        ...t,
+        status: t.status || (t.completed ? 'completed' : 'pending')
+    })) || []);
     const [materials, setMaterials] = useState(quotation.operationsData?.materials || []);
 
     const [newTask, setNewTask] = useState('');
     const [newMaterial, setNewMaterial] = useState('');
     const [uploadingState, setUploadingState] = useState({});
+    
+    // null | { type: 'task' | 'material', id: number/string }
+    const [selectedItem, setSelectedItem] = useState(null);
 
     const handleFileUpload = async (itemId, type, file) => {
         if (!file) return;
-        setUploadingState(prev => ({ ...prev, [itemId]: 'Subiendo archivo a la nube...' }));
+        setUploadingState(prev => ({ ...prev, [itemId]: 'Subiendo...' }));
         try {
             const ext = file.name.split('.').pop();
             const filename = `pendings/${quotation.id}/${type}_${itemId}_${Date.now()}.${ext}`;
@@ -40,7 +46,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             if (type === 'material') {
                 let detectedCost = null;
                 let scanData = null;
-                setUploadingState(prev => ({ ...prev, [itemId]: 'Escaneando con OCR (puede tardar 5-15s)...' }));
+                setUploadingState(prev => ({ ...prev, [itemId]: 'Escaneando OCR...' }));
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -56,16 +62,12 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             if (data.fecha)  partes.push(`Fecha: ${data.fecha}`);
                             alert(`OCR detectó:\n\n${partes.join('\n')}`);
                         } else {
-                            const etapas = (data.stages || []).map(s => `  · ${s.name}: ${s.error ? 'error → ' + s.error : s.chars + ' chars'}`).join('\n');
-                            alert(`Documento escaneado pero no se detectó monto.\n\nEtapas:\n${etapas}\n\nIngresa el costo manualmente.`);
-                            console.log('OCR debug:', data);
+                            alert(`Documento escaneado pero no se detectó monto.\nIngresa el costo manualmente.`);
                         }
                     } else {
-                        console.error('API /scan-invoice falló:', res.status, data);
-                        alert(`Error en OCR (${res.status}): ${data?.error || 'desconocido'}\n\nVerifica que el archivo sea una imagen o PDF legible.`);
+                        alert(`Error en OCR (${res.status}): ${data?.error || 'desconocido'}`);
                     }
                 } catch(e) {
-                    console.error('Excepción al contactar OCR:', e);
                     alert('No se pudo contactar al OCR: ' + e.message);
                 }
 
@@ -84,7 +86,6 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     } : (m.ocrData || null),
                 } : m));
 
-                // Auto-registrar en contabilidad si el OCR detectó monto
                 if (scanData?.amount && user?.empresaId) {
                     setUploadingState(prev => ({ ...prev, [itemId]: 'Registrando en contabilidad...' }));
                     try {
@@ -108,12 +109,11 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                 attachmentUrl: url,
                             }),
                         });
-                        // Marcar como registrado
                         setMaterials(prev => prev.map(m =>
                             m.id === itemId ? { ...m, purchaseLedgerId: 'auto' } : m
                         ));
                     } catch (regErr) {
-                        console.error('Auto-registro contabilidad falló:', regErr);
+                        console.error('Auto-registro falló:', regErr);
                     }
                 }
 
@@ -123,7 +123,6 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                 setTasks(prev => prev.map(t => t.id === itemId ? { ...t, attachmentUrl: url } : t));
             }
         } catch (error) {
-            console.error("Error al subir archivo:", error);
             alert("Error al subir el archivo.");
         } finally {
             setUploadingState(prev => {
@@ -135,8 +134,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     };
 
     const handleFileDelete = (itemId, type) => {
-        if (!window.confirm("¿Estás seguro de que deseas eliminar este archivo?")) return;
-        
+        if (!window.confirm("¿Estás seguro de eliminar este archivo?")) return;
         if (type === 'material') {
             setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, attachmentUrl: null, cost: '' } : m));
         } else if (type === 'material_image') {
@@ -148,18 +146,29 @@ export function PendingsModal({ quotation, onClose, onSave }) {
 
     const handleAddTask = () => {
         if (!newTask.trim()) return;
-        setTasks([...tasks, { id: Date.now(), title: newTask.trim(), completed: false }]);
+        const newId = Date.now();
+        setTasks([...tasks, { id: newId, title: newTask.trim(), completed: false, status: 'pending' }]);
         setNewTask('');
+        setSelectedItem({ type: 'task', id: newId });
     };
 
     const handleAddMaterial = () => {
         if (!newMaterial.trim()) return;
-        setMaterials([...materials, { id: Date.now(), title: newMaterial.trim(), purchased: false }]);
+        const newId = Date.now();
+        setMaterials([...materials, { id: newId, title: newMaterial.trim(), purchased: false }]);
         setNewMaterial('');
+        setSelectedItem({ type: 'material', id: newId });
     };
 
-    const toggleTask = (id) => {
-        setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    const updateTaskField = (id, field, value) => {
+        setTasks(tasks.map(t => {
+            if (t.id === id) {
+                const updated = { ...t, [field]: value };
+                if (field === 'status') updated.completed = (value === 'completed');
+                return updated;
+            }
+            return t;
+        }));
     };
 
     const toggleMaterial = (id) => {
@@ -170,26 +179,24 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         setMaterials(materials.map(m => m.id === id ? { ...m, [field]: value } : m));
     };
 
-    const toggleExpandMaterial = (id) => {
-        setMaterials(materials.map(m => m.id === id ? { ...m, isExpanded: !m.isExpanded } : m));
+    const removeTask = (id) => {
+        setTasks(tasks.filter(t => t.id !== id));
+        if (selectedItem?.id === id) setSelectedItem(null);
+    };
+    
+    const removeMaterial = (id) => {
+        setMaterials(materials.filter(m => m.id !== id));
+        if (selectedItem?.id === id) setSelectedItem(null);
     };
 
-    const removeTask = (id) => setTasks(tasks.filter(t => t.id !== id));
-    const removeMaterial = (id) => setMaterials(materials.filter(m => m.id !== id));
-
-    // Envía un material escaneado al registro de compras del módulo contable
     const handleRegisterAsPurchase = async (material) => {
         if (!material.ocrData) {
-            alert('Este material no tiene datos OCR. Sube primero un comprobante con "Archivo" o "Cámara".');
+            alert('Sube primero un comprobante para usar el OCR.');
             return;
         }
         try {
-            // Usar directamente el empresaId del usuario autenticado
             const companyProfileId = user?.empresaId;
-            if (!companyProfileId) {
-                alert('No hay perfil de empresa configurado. Verifica tu sesión.');
-                return;
-            }
+            if (!companyProfileId) return;
 
             const res = await fetch('/api/accounting/purchases/from-pending', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -203,18 +210,13 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                 }),
             });
             const data = await res.json();
-            if (!res.ok) { alert(data.error || 'Error al registrar compra'); return; }
+            if (!res.ok) { alert(data.error || 'Error al registrar'); return; }
 
             if (data.alreadyExists) {
-                alert(`Esta compra ya está registrada en contabilidad (${data.serie || ''}-${data.numero || ''}).`);
+                alert(`Ya está registrada (${data.serie || ''}-${data.numero || ''}).`);
             } else {
-                const detail = [`Periodo: ${data.period}`, `Total: S/ ${data.total}`,
-                    data.serie && `Comprobante: ${data.serie}-${data.numero}`,
-                    data.numeroDocProveedor && `RUC: ${data.numeroDocProveedor}`,
-                    data.needsReview && '⚠ Datos incompletos — revísala en el Registro de Compras'].filter(Boolean).join('\n');
-                alert(`Compra registrada en contabilidad:\n\n${detail}`);
+                alert('Compra registrada en contabilidad exitosamente.');
             }
-            // Marcar el material para no volver a registrarlo
             setMaterials(prev => prev.map(m => m.id === material.id ? { ...m, purchaseLedgerId: data.id } : m));
         } catch (e) {
             alert('Error al registrar: ' + e.message);
@@ -226,7 +228,6 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         onClose();
     };
 
-    // Initialize materials from subItems if materials array is empty
     const handleImportFromSubItems = () => {
         if (!quotation.items) return;
         const imported = [];
@@ -243,231 +244,348 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                 });
             }
         });
-        if (imported.length > 0) {
-            setMaterials([...materials, ...imported]);
-        } else {
-            alert('No se encontraron sub-ítems en la cotización.');
-        }
+        if (imported.length > 0) setMaterials([...materials, ...imported]);
+    };
+
+    // Rendering Helpers
+    const renderTaskDetails = (t) => {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div>
+                    <h3 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '0 0 0.5rem 0', fontWeight: '600' }}>Detalles de la Tarea</h3>
+                    <input 
+                        type="text" 
+                        className="input" 
+                        value={t.title} 
+                        onChange={e => updateTaskField(t.id, 'title', e.target.value)} 
+                        style={{ fontSize: '1rem', fontWeight: '500', width: '100%' }} 
+                    />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Estado</label>
+                        <select className="input" value={t.status} onChange={e => updateTaskField(t.id, 'status', e.target.value)} style={{ padding: '0.5rem' }}>
+                            <option value="pending">Pendiente</option>
+                            <option value="progress">En Progreso</option>
+                            <option value="completed">Completado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fecha Inicio</label>
+                        <input type="date" className="input" value={t.startDate || ''} onChange={e => updateTaskField(t.id, 'startDate', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fecha Fin</label>
+                        <input type="date" className="input" value={t.endDate || ''} onChange={e => updateTaskField(t.id, 'endDate', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                </div>
+
+                <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cronograma</h4>
+                    {t.startDate && t.endDate ? (
+                        <div style={{ position: 'relative', height: '36px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
+                            <div style={{ 
+                                position: 'absolute', top: 0, bottom: 0, left: '5%', right: '5%', 
+                                background: t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8', 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.75rem', fontWeight: '600', borderRadius: '6px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}>
+                                {t.startDate} al {t.endDate}
+                            </div>
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0, fontStyle: 'italic' }}>Define las fechas de inicio y fin para generar la línea de tiempo.</p>
+                    )}
+                </div>
+
+                <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Evidencia</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        {uploadingState[t.id] ? (
+                            <span style={{ fontSize: '0.8rem', color: '#ea580c', fontWeight: '600' }}>{uploadingState[t.id]}</span>
+                        ) : (
+                            <>
+                                <label style={actionBtnStyle}>
+                                    Archivo
+                                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => handleFileUpload(t.id, 'task', e.target.files[0])} />
+                                </label>
+                                <label style={actionBtnStyle}>
+                                    Cámara
+                                    <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileUpload(t.id, 'task', e.target.files[0])} />
+                                </label>
+                            </>
+                        )}
+                        {t.attachmentUrl && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <a href={t.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'underline' }}>Ver Evidencia</a>
+                                <button onClick={() => handleFileDelete(t.id, 'task')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>✕</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderMaterialDetails = (m) => {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div>
+                    <h3 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '0 0 0.5rem 0', fontWeight: '600' }}>Detalles de Compra</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="checkbox" checked={m.purchased} onChange={() => toggleMaterial(m.id)} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                        <input type="text" className="input" value={m.title} onChange={e => updateMaterialField(m.id, 'title', e.target.value)} style={{ fontSize: '1rem', fontWeight: '500', flex: 1, textDecoration: m.purchased ? 'line-through' : 'none', color: m.purchased ? '#64748b' : '#0f172a' }} />
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Marca</label>
+                        <input type="text" className="input" value={m.brand || ''} onChange={e => updateMaterialField(m.id, 'brand', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Modelo</label>
+                        <input type="text" className="input" value={m.model || ''} onChange={e => updateMaterialField(m.id, 'model', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Costo Total (S/)</label>
+                        <input type="number" className="input" value={m.cost || ''} onChange={e => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Link de Compra</label>
+                        <input type="url" className="input" value={m.buyLink || ''} onChange={e => updateMaterialField(m.id, 'buyLink', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                </div>
+
+                <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comprobante de Pago</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        {uploadingState[m.id] ? (
+                            <span style={{ fontSize: '0.8rem', color: '#ea580c', fontWeight: '600' }}>{uploadingState[m.id]}</span>
+                        ) : (
+                            <>
+                                <label style={actionBtnStyle}>
+                                    Archivo / PDF
+                                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material', e.target.files[0])} />
+                                </label>
+                                <label style={actionBtnStyle}>
+                                    Cámara
+                                    <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material', e.target.files[0])} />
+                                </label>
+                            </>
+                        )}
+                        {m.attachmentUrl && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'underline' }}>Ver Comprobante</a>
+                                {m.ocrData?.amount && (
+                                    <button onClick={() => handleRegisterAsPurchase(m)} style={{ border: 'none', background: m.purchaseLedgerId ? '#dcfce7' : '#f1f5f9', color: m.purchaseLedgerId ? '#16a34a' : '#0f172a', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
+                                        {m.purchaseLedgerId ? 'Contabilizado' : 'Enviar a Contabilidad'}
+                                    </button>
+                                )}
+                                <button onClick={() => handleFileDelete(m.id, 'material')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>✕</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Foto del Producto</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <label style={actionBtnStyle}>
+                            Subir Imagen
+                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material_image', e.target.files[0])} />
+                        </label>
+                        {m.productImageUrl && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <a href={m.productImageUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'underline' }}>Ver Imagen</a>
+                                <button onClick={() => handleFileDelete(m.id, 'material_image')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>✕</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderDashboard = () => {
+        const completedTasks = tasks.filter(t => t.status === 'completed').length;
+        const tasksPct = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
+        
+        const completedMaterials = materials.filter(m => m.purchased).length;
+        const materialsPct = materials.length ? Math.round((completedMaterials / materials.length) * 100) : 0;
+
+        const totalSpent = materials.reduce((acc, m) => acc + (parseFloat(m.cost) || 0), 0);
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div>
+                    <h3 style={{ fontSize: '1.25rem', color: '#0f172a', margin: '0 0 0.2rem 0', fontWeight: '700' }}>Panel de Control</h3>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Selecciona un elemento de la izquierda para ver y editar sus detalles.</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Avance Tareas</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>{tasksPct}%</span>
+                        </div>
+                        <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                            <div style={{ width: `${tasksPct}%`, height: '100%', background: tasksPct === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.3s' }} />
+                        </div>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>{completedTasks} de {tasks.length} completadas</p>
+                    </div>
+
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Avance Compras</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>{materialsPct}%</span>
+                        </div>
+                        <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                            <div style={{ width: `${materialsPct}%`, height: '100%', background: materialsPct === 100 ? '#10b981' : '#f59e0b', transition: 'width 0.3s' }} />
+                        </div>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>{completedMaterials} de {materials.length} adquiridas</p>
+                    </div>
+
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Total Gastado</span>
+                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#ea580c' }}>S/ {totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                </div>
+
+                {tasks.length > 0 && (
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>Cronograma General</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {tasks.map(t => (
+                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })}>
+                                    <div style={{ width: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155', fontWeight: '500', cursor: 'pointer' }}>{t.title}</div>
+                                    <div style={{ flex: 1, height: '24px', background: '#f1f5f9', borderRadius: '4px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+                                        {t.startDate && t.endDate ? (
+                                            <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, background: t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8', display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#fff', fontSize: '0.7rem', fontWeight: '600' }}>
+                                                {t.startDate.slice(5)} al {t.endDate.slice(5)}
+                                            </div>
+                                        ) : (
+                                            <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#94a3b8', fontSize: '0.7rem' }}>Sin programar</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '1rem' }}>
-            <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)' }}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '2rem' }}>
+            <div style={{ background: '#ffffff', borderRadius: '12px', width: '95vw', maxWidth: '1200px', height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+                {/* Header */}
+                <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b' }}>Operaciones: {quotation.code}</h2>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>{quotation.clientName}</p>
+                        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: '700' }}>Control de Proyecto: {quotation.code}</h2>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginTop: '0.1rem' }}>{quotation.clientName}</p>
                     </div>
-                    <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                    <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color='#0f172a'} onMouseLeave={e => e.target.style.color='#94a3b8'}>✕</button>
                 </div>
 
-                <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* Materiales Section */}
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                🛒 Materiales a Comprar
-                            </h3>
-                            {materials.length === 0 && (
-                                <button onClick={handleImportFromSubItems} style={{ fontSize: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', color: '#475569', fontWeight: '600' }}>
-                                    Importar de Sub-ítems
-                                </button>
-                            )}
-                        </div>
+                {/* Body 2-Columns */}
+                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                    
+                    {/* Left Column: Lists */}
+                    <div style={{ width: '320px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', background: '#f8fafc', overflowY: 'auto' }}>
                         
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <input 
-                                type="text" 
-                                className="input" 
-                                value={newMaterial} 
-                                onChange={(e) => setNewMaterial(e.target.value)} 
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddMaterial()}
-                                placeholder="Ej: 5m de Cable Eléctrico N°12..." 
-                                style={{ flex: 1 }} 
-                            />
-                            <button className="btn btn-secondary" onClick={handleAddMaterial}>Añadir</button>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#334155', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tareas</h3>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem' }}>
+                                <input type="text" className="input" value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} placeholder="Nueva tarea..." style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} />
+                                <button className="btn btn-secondary" onClick={handleAddTask} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Añadir</button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                {tasks.map(t => {
+                                    const isSelected = selectedItem?.type === 'task' && selectedItem?.id === t.id;
+                                    return (
+                                        <div 
+                                            key={t.id} 
+                                            onClick={() => setSelectedItem({ type: 'task', id: t.id })}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.8rem', 
+                                                background: isSelected ? '#eff6ff' : '#fff', border: `1px solid ${isSelected ? '#bfdbfe' : '#e2e8f0'}`, 
+                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
+                                                borderLeft: `3px solid ${t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#cbd5e1'}`
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.85rem', color: t.status === 'completed' ? '#64748b' : '#334155', textDecoration: t.status === 'completed' ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                                            <button onClick={(e) => { e.stopPropagation(); removeTask(t.id); }} style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 0.2rem' }}>✕</button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {materials.map(m => (
-                                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', padding: '1rem', background: m.purchased ? '#f0fdf4' : '#f8fafc', border: `1px solid ${m.purchased ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: '8px', gap: '0.75rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, paddingRight: '1rem' }}>
-                                            <input type="checkbox" checked={m.purchased} onChange={() => toggleMaterial(m.id)} style={{ width: '22px', height: '22px', cursor: 'pointer', flexShrink: 0 }} />
-                                            <span style={{ fontSize: '1rem', color: m.purchased ? '#16a34a' : '#334155', textDecoration: m.purchased ? 'line-through' : 'none', wordBreak: 'break-word', fontWeight: '500' }}>
-                                                {m.title}
-                                            </span>
+                        <div style={{ padding: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#334155', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Materiales</h3>
+                                {materials.length === 0 && (
+                                    <button onClick={handleImportFromSubItems} style={{ fontSize: '0.7rem', background: '#fff', border: '1px solid #cbd5e1', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', color: '#475569' }}>Importar</button>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem' }}>
+                                <input type="text" className="input" value={newMaterial} onChange={e => setNewMaterial(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddMaterial()} placeholder="Nuevo material..." style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} />
+                                <button className="btn btn-secondary" onClick={handleAddMaterial} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Añadir</button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                {materials.map(m => {
+                                    const isSelected = selectedItem?.type === 'material' && selectedItem?.id === m.id;
+                                    return (
+                                        <div 
+                                            key={m.id} 
+                                            onClick={() => setSelectedItem({ type: 'material', id: m.id })}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.8rem', 
+                                                background: isSelected ? '#eff6ff' : '#fff', border: `1px solid ${isSelected ? '#bfdbfe' : '#e2e8f0'}`, 
+                                                borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
+                                                borderLeft: `3px solid ${m.purchased ? '#10b981' : '#f59e0b'}`
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.85rem', color: m.purchased ? '#64748b' : '#334155', textDecoration: m.purchased ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                                            <button onClick={(e) => { e.stopPropagation(); removeMaterial(m.id); }} style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 0.2rem' }}>✕</button>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                                            <button onClick={() => toggleExpandMaterial(m.id)} style={{ border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', borderRadius: '6px', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '600' }}>
-                                                {m.isExpanded ? 'Ocultar info' : 'Añadir info'}
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: m.isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9" /></svg>
-                                            </button>
-                                            <button onClick={() => removeMaterial(m.id)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem', display: 'flex', alignItems: 'center' }}>
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {m.isExpanded && (
-                                        <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
-                                                <input type="text" className="input" placeholder="Marca" value={m.brand || ''} onChange={(e) => updateMaterialField(m.id, 'brand', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                                <input type="text" className="input" placeholder="Modelo" value={m.model || ''} onChange={(e) => updateMaterialField(m.id, 'model', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                                <input type="text" className="input" placeholder="Código" value={m.code || ''} onChange={(e) => updateMaterialField(m.id, 'code', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                                <input type="number" className="input" placeholder="Costo (S/)" value={m.cost || ''} onChange={(e) => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                                <input type="url" className="input" placeholder="Link de compra" value={m.buyLink || ''} onChange={(e) => updateMaterialField(m.id, 'buyLink', e.target.value)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} />
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }}>
-                                                <label style={{...actionBtnStyle, padding: '0.3rem 0.6rem'}}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                                                    <span style={{ fontSize: '0.75rem' }}>Imagen del Producto</span>
-                                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material_image', e.target.files[0])} />
-                                                </label>
-                                                {m.productImageUrl && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <a href={m.productImageUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline', fontWeight: '600' }}>Ver Imagen</a>
-                                                        <button onClick={() => handleFileDelete(m.id, 'material_image')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>✕</button>
-                                                    </div>
-                                                )}
-                                                {uploadingState[m.id] && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Subiendo...</span>}
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${m.purchased ? '#bbf7d0' : '#e2e8f0'}`, paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {uploadingState[m.id] ? (
-                                                <span style={{ fontSize: '0.85rem', color: '#ea580c', padding: '0.5rem 0', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-                                                    {uploadingState[m.id]}
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    <label style={actionBtnStyle}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                                        <span>Archivo</span>
-                                                        <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material', e.target.files[0])} />
-                                                    </label>
-                                                    <label style={actionBtnStyle}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-                                                        <span>Cámara</span>
-                                                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileUpload(m.id, 'material', e.target.files[0])} />
-                                                    </label>
-                                                </>
-                                            )}
-                                        </div>
-                                        {m.attachmentUrl && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                                                    Ver Factura
-                                                </a>
-                                                {m.ocrData?.amount && (
-                                                    <button
-                                                        onClick={() => handleRegisterAsPurchase(m)}
-                                                        title={m.purchaseLedgerId ? 'Ya registrada en contabilidad' : 'Crear entrada en el registro de compras del módulo contable'}
-                                                        style={{
-                                                            display: 'flex', alignItems: 'center', gap: '0.3rem',
-                                                            color: m.purchaseLedgerId ? '#16a34a' : '#1e293b',
-                                                            background: m.purchaseLedgerId ? '#dcfce7' : '#f1f5f9',
-                                                            border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px',
-                                                            fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer'
-                                                        }}>
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
-                                                        {m.purchaseLedgerId ? 'En contabilidad' : 'Registrar en contabilidad'}
-                                                    </button>
-                                                )}
-                                                <button onClick={() => handleFileDelete(m.id, 'material')} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {materials.length === 0 && <p style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center', margin: '1rem 0' }}>No hay materiales registrados.</p>}
+                                    )
+                                })}
+                            </div>
                         </div>
+
                     </div>
 
-                    {/* Tareas Section */}
-                    <div>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            🛠️ Tareas de Ejecución
-                        </h3>
-                        
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <input 
-                                type="text" 
-                                className="input" 
-                                value={newTask} 
-                                onChange={(e) => setNewTask(e.target.value)} 
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                placeholder="Ej: Instalación de tableros..." 
-                                style={{ flex: 1 }} 
-                            />
-                            <button className="btn btn-secondary" onClick={handleAddTask}>Añadir</button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {tasks.map(t => (
-                                <div key={t.id} style={{ display: 'flex', flexDirection: 'column', padding: '1rem', background: t.completed ? '#f0fdf4' : '#f8fafc', border: `1px solid ${t.completed ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: '8px', gap: '0.75rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, paddingRight: '1rem' }}>
-                                            <input type="checkbox" checked={t.completed} onChange={() => toggleTask(t.id)} style={{ width: '22px', height: '22px', cursor: 'pointer', flexShrink: 0 }} />
-                                            <span style={{ fontSize: '1rem', color: t.completed ? '#16a34a' : '#334155', textDecoration: t.completed ? 'line-through' : 'none', wordBreak: 'break-word', fontWeight: '500' }}>
-                                                {t.title}
-                                            </span>
-                                        </div>
-                                        <button onClick={() => removeTask(t.id)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                                        </button>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${t.completed ? '#bbf7d0' : '#e2e8f0'}`, paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {uploadingState[t.id] ? (
-                                                <span style={{ fontSize: '0.85rem', color: '#ea580c', padding: '0.5rem 0', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-                                                    {uploadingState[t.id]}
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    <label style={actionBtnStyle}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                                        <span>Archivo</span>
-                                                        <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => handleFileUpload(t.id, 'task', e.target.files[0])} />
-                                                    </label>
-                                                    <label style={actionBtnStyle}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-                                                        <span>Cámara</span>
-                                                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileUpload(t.id, 'task', e.target.files[0])} />
-                                                    </label>
-                                                </>
-                                            )}
-                                        </div>
-                                        {t.attachmentUrl && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <a href={t.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none', background: '#eff6ff', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                                                    Ver Evidencia
-                                                </a>
-                                                <button onClick={() => handleFileDelete(t.id, 'task')} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {tasks.length === 0 && <p style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center', margin: '1rem 0' }}>No hay tareas registradas.</p>}
-                        </div>
+                    {/* Right Column: Details */}
+                    <div style={{ flex: 1, background: '#f8fafc', padding: '2rem', overflowY: 'auto' }}>
+                        {selectedItem ? (
+                            selectedItem.type === 'task' 
+                                ? renderTaskDetails(tasks.find(t => t.id === selectedItem.id))
+                                : renderMaterialDetails(materials.find(m => m.id === selectedItem.id))
+                        ) : (
+                            renderDashboard()
+                        )}
                     </div>
+
                 </div>
 
-                <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#f8fafc', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
-                    <button onClick={onClose} className="btn btn-secondary">Cancelar</button>
-                    <button onClick={handleSave} className="btn btn-primary">Guardar Cambios</button>
+                {/* Footer */}
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#fff' }}>
+                    <button onClick={onClose} className="btn btn-secondary">Cerrar sin guardar</button>
+                    <button onClick={handleSave} className="btn btn-primary" style={{ padding: '0.6rem 1.5rem' }}>Guardar Cambios</button>
                 </div>
             </div>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 }
