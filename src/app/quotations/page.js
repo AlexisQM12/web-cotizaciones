@@ -25,6 +25,7 @@ export default function Dashboard() {
     const [toasts, setToasts] = useState([]) // notificaciones flotantes transitorias
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
     const [selectedQuotationForEmail, setSelectedQuotationForEmail] = useState(null)
+    const [leadsOpen, setLeadsOpen] = useState(false) // Panel Gmail Leads: abierto (desktop) o replegado en botón (móvil)
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -199,6 +200,13 @@ export default function Dashboard() {
         return () => newSocket.disconnect();
     }, []);
 
+    // Panel Gmail Leads: abierto por defecto en escritorio, replegado (botón) en móvil.
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setLeadsOpen(window.matchMedia('(min-width: 769px)').matches);
+        }
+    }, []);
+
     const handleOpenEmailModal = (q) => {
         setSelectedQuotationForEmail(q);
         setIsEmailModalOpen(true);
@@ -265,10 +273,10 @@ export default function Dashboard() {
 
     const STAGES = [
         { key: 'todas',    label: 'Todas' },
-        { key: 'emitida',  label: 'Sin enviar',    match: q => !q.isSent && q.quotationStatus !== 'aprobada' && q.quotationStatus !== 'completado' },
-        { key: 'enviada',  label: 'Enviada',        match: q => q.isSent && q.quotationStatus !== 'aprobada' && q.quotationStatus !== 'completado' },
-        { key: 'aprobada', label: 'OC Recibida',   match: q => q.quotationStatus === 'aprobada' },
-        { key: 'completado', label: 'Facturada',   match: q => q.quotationStatus === 'completado' },
+        { key: 'emitida',  label: 'Sin enviar',    match: q => !q.isSent && !['aprobada', 'completado', 'pendiente_factura'].includes(q.quotationStatus) && !q.invoicePdfUrl },
+        { key: 'enviada',  label: 'Enviada',        match: q => q.isSent && !['aprobada', 'completado', 'pendiente_factura'].includes(q.quotationStatus) && !q.invoicePdfUrl },
+        { key: 'aprobada', label: 'OC Recibida',   match: q => ['aprobada', 'pendiente_factura'].includes(q.quotationStatus) && !q.invoicePdfUrl },
+        { key: 'completado', label: 'Facturada',   match: q => ['completado'].includes(q.quotationStatus) || !!q.invoicePdfUrl },
     ];
 
     const stageFiltered = stageFilter === 'todas'
@@ -294,14 +302,17 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div className="dashboard-actions">
-                        <button className="btn btn-secondary" onClick={() => setIsScannerModalOpen(true)}>
-                            📡 Lector O.C.
+                        <button className="btn btn-secondary" onClick={() => setIsScannerModalOpen(true)} title="Lector O.C." aria-label="Lector O.C.">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.93 4.93a10 10 0 0 0 0 14.14M19.07 4.93a10 10 0 0 1 0 14.14M7.76 7.76a6 6 0 0 0 0 8.48M16.24 7.76a6 6 0 0 1 0 8.48"/><circle cx="12" cy="12" r="1.5"/></svg>
+                            <span className="btn-label">Lector O.C.</span>
                         </button>
-                        <button className="btn btn-secondary" onClick={() => router.push('/settings')}>
-                            Configuración
+                        <button className="btn btn-secondary" onClick={() => router.push('/settings')} title="Configuración" aria-label="Configuración">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            <span className="btn-label">Configuración</span>
                         </button>
-                        <button className="btn btn-primary" onClick={createNewQuotation}>
-                            Nueva Cotización
+                        <button className="btn btn-primary" onClick={createNewQuotation} title="Nueva Cotización" aria-label="Nueva Cotización">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            <span className="btn-label">Nueva Cotización</span>
                         </button>
                     </div>
                 </div>
@@ -367,6 +378,19 @@ export default function Dashboard() {
                     @keyframes slide-in {
                         from { opacity: 0; transform: translateX(40px); }
                         to   { opacity: 1; transform: translateX(0); }
+                    }
+                    @keyframes gmail-pulse {
+                        0%   { box-shadow: 0 0 0 0 rgba(229,57,53,0.55); }
+                        70%  { box-shadow: 0 0 0 16px rgba(229,57,53,0); }
+                        100% { box-shadow: 0 0 0 0 rgba(229,57,53,0); }
+                    }
+                    @media (max-width: 768px) {
+                        .gadgets-sidebar {
+                            width: calc(100vw - 2rem) !important;
+                            right: 1rem !important;
+                            top: 80px !important;
+                            max-height: calc(100vh - 100px) !important;
+                        }
                     }
                 `}</style>
 
@@ -466,24 +490,31 @@ export default function Dashboard() {
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                                                <select
-                                                    value={q.quotationStatus || 'pendiente'}
-                                                    onChange={(e) => updateStatus(q.id, e.target.value, e)}
-                                                    style={{
-                                                        backgroundColor: (q.quotationStatus || 'pendiente') === 'completado' ? '#dcfce7' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#e0e7ff' : '#fef9c3',
-                                                        color: (q.quotationStatus || 'pendiente') === 'completado' ? '#16a34a' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#4338ca' : '#a16207',
-                                                        border: `1px solid ${(q.quotationStatus || 'pendiente') === 'completado' ? '#bbf7d0' : (q.quotationStatus || 'pendiente') === 'aprobada' ? '#c7d2fe' : '#fde68a'}`,
-                                                        borderRadius: '20px',
-                                                        padding: '0.2rem 0.75rem',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: '600',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <option value="aprobada">🚀 OC Recibida</option>
-                                                    <option value="completado">✓ Completado</option>
-                                                    <option value="pendiente">⏳ Pendiente</option>
-                                                </select>
+                                                {(() => {
+                                                    const s = q.invoicePdfUrl ? 'completado' : (q.quotationStatus || 'pendiente');
+                                                    let bg = '#fef9c3', color = '#a16207', border = '#fde68a';
+                                                    if (s === 'completado') { bg = '#dcfce7'; color = '#16a34a'; border = '#bbf7d0'; }
+                                                    else if (s === 'aprobada') { bg = '#e0e7ff'; color = '#4338ca'; border = '#c7d2fe'; }
+                                                    else if (s === 'pendiente_factura') { bg = '#fef3c7'; color = '#d97706'; border = '#fcd34d'; }
+                                                    else if (s === 'pendiente_oc') { bg = '#fff7ed'; color = '#c2410c'; border = '#ffedd5'; }
+                                                    
+                                                    return (
+                                                        <select
+                                                            value={s}
+                                                            onChange={(e) => updateStatus(q.id, e.target.value, e)}
+                                                            style={{
+                                                                backgroundColor: bg, color, border: `1px solid ${border}`,
+                                                                borderRadius: '20px', padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <option value="pendiente">⏳ Pendiente</option>
+                                                            <option value="aprobada">🚀 OC Recibida</option>
+                                                            <option value="pendiente_oc">⚙️ Sin OC (En Op)</option>
+                                                            <option value="pendiente_factura">🧾 Pendiente Factura</option>
+                                                            <option value="completado">✓ Completado</option>
+                                                        </select>
+                                                    );
+                                                })()}
                                             </div>
                                             {q.ocPdfUrl && (
                                                 <a
@@ -560,12 +591,12 @@ export default function Dashboard() {
 
                                     {/* Progress steps */}
                                     {(() => {
-                                        const ocDone = q.quotationStatus === 'aprobada' || q.quotationStatus === 'completado';
+                                        const ocDone = ['aprobada', 'completado', 'pendiente_factura'].includes(q.quotationStatus) || !!q.invoicePdfUrl;
                                         const steps = [
                                             { label: 'Emisión', done: !!q.code },
                                             { label: 'Envío', done: !!q.isSent || ocDone, clickable: true },
                                             { label: 'Recep. OC', done: ocDone },
-                                            { label: 'Factura', done: q.quotationStatus === 'completado' },
+                                            { label: 'Factura', done: q.quotationStatus === 'completado' || !!q.invoicePdfUrl },
                                         ];
                                         return (
                                             <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: 0 }}>
@@ -630,8 +661,8 @@ export default function Dashboard() {
                 overflowY: 'auto'
             }}>
                 
-                {/* Gadget de Gmail Leads */}
-                {leads.length > 0 && (
+                {/* Gadget de Gmail Leads (solo cuando está abierto; replegado vive en el botón flotante) */}
+                {leads.length > 0 && leadsOpen && (
                     <div className="card" style={{ padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', borderRadius: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="28px" height="28px">
@@ -646,6 +677,14 @@ export default function Dashboard() {
                             <span style={{ background: '#ef4444', color: 'white', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', fontWeight: 'bold', marginLeft: 'auto' }}>
                                 {leads.length} Nuevo{leads.length > 1 ? 's' : ''}
                             </span>
+                            <button
+                                onClick={() => setLeadsOpen(false)}
+                                title="Replegar"
+                                aria-label="Replegar panel de Gmail Leads"
+                                style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
                         </div>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -684,6 +723,43 @@ export default function Dashboard() {
                     </div>
                 )}
             </aside>
+
+            {/* Botón flotante Gmail (replegado / móvil) — parpadea cuando hay pendientes */}
+            {leads.length > 0 && !leadsOpen && (
+                <button
+                    onClick={() => setLeadsOpen(true)}
+                    title={`${leads.length} solicitud${leads.length > 1 ? 'es' : ''} de cotización en Gmail`}
+                    aria-label="Ver leads de Gmail"
+                    style={{
+                        position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 95,
+                        width: 60, height: 60, borderRadius: '50%',
+                        background: '#ffffff', border: '1px solid #e2e8f0',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', padding: 0,
+                        animation: 'gmail-pulse 1.6s ease-out infinite',
+                    }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="30px" height="30px">
+                        <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75V40h7.5C43.883,40,45,38.883,45,37.5V16.2z"/>
+                        <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H5.5C4.118,40,3,38.883,3,37.5V16.2z"/>
+                        <path fill="#e53935" d="M35,11.2l-11,8.25L13,11.2l-3,2.41L3,16.2l10.879,8.428L24,32.25l10.121-7.622L45,16.2l-7-5.01V11.2z"/>
+                        <path fill="#c62828" d="M35,11.2l-11,8.25L13,11.2l-2.091-1.631L13,7.5l11,8.25L35,7.5l2.091,2.069L35,11.2z"/>
+                        <path fill="#fbc02d" d="M45,16.2l-7-5.01L35,11.2v12.5l10-7.5V16.2z"/>
+                        <path fill="#1565c0" d="M3,16.2l7-5.01L13,11.2v12.5l-10-7.5V16.2z"/>
+                    </svg>
+                    <span style={{
+                        position: 'absolute', top: -4, right: -4,
+                        background: '#ef4444', color: 'white', borderRadius: '999px',
+                        minWidth: 22, height: 22, padding: '0 6px',
+                        fontSize: '0.72rem', fontWeight: 'bold',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '2px solid white', lineHeight: 1,
+                    }}>
+                        {leads.length}
+                    </span>
+                </button>
+            )}
         </ProtectedRoute>
     )
 }

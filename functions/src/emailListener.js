@@ -973,7 +973,7 @@ async function findInvoiceMatch({ labeled, general }) {
 
   try {
     const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations')
-      .where('quotationStatus', '==', 'aprobada')
+      .where('quotationStatus', 'in', ['aprobada', 'pendiente_factura'])
       .get();
 
     const TOLERANCE = 1.00;

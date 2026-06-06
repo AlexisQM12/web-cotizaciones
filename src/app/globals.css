@@ -248,6 +248,19 @@ textarea:focus,
   gap: 1rem;
 }
 
+.dashboard-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.dashboard-actions .btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .dashboard-tabs {
   margin-bottom: 2rem;
   border-bottom: 2px solid #f1f5f9;
@@ -492,12 +505,25 @@ textarea:focus,
   }
   
   .dashboard-actions {
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
+    gap: 0.5rem;
   }
 
   .dashboard-actions .btn {
-    width: 100%;
+    flex: 1;
+    width: auto;
+    padding: 0.75rem 0.5rem;
+  }
+
+  /* En móvil: solo icono, texto oculto, botones en fila */
+  .dashboard-actions .btn .btn-label {
+    display: none;
+  }
+
+  .dashboard-actions .btn svg {
+    width: 22px;
+    height: 22px;
   }
   
   .dashboard-tabs {
