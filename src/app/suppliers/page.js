@@ -177,11 +177,11 @@ export default function SuppliersDashboard() {
                         <div className="grid-list">
                             {filteredSuppliers.map(s => (
                                 <div key={s.id} className="card" style={{ padding: '2rem', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'flex-start' }}>
-                                        <h3 style={{ fontSize: '1.25rem', color: '#101828', fontWeight: '600', margin: 0, paddingRight: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                        <h3 style={{ fontSize: '1.25rem', color: '#101828', fontWeight: '600', margin: 0, paddingRight: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }} title={s.name}>
                                             {s.name}
                                         </h3>
-                                        <span style={{ padding: '0.2rem 0.6rem', background: '#fdf4ff', color: '#d946ef', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', flexShrink: 0 }}>
+                                        <span style={{ padding: '0.2rem 0.6rem', background: '#fdf4ff', color: '#d946ef', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', flexShrink: 0, maxWidth: '140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center' }} title={s.category || 'Sin rubro'}>
                                             {s.category || 'Sin rubro'}
                                         </span>
                                     </div>
@@ -189,17 +189,26 @@ export default function SuppliersDashboard() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                                         {s.whatsapp && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-                                                <span>📱</span> <strong>WhatsApp:</strong> <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#25D366', textDecoration: 'none' }}>{s.whatsapp}</a>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: '#64748b', flexShrink: 0}}>
+                                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line>
+                                                </svg>
+                                                <strong>WhatsApp:</strong> <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#25D366', textDecoration: 'none' }}>{s.whatsapp}</a>
                                             </div>
                                         )}
                                         {s.city && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-                                                <span>📍</span> <strong>Ciudad:</strong> {s.city}
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: '#64748b', flexShrink: 0}}>
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
+                                                </svg>
+                                                <strong>Ciudad:</strong> {s.city}
                                             </div>
                                         )}
                                         {s.email && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-                                                <span>✉️</span> <strong>Email:</strong> {s.email}
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: '#64748b', flexShrink: 0}}>
+                                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>
+                                                </svg>
+                                                <strong>Email:</strong> {s.email}
                                             </div>
                                         )}
                                         {s.notes && (

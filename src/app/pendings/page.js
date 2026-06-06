@@ -14,6 +14,7 @@ export default function PendingsDashboard() {
     const [selectedQuotation, setSelectedQuotation] = useState(null)
     const [showAddModal, setShowAddModal] = useState(false)
     const [showGlobalTimeline, setShowGlobalTimeline] = useState(false)
+    const [activeTab, setActiveTab] = useState('en_proceso')
     const router = useRouter()
 
     useEffect(() => {
@@ -23,14 +24,14 @@ export default function PendingsDashboard() {
                 if (Array.isArray(data)) {
                     setAllQuotations(data);
                     // Filter those with OC or pending OC
-                    const filtered = data.filter(q => ['aprobada', 'completado', 'pendiente_oc'].includes(q.quotationStatus));
+                    const filtered = data.filter(q => ['aprobada', 'completado', 'pendiente_oc', 'pendiente_factura'].includes(q.quotationStatus));
                     
                     const getPriorityVal = (p) => p === 'alta' ? 3 : p === 'baja' ? 1 : 2;
 
                     // Sort so 'completado' appears at the end, then by priority, then newest first
                     filtered.sort((a, b) => {
-                        if (a.quotationStatus === 'completado' && b.quotationStatus !== 'completado') return 1;
-                        if (a.quotationStatus !== 'completado' && b.quotationStatus === 'completado') return -1;
+                        if ((a.quotationStatus === 'completado' || a.quotationStatus === 'pendiente_factura') && (b.quotationStatus !== 'completado' && b.quotationStatus !== 'pendiente_factura')) return 1;
+                        if ((a.quotationStatus !== 'completado' && a.quotationStatus !== 'pendiente_factura') && (b.quotationStatus === 'completado' || b.quotationStatus === 'pendiente_factura')) return -1;
                         
                         const pA = getPriorityVal(a.priority);
                         const pB = getPriorityVal(b.priority);
@@ -54,8 +55,10 @@ export default function PendingsDashboard() {
                 body: JSON.stringify({ operationsData })
             });
             setQuotations(prev => prev.map(q => q.id === id ? { ...q, operationsData } : q));
+            setSelectedQuotation(prev => prev && prev.id === id ? { ...prev, operationsData } : prev);
         } catch (err) {
             console.error(err);
+            throw err;
         }
     };
 
@@ -70,8 +73,8 @@ export default function PendingsDashboard() {
                 const updated = prev.map(q => q.id === id ? { ...q, priority: newPriority } : q);
                 const getPriorityVal = (p) => p === 'alta' ? 3 : p === 'baja' ? 1 : 2;
                 updated.sort((a, b) => {
-                    if (a.quotationStatus === 'completado' && b.quotationStatus !== 'completado') return 1;
-                    if (a.quotationStatus !== 'completado' && b.quotationStatus === 'completado') return -1;
+                    if ((a.quotationStatus === 'completado' || a.quotationStatus === 'pendiente_factura') && (b.quotationStatus !== 'completado' && b.quotationStatus !== 'pendiente_factura')) return 1;
+                    if ((a.quotationStatus !== 'completado' && a.quotationStatus !== 'pendiente_factura') && (b.quotationStatus === 'completado' || b.quotationStatus === 'pendiente_factura')) return -1;
                     const pA = getPriorityVal(a.priority);
                     const pB = getPriorityVal(b.priority);
                     if (pA !== pB) return pB - pA;
@@ -94,11 +97,11 @@ export default function PendingsDashboard() {
             const updatedAll = allQuotations.map(q => q.id === id ? { ...q, quotationStatus: 'pendiente_oc' } : q);
             setAllQuotations(updatedAll);
             
-            const filtered = updatedAll.filter(q => ['aprobada', 'completado', 'pendiente_oc'].includes(q.quotationStatus));
+            const filtered = updatedAll.filter(q => ['aprobada', 'completado', 'pendiente_oc', 'pendiente_factura'].includes(q.quotationStatus));
             const getPriorityVal = (p) => p === 'alta' ? 3 : p === 'baja' ? 1 : 2;
             filtered.sort((a, b) => {
-                if (a.quotationStatus === 'completado' && b.quotationStatus !== 'completado') return 1;
-                if (a.quotationStatus !== 'completado' && b.quotationStatus === 'completado') return -1;
+                if ((a.quotationStatus === 'completado' || a.quotationStatus === 'pendiente_factura') && (b.quotationStatus !== 'completado' && b.quotationStatus !== 'pendiente_factura')) return 1;
+                if ((a.quotationStatus !== 'completado' && a.quotationStatus !== 'pendiente_factura') && (b.quotationStatus === 'completado' || b.quotationStatus === 'pendiente_factura')) return -1;
                 const pA = getPriorityVal(a.priority);
                 const pB = getPriorityVal(b.priority);
                 if (pA !== pB) return pB - pA;
@@ -106,6 +109,37 @@ export default function PendingsDashboard() {
             });
             setQuotations(filtered);
             setShowAddModal(false);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleMarkAsCompletedManual = async (id) => {
+        if (!window.confirm("¿Estás seguro de que deseas completar este proyecto de forma manual? Se marcará como 'Pendiente Factura'.")) {
+            return;
+        }
+        
+        try {
+            await fetch(`/api/quotations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quotationStatus: 'pendiente_factura' })
+            });
+            
+            const updatedAll = allQuotations.map(q => q.id === id ? { ...q, quotationStatus: 'pendiente_factura' } : q);
+            setAllQuotations(updatedAll);
+            
+            const filtered = updatedAll.filter(q => ['aprobada', 'completado', 'pendiente_oc', 'pendiente_factura'].includes(q.quotationStatus));
+            const getPriorityVal = (p) => p === 'alta' ? 3 : p === 'baja' ? 1 : 2;
+            filtered.sort((a, b) => {
+                if ((a.quotationStatus === 'completado' || a.quotationStatus === 'pendiente_factura') && (b.quotationStatus !== 'completado' && b.quotationStatus !== 'pendiente_factura')) return 1;
+                if ((a.quotationStatus !== 'completado' && a.quotationStatus !== 'pendiente_factura') && (b.quotationStatus === 'completado' || b.quotationStatus === 'pendiente_factura')) return -1;
+                const pA = getPriorityVal(a.priority);
+                const pB = getPriorityVal(b.priority);
+                if (pA !== pB) return pB - pA;
+                return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+            });
+            setQuotations(filtered);
         } catch (err) {
             console.error(err);
         }
@@ -145,18 +179,43 @@ export default function PendingsDashboard() {
                     </div>
                 </div>
 
+                <div style={{ marginTop: '1rem', borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                    <div className="container" style={{ display: 'flex', gap: '2rem' }}>
+                        <button 
+                            onClick={() => setActiveTab('en_proceso')}
+                            style={{ background: 'none', border: 'none', borderBottom: activeTab === 'en_proceso' ? '2px solid #ea580c' : '2px solid transparent', color: activeTab === 'en_proceso' ? '#ea580c' : '#64748b', padding: '0.8rem 0', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                            En proceso
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('completadas')}
+                            style={{ background: 'none', border: 'none', borderBottom: activeTab === 'completadas' ? '2px solid #10b981' : '2px solid transparent', color: activeTab === 'completadas' ? '#10b981' : '#64748b', padding: '0.8rem 0', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                            Completadas
+                        </button>
+                    </div>
+                </div>
+
                 <div className="content-frame main-content-frame">
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '3rem', color: '#101828' }}>Cargando pendientes...</div>
-                    ) : quotations.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b' }}>
-                            <h3 style={{ fontSize: '1.5rem', color: '#101828', marginBottom: '1rem' }}>No hay pendientes</h3>
-                            <p>No se encontraron órdenes de compra aprobadas en este momento.</p>
-                        </div>
-                    ) : (
-                        <div className="grid-list">
-                            {quotations.map(q => {
-                                const ops = q.operationsData || { tasks: [], materials: [] };
+                    ) : (() => {
+                        const isCompletedStatus = (s) => s === 'completado' || s === 'pendiente_factura';
+                        const filteredQuotations = quotations.filter(q => activeTab === 'completadas' ? isCompletedStatus(q.quotationStatus) : !isCompletedStatus(q.quotationStatus));
+
+                        if (filteredQuotations.length === 0) {
+                            return (
+                                <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b' }}>
+                                    <h3 style={{ fontSize: '1.5rem', color: '#101828', marginBottom: '1rem' }}>No hay pendientes</h3>
+                                    <p>No se encontraron cotizaciones en esta pestaña.</p>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="grid-list">
+                                {filteredQuotations.map(q => {
+                                    const ops = q.operationsData || { tasks: [], materials: [] };
                                 
                                 const totalMaterials = ops.materials.length;
                                 const completedMaterials = ops.materials.filter(m => m.purchased).length;
@@ -188,9 +247,19 @@ export default function PendingsDashboard() {
                                                     <option value="media">🟡 Media</option>
                                                     <option value="baja">🟢 Baja</option>
                                                 </select>
-                                                <span style={{ padding: '0.2rem 0.6rem', background: q.quotationStatus === 'completado' ? '#f0fdf4' : q.quotationStatus === 'pendiente_oc' ? '#fff7ed' : '#eef2ff', color: q.quotationStatus === 'completado' ? '#16a34a' : q.quotationStatus === 'pendiente_oc' ? '#c2410c' : '#4338ca', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                                                    {q.quotationStatus === 'completado' ? 'Completada' : q.quotationStatus === 'pendiente_oc' ? 'Sin OC (En Op)' : 'OC Recibida'}
-                                                </span>
+                                                {(() => {
+                                                    const statusColors = {
+                                                        'completado': { bg: '#f0fdf4', text: '#16a34a', label: 'Completada' },
+                                                        'pendiente_factura': { bg: '#fef3c7', text: '#d97706', label: 'Pendiente Factura' },
+                                                        'pendiente_oc': { bg: '#fff7ed', text: '#c2410c', label: 'Sin OC (En Op)' }
+                                                    };
+                                                    const qStatus = statusColors[q.quotationStatus] || { bg: '#eef2ff', text: '#4338ca', label: 'OC Recibida' };
+                                                    return (
+                                                        <span style={{ padding: '0.2rem 0.6rem', background: qStatus.bg, color: qStatus.text, borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                            {qStatus.label}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         
@@ -243,18 +312,30 @@ export default function PendingsDashboard() {
                                             </div>
                                         </div>
 
-                                        <button 
-                                            className="btn btn-secondary" 
-                                            style={{ marginTop: '1.25rem', width: '100%', justifyContent: 'center' }}
-                                            onClick={() => setSelectedQuotation(q)}
-                                        >
-                                            {overallTotal === 0 ? '+ Iniciar Planificación' : 'Ver Materiales y Tareas'}
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                                            <button 
+                                                className="btn btn-secondary" 
+                                                style={{ flex: 1, justifyContent: 'center' }}
+                                                onClick={() => setSelectedQuotation(q)}
+                                            >
+                                                {overallTotal === 0 ? '+ Iniciar Planificación' : 'Ver Materiales y Tareas'}
+                                            </button>
+                                            {q.quotationStatus !== 'completado' && q.quotationStatus !== 'pendiente_factura' && (
+                                                <button 
+                                                    onClick={() => handleMarkAsCompletedManual(q.id)}
+                                                    style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '0 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem', transition: 'all 0.2s' }}
+                                                    title="Marcar como completado (Falta Factura)"
+                                                >
+                                                    ✓ Completar
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
-                    )}
+                        );
+                    })()}
                 </div>
             </main>
 
@@ -275,7 +356,7 @@ export default function PendingsDashboard() {
                         </div>
                         <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>Selecciona una cotización en curso para iniciar operaciones antes de recibir la Orden de Compra.</p>
                         <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
-                            {allQuotations.filter(q => q.code && !['aprobada', 'completado', 'pendiente_oc'].includes(q.quotationStatus)).map(q => (
+                            {allQuotations.filter(q => q.code && !['aprobada', 'completado', 'pendiente_oc', 'pendiente_factura'].includes(q.quotationStatus)).map(q => (
                                 <div key={q.id} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
                                     <div style={{ flex: 1, paddingRight: '1rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -299,7 +380,7 @@ export default function PendingsDashboard() {
                                     </button>
                                 </div>
                             ))}
-                            {allQuotations.filter(q => q.code && !['aprobada', 'completado', 'pendiente_oc'].includes(q.quotationStatus)).length === 0 && (
+                            {allQuotations.filter(q => q.code && !['aprobada', 'completado', 'pendiente_oc', 'pendiente_factura'].includes(q.quotationStatus)).length === 0 && (
                                 <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No hay cotizaciones disponibles para añadir.</div>
                             )}
                         </div>

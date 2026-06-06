@@ -623,5 +623,58 @@ textarea:focus,
   .btn-logout {
     margin-top: 0;
   }
+
+  /* PendingsModal Dashboard Layout */
+  .dashboard-panel-controls, .dashboard-panel-stats {
+    flex-direction: column;
+    align-items: stretch !important;
+    width: 100%;
+    gap: 1rem !important;
+  }
+
+  .dashboard-panel-dates {
+    border-left: none !important;
+    padding-left: 0 !important;
+    flex-direction: column;
+    align-items: stretch !important;
+    width: 100%;
+  }
+
+  .dashboard-panel-dates > div {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .stat-bar-container {
+    width: 100% !important;
+  }
+
+  .dashboard-panel-total {
+    border-left: none !important;
+    border-top: 1px solid #e2e8f0;
+    padding-left: 0 !important;
+    padding-top: 1rem;
+    align-items: center;
+  }
+
+  /* PendingsModal Layout */
+  .pendings-modal-body {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+  .pendings-modal-left {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+    flex: none !important;
+    overflow-y: visible !important;
+    max-height: 400px;
+  }
+  .pendings-modal-right {
+    width: 100% !important;
+    flex: none !important;
+    overflow-y: visible !important;
+    min-height: 500px;
+  }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,20 +18,88 @@ const actionBtnStyle = {
     boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
 };
 
+const ASSIGNEE_COLORS = [
+    '#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', 
+    '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', 
+    '#10b981', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316'
+];
+
 export function PendingsModal({ quotation, onClose, onSave }) {
+    const localScrollRef = useRef(null);
     const { user } = useAuth();
-    const [tasks, setTasks] = useState(quotation.operationsData?.tasks?.map(t => ({
-        ...t,
-        status: t.status || (t.completed ? 'completed' : 'pending')
-    })) || []);
-    const [materials, setMaterials] = useState(quotation.operationsData?.materials || []);
+    const [tasks, setTasks] = useState(quotation.operationsData?.tasks?.map(t => {
+        const assigneeIds = t.assigneeIds || (t.assigneeId ? [t.assigneeId] : []);
+        return {
+            ...t,
+            assigneeIds,
+            status: t.status || (t.completed ? 'completed' : 'pending')
+        };
+    }) || []);
+    const [materials, setMaterials] = useState(quotation.operationsData?.materials?.map(m => {
+        const assigneeIds = m.assigneeIds || (m.assigneeId ? [m.assigneeId] : []);
+        return { ...m, assigneeIds };
+    }) || []);
+
+    const [projectStartDate, setProjectStartDate] = useState(quotation.operationsData?.projectStartDate || '');
+    const [projectEndDate, setProjectEndDate] = useState(quotation.operationsData?.projectEndDate || '');
+
+    const [saveStatus, setSaveStatus] = useState(null);
 
     const [newTask, setNewTask] = useState('');
     const [newMaterial, setNewMaterial] = useState('');
     const [uploadingState, setUploadingState] = useState({});
     
+    const [teamMembers, setTeamMembers] = useState([]);
+    
+    useEffect(() => {
+        fetch(`/api/team?empresaId=${user?.empresaId || ''}`)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setTeamMembers(data);
+            })
+            .catch(err => console.error('Error fetching team', err));
+    }, [user]);
+
     // null | { type: 'task' | 'material', id: number/string }
     const [selectedItem, setSelectedItem] = useState(null);
+
+    useEffect(() => {
+        if (!selectedItem && localScrollRef.current) {
+            const nowMs = Date.now();
+            let minT = projectStartDate ? new Date(`${projectStartDate}T00:00:00`).getTime() : null;
+            let maxT = projectEndDate ? new Date(`${projectEndDate}T23:59:59`).getTime() : null;
+            const tasksWithDates = tasks.filter(t => t.startDate && t.endDate);
+            if (tasksWithDates.length > 0) {
+                const minTasks = Math.min(...tasksWithDates.map(t => new Date(`${t.startDate}T00:00:00`).getTime()));
+                const maxTasks = Math.max(...tasksWithDates.map(t => new Date(`${t.endDate}T23:59:59`).getTime()));
+                if (!minT || minTasks < minT) minT = minTasks;
+                if (!maxT || maxTasks > maxT) maxT = maxTasks;
+            }
+            if (!minT || nowMs < minT) minT = nowMs;
+            if (!maxT || nowMs > maxT) maxT = nowMs;
+            
+            const minDate = new Date(minT);
+            minDate.setDate(minDate.getDate() + (minDate.getDay() === 0 ? -6 : 1 - minDate.getDay()));
+            minDate.setHours(0,0,0,0);
+            
+            const maxDate = new Date(maxT);
+            maxDate.setDate(maxDate.getDate() + (maxDate.getDay() === 0 ? 0 : 7 - maxDate.getDay()));
+            maxDate.setHours(23,59,59,999);
+            
+            const gridStartMs = minDate.getTime();
+            let gridEndMs = maxDate.getTime();
+            if (gridEndMs - gridStartMs < 35 * 24 * 60 * 60 * 1000) {
+                gridEndMs = gridStartMs + 35 * 24 * 60 * 60 * 1000;
+            }
+            const totalMs = gridEndMs - gridStartMs;
+            const nowPct = ((nowMs - gridStartMs) / totalMs) * 100;
+            
+            const containerWidth = localScrollRef.current.clientWidth;
+            const scrollWidth = localScrollRef.current.scrollWidth;
+            const targetScroll = (scrollWidth * (nowPct / 100)) - (containerWidth / 2);
+            localScrollRef.current.scrollLeft = Math.max(0, targetScroll);
+        }
+    }, [selectedItem, projectStartDate, projectEndDate, tasks]);
 
     const handleFileUpload = async (itemId, type, file) => {
         if (!file) return;
@@ -179,6 +247,32 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         setMaterials(materials.map(m => m.id === id ? { ...m, [field]: value } : m));
     };
 
+    const handleToggleTaskAssignee = (taskId, memberId) => {
+        setTasks(tasks.map(t => {
+            if (t.id === taskId) {
+                const current = t.assigneeIds || [];
+                const newAssigneeIds = current.includes(memberId) 
+                    ? current.filter(id => id !== memberId) 
+                    : [...current, memberId];
+                return { ...t, assigneeIds: newAssigneeIds };
+            }
+            return t;
+        }));
+    };
+
+    const handleToggleMaterialAssignee = (materialId, memberId) => {
+        setMaterials(materials.map(m => {
+            if (m.id === materialId) {
+                const current = m.assigneeIds || [];
+                const newAssigneeIds = current.includes(memberId) 
+                    ? current.filter(id => id !== memberId) 
+                    : [...current, memberId];
+                return { ...m, assigneeIds: newAssigneeIds };
+            }
+            return m;
+        }));
+    };
+
     const removeTask = (id) => {
         setTasks(tasks.filter(t => t.id !== id));
         if (selectedItem?.id === id) setSelectedItem(null);
@@ -223,10 +317,20 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         }
     };
 
-    const handleSave = () => {
-        onSave({ tasks, materials });
-        onClose();
+    const handleSave = async () => {
+        setSaveStatus('saving');
+        try {
+            await onSave({ tasks, materials, projectStartDate, projectEndDate });
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus(null), 2500);
+        } catch (error) {
+            console.error('Error saving:', error);
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus(null), 3000);
+        }
     };
+
+
 
     const handleImportFromSubItems = () => {
         if (!quotation.items) return;
@@ -284,6 +388,28 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     <div>
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fecha Fin</label>
                         <input type="date" className="input" value={t.endDate || ''} onChange={e => updateTaskField(t.id, 'endDate', e.target.value)} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Encargados</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                            {(t.assigneeIds || []).map(id => {
+                                const m = teamMembers.find(x => x.id === id);
+                                if(!m) return null;
+                                return (
+                                    <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#f8fafc', padding: '0.2rem 0.5rem', borderRadius: '99px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: m.color || '#ccc' }}></div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#334155' }}>{m.name}</span>
+                                        <button onClick={() => handleToggleTaskAssignee(t.id, id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, fontSize: '0.8rem', display: 'flex', alignItems: 'center', marginLeft: '0.2rem' }}>✕</button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <select className="input" value="" onChange={e => { if(e.target.value) handleToggleTaskAssignee(t.id, e.target.value); }} style={{ padding: '0.5rem' }}>
+                            <option value="">+ Añadir encargado...</option>
+                            {teamMembers.filter(m => !(t.assigneeIds || []).includes(m.id)).map(a => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -368,6 +494,28 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Link de Compra</label>
                         <input type="url" className="input" value={m.buyLink || ''} onChange={e => updateMaterialField(m.id, 'buyLink', e.target.value)} style={{ padding: '0.5rem' }} />
                     </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Encargados</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                            {(m.assigneeIds || []).map(id => {
+                                const member = teamMembers.find(x => x.id === id);
+                                if(!member) return null;
+                                return (
+                                    <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#f8fafc', padding: '0.2rem 0.5rem', borderRadius: '99px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: member.color || '#ccc' }}></div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#334155' }}>{member.name}</span>
+                                        <button onClick={() => handleToggleMaterialAssignee(m.id, id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, fontSize: '0.8rem', display: 'flex', alignItems: 'center', marginLeft: '0.2rem' }}>✕</button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <select className="input" value="" onChange={e => { if(e.target.value) handleToggleMaterialAssignee(m.id, e.target.value); }} style={{ padding: '0.5rem' }}>
+                            <option value="">+ Añadir encargado...</option>
+                            {teamMembers.filter(x => !(m.assigneeIds || []).includes(x.id)).map(a => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -430,80 +578,197 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         const totalSpent = materials.reduce((acc, m) => acc + (parseFloat(m.cost) || 0), 0);
 
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.2s ease-out' }}>
-                <div>
-                    <h3 style={{ fontSize: '1.25rem', color: '#0f172a', margin: '0 0 0.2rem 0', fontWeight: '700' }}>Panel de Control</h3>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Selecciona un elemento de la izquierda para ver y editar sus detalles.</p>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Avance Tareas</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>{tasksPct}%</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeIn 0.2s ease-out' }}>
+                <div className="dashboard-panel-wrapper" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    
+                    <div className="dashboard-panel-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        <div>
+                            <h3 style={{ fontSize: '1.1rem', color: '#0f172a', margin: '0 0 0.1rem 0', fontWeight: '700' }}>Panel de Control</h3>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem' }}>Selecciona un elemento para editar.</p>
                         </div>
-                        <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                            <div style={{ width: `${tasksPct}%`, height: '100%', background: tasksPct === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.3s' }} />
+                        
+                        <div className="dashboard-panel-dates" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Inicio:</span>
+                                <input type="date" className="input" value={projectStartDate} onChange={e => setProjectStartDate(e.target.value)} style={{ padding: '0.15rem 0.4rem', fontSize: '0.75rem', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '4px', cursor: 'pointer', width: '100%' }} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Fin:</span>
+                                <input type="date" className="input" value={projectEndDate} onChange={e => setProjectEndDate(e.target.value)} style={{ padding: '0.15rem 0.4rem', fontSize: '0.75rem', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '4px', cursor: 'pointer', width: '100%' }} />
+                            </div>
                         </div>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>{completedTasks} de {tasks.length} completadas</p>
                     </div>
 
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Avance Compras</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>{materialsPct}%</span>
+                    <div className="dashboard-panel-stats" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        <div className="stat-bar-container" style={{ display: 'flex', flexDirection: 'column', width: '120px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Tareas</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#0f172a' }}>{tasksPct}%</span>
+                            </div>
+                            <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${tasksPct}%`, height: '100%', background: tasksPct === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.3s' }} />
+                            </div>
                         </div>
-                        <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                            <div style={{ width: `${materialsPct}%`, height: '100%', background: materialsPct === 100 ? '#10b981' : '#f59e0b', transition: 'width 0.3s' }} />
-                        </div>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>{completedMaterials} de {materials.length} adquiridas</p>
-                    </div>
 
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Total Gastado</span>
-                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#ea580c' }}>S/ {totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        <div className="stat-bar-container" style={{ display: 'flex', flexDirection: 'column', width: '120px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Compras</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#0f172a' }}>{materialsPct}%</span>
+                            </div>
+                            <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${materialsPct}%`, height: '100%', background: materialsPct === 100 ? '#10b981' : '#f59e0b', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+
+                        <div className="dashboard-panel-total" style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Total Gastado</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '700', color: '#ea580c' }}>S/ {totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
                     </div>
                 </div>
 
                 {tasks.length > 0 && (() => {
                     const tasksWithDates = tasks.filter(t => t.startDate && t.endDate);
-                    let minTime = null, maxTime = null, totalMs = 86400000;
+                    
+                    const nowMs = Date.now();
+                    let minTime = projectStartDate ? new Date(`${projectStartDate}T00:00:00`).getTime() : null;
+                    let maxTime = projectEndDate ? new Date(`${projectEndDate}T23:59:59`).getTime() : null;
+
                     if (tasksWithDates.length > 0) {
-                        minTime = Math.min(...tasksWithDates.map(t => new Date(`${t.startDate}T00:00:00`).getTime()));
-                        maxTime = Math.max(...tasksWithDates.map(t => new Date(`${t.endDate}T23:59:59`).getTime()));
-                        totalMs = maxTime - minTime;
-                        if (totalMs === 0) totalMs = 86400000;
+                        const minTasks = Math.min(...tasksWithDates.map(t => new Date(`${t.startDate}T00:00:00`).getTime()));
+                        const maxTasks = Math.max(...tasksWithDates.map(t => new Date(`${t.endDate}T23:59:59`).getTime()));
+                        if (!minTime || minTasks < minTime) minTime = minTasks;
+                        if (!maxTime || maxTasks > maxTime) maxTime = maxTasks;
                     }
-                    const paddedTotalMs = totalMs * 1.1;
-                    const paddedMinTime = minTime ? minTime - (totalMs * 0.05) : null;
+
+                    if (!minTime || nowMs < minTime) minTime = nowMs;
+                    if (!maxTime || nowMs > maxTime) maxTime = nowMs;
+
+                    const minDate = new Date(minTime);
+                    const minDay = minDate.getDay(); 
+                    const diffToMonday = minDay === 0 ? -6 : 1 - minDay;
+                    minDate.setDate(minDate.getDate() + diffToMonday);
+                    minDate.setHours(0,0,0,0);
+                    const gridStartMs = minDate.getTime();
+
+                    const maxDate = new Date(maxTime);
+                    const maxDay = maxDate.getDay();
+                    const diffToSunday = maxDay === 0 ? 0 : 7 - maxDay;
+                    maxDate.setDate(maxDate.getDate() + diffToSunday);
+                    maxDate.setHours(23,59,59,999);
+                    let gridEndMs = maxDate.getTime();
+
+                    const MIN_SPAN_MS = 35 * 24 * 60 * 60 * 1000;
+                    if (gridEndMs - gridStartMs < MIN_SPAN_MS) {
+                        gridEndMs = gridStartMs + MIN_SPAN_MS;
+                    }
+
+                    const totalMs = gridEndMs - gridStartMs;
+                    const totalDays = Math.ceil(totalMs / (24 * 60 * 60 * 1000));
+                    const totalWeeks = Math.ceil(totalDays / 7);
+
+                    const viewportDays = 30;
+                    const ganttWidthPct = Math.max(100, (totalDays / viewportDays) * 100);
+                    const nowLeftPct = ((nowMs - gridStartMs) / totalMs) * 100;
+
+                    const weeks = [];
+                    for(let i = 0; i < totalWeeks; i++) {
+                        const wStart = new Date(gridStartMs + i * 7 * 24 * 60 * 60 * 1000);
+                        weeks.push({
+                            label: `${wStart.getDate().toString().padStart(2, '0')}/${(wStart.getMonth()+1).toString().padStart(2, '0')}`,
+                            leftPct: (i / totalWeeks) * 100,
+                            widthPct: (1 / totalWeeks) * 100
+                        });
+                    }
 
                     return (
-                        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>Cronograma General</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {tasks.map(t => {
-                                    let leftPct = 0, widthPct = 100, hasDates = !!(t.startDate && t.endDate);
-                                    if (hasDates && paddedMinTime !== null) {
-                                        const startMs = new Date(`${t.startDate}T00:00:00`).getTime();
-                                        const endMs = new Date(`${t.endDate}T23:59:59`).getTime();
-                                        leftPct = ((startMs - paddedMinTime) / paddedTotalMs) * 100;
-                                        widthPct = Math.max(2, ((endMs - startMs) / paddedTotalMs) * 100);
-                                    }
-                                    return (
-                                        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })}>
-                                            <div style={{ width: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155', fontWeight: '500', cursor: 'pointer' }}>{t.title}</div>
-                                            <div style={{ flex: 1, height: '24px', background: '#f1f5f9', borderRadius: '4px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                                                {hasDates ? (
-                                                    <div style={{ position: 'absolute', left: `${Math.max(0, leftPct)}%`, width: `${Math.min(100 - leftPct, widthPct)}%`, top: 0, bottom: 0, background: t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8', display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#fff', fontSize: '0.7rem', fontWeight: '600', borderRadius: '4px', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                                                        {widthPct > 10 ? `${t.startDate.slice(5)} al ${t.endDate.slice(5)}` : ''}
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', paddingLeft: '0.5rem', color: '#94a3b8', fontSize: '0.7rem', fontStyle: 'italic' }}>Sin programar</div>
-                                                )}
+                        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>Cronograma de Tareas</h4>
+                            
+                            {/* Scrolling Container */}
+                            <div ref={localScrollRef} style={{ overflowX: 'auto', paddingBottom: '0.5rem', position: 'relative' }}>
+                                {/* Gantt Area Wrapper */}
+                                <div style={{ minWidth: `calc(150px + ${ganttWidthPct}%)`, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                                    
+                                    {/* Cabecera Semanas */}
+                                    <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.5rem' }}>
+                                        <div style={{ width: '150px', flexShrink: 0, position: 'sticky', left: 0, background: '#fff', zIndex: 20 }}></div>
+                                        <div style={{ flex: 1, position: 'relative', height: '20px' }}>
+                                            {weeks.map((w, i) => (
+                                                <div key={i} style={{ position: 'absolute', left: `${w.leftPct}%`, width: `${w.widthPct}%`, top: 0, bottom: 0, borderRight: '1px solid #e2e8f0', fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold', display: 'flex', justifyContent: 'center', background: i % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
+                                                    Sem {w.label}
+                                                </div>
+                                            ))}
+                                            {/* Indicador HOY (Header) */}
+                                            <div style={{ position: 'absolute', left: `${nowLeftPct}%`, top: 0, bottom: 0, width: '2px', background: '#ef4444', zIndex: 30 }}>
+                                                <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', background: '#ef4444', color: '#fff', padding: '1px 4px', borderRadius: '0 0 4px 4px', fontSize: '0.55rem', fontWeight: 'bold' }}>HOY</div>
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+
+                                    {/* Grid y Filas */}
+                                    <div style={{ position: 'relative', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {/* Grid de fondo */}
+                                        <div style={{ position: 'absolute', inset: 0, display: 'flex', pointerEvents: 'none' }}>
+                                            <div style={{ width: '150px', flexShrink: 0 }}></div>
+                                            <div style={{ flex: 1, position: 'relative' }}>
+                                                {weeks.map((w, i) => (
+                                                    <div key={i} style={{ position: 'absolute', left: `${w.leftPct}%`, width: `${w.widthPct}%`, top: 0, bottom: 0, borderRight: '1px solid #e2e8f0', background: i % 2 === 0 ? 'rgba(241, 245, 249, 0.4)' : 'transparent' }} />
+                                                ))}
+                                                <div style={{ position: 'absolute', left: `${nowLeftPct}%`, top: 0, bottom: 0, width: '2px', background: 'rgba(239, 68, 68, 0.4)', zIndex: 5 }} />
+                                            </div>
+                                        </div>
+
+                                        {tasks.map((t, idx) => {
+                                            let leftPct = 0, widthPct = 0, hasDates = !!(t.startDate && t.endDate);
+                                            if (hasDates) {
+                                                const startMs = new Date(`${t.startDate}T00:00:00`).getTime();
+                                                const endMs = new Date(`${t.endDate}T23:59:59`).getTime();
+                                                leftPct = ((startMs - gridStartMs) / totalMs) * 100;
+                                                widthPct = Math.max(0.5, ((endMs - startMs) / totalMs) * 100);
+                                            }
+                                            const firstAssignee = (t.assigneeIds && t.assigneeIds.length > 0) ? teamMembers.find(m => m.id === t.assigneeIds[0]) : null;
+                                            const assigneeColor = firstAssignee ? firstAssignee.color : null;
+                                            const barColor = assigneeColor || (t.status === 'completed' ? '#10b981' : t.status === 'progress' ? '#3b82f6' : '#94a3b8');
+                                            const isCompleted = t.status === 'completed';
+
+                                            return (
+                                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', position: 'relative', zIndex: 10 }}>
+                                                    {/* Nombre Tarea */}
+                                                    <div style={{ width: '150px', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155', fontWeight: '500', position: 'sticky', left: 0, background: '#fff', zIndex: 20, cursor: 'pointer', paddingRight: '1rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })} title={t.title}>
+                                                        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                                            {(t.assigneeIds || []).map(id => {
+                                                                const m = teamMembers.find(x => x.id === id);
+                                                                return m ? <div key={m.id} style={{ width: '6px', height: '6px', borderRadius: '50%', background: m.color || '#ccc' }} title={m.name}></div> : null;
+                                                            })}
+                                                        </div>
+                                                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>{t.title}</span>
+                                                    </div>
+                                                    {/* Barra Gantt */}
+                                                    <div style={{ flex: 1, height: '24px', position: 'relative' }} onClick={() => setSelectedItem({ type: 'task', id: t.id })}>
+                                                        {hasDates && (
+                                                            <div style={{ 
+                                                                position: 'absolute', 
+                                                                left: `${Math.max(0, leftPct)}%`, 
+                                                                width: `${Math.min(100 - leftPct, widthPct)}%`, 
+                                                                top: '2px', bottom: '2px', 
+                                                                background: barColor, 
+                                                                opacity: isCompleted ? 0.6 : 1,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                                color: '#fff', fontSize: '0.65rem', fontWeight: '600', 
+                                                                borderRadius: '4px', whiteSpace: 'nowrap', overflow: 'hidden', cursor: 'pointer',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                                            }}>
+                                                                {isCompleted && <span style={{ marginRight: '0.3rem' }}>✓</span>}
+                                                                {widthPct > 5 ? `${t.startDate.slice(5)} al ${t.endDate.slice(5)}` : ''}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     );
@@ -512,23 +777,48 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         );
     };
 
+    const projectAssigneeIds = new Set();
+    tasks.forEach(t => (t.assigneeIds || []).forEach(id => projectAssigneeIds.add(id)));
+    materials.forEach(m => (m.assigneeIds || []).forEach(id => projectAssigneeIds.add(id)));
+    const projectTeam = Array.from(projectAssigneeIds).map(id => teamMembers.find(member => member.id === id)).filter(Boolean);
+
     return (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '2rem' }}>
             <div style={{ background: '#ffffff', borderRadius: '12px', width: '95vw', maxWidth: '1200px', height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: '700' }}>Control de Proyecto: {quotation.code}</h2>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginTop: '0.1rem' }}>{quotation.clientName}</p>
+                        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: '700' }}>
+                            {quotation.serviceDescription || 'Sin Descripción'}
+                        </h2>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 'bold', color: '#475569' }}>{quotation.code}</span>
+                            <span>•</span>
+                            <span>{quotation.clientName}</span>
+                        </p>
                     </div>
-                    <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color='#0f172a'} onMouseLeave={e => e.target.style.color='#94a3b8'}>✕</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        {projectTeam.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {projectTeam.map(m => (
+                                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f1f5f9', padding: '0.2rem 0.6rem 0.2rem 0.2rem', borderRadius: '99px' }} title={m.role || 'Equipo'}>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#fff', border: `2px solid ${m.color || '#0ea5e9'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${m.name}&backgroundColor=${(m.color || '#0ea5e9').replace('#','')}`} alt={m.name} style={{ width: '100%', height: '100%' }} />
+                                        </div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155' }}>{m.name.split(' ')[0]}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s', padding: '0.5rem' }} onMouseEnter={e => e.target.style.color='#0f172a'} onMouseLeave={e => e.target.style.color='#94a3b8'}>✕</button>
+                    </div>
                 </div>
 
                 {/* Body 2-Columns */}
-                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                <div className="pendings-modal-body" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                     
                     {/* Left Column: Lists */}
-                    <div style={{ width: '320px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', background: '#f8fafc', overflowY: 'auto' }}>
+                    <div className="pendings-modal-left" style={{ width: '320px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', background: '#f8fafc', overflowY: 'auto' }}>
                         
                         <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
@@ -552,7 +842,15 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                                 borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
                                             }}
                                         >
-                                            <span style={{ fontSize: '0.85rem', color: t.status === 'completed' ? '#64748b' : '#334155', textDecoration: t.status === 'completed' ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                                    {(t.assigneeIds || []).map(id => {
+                                                        const m = teamMembers.find(x => x.id === id);
+                                                        return m ? <div key={m.id} style={{ width: '6px', height: '6px', borderRadius: '50%', background: m.color || '#ccc' }} title={m.name}></div> : null;
+                                                    })}
+                                                </div>
+                                                <span style={{ fontSize: '0.85rem', color: t.status === 'completed' ? '#64748b' : '#334155', textDecoration: t.status === 'completed' ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                                            </div>
                                             <button onClick={(e) => { e.stopPropagation(); removeTask(t.id); }} style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 0.2rem' }}>✕</button>
                                         </div>
                                     )
@@ -585,7 +883,15 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                                 borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
                                             }}
                                         >
-                                            <span style={{ fontSize: '0.85rem', color: m.purchased ? '#64748b' : '#334155', textDecoration: m.purchased ? 'line-through' : 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                                    {(m.assigneeIds || []).map(id => {
+                                                        const member = teamMembers.find(x => x.id === id);
+                                                        return member ? <div key={member.id} style={{ width: '6px', height: '6px', borderRadius: '50%', background: member.color || '#ccc' }} title={member.name}></div> : null;
+                                                    })}
+                                                </div>
+                                                <span style={{ fontSize: '0.85rem', color: m.purchased ? '#64748b' : '#334155', textDecoration: m.purchased ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                                            </div>
                                             <button onClick={(e) => { e.stopPropagation(); removeMaterial(m.id); }} style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 0.2rem' }}>✕</button>
                                         </div>
                                     )
@@ -595,8 +901,8 @@ export function PendingsModal({ quotation, onClose, onSave }) {
 
                     </div>
 
-                    {/* Right Column: Details */}
-                    <div style={{ flex: 1, background: '#f8fafc', padding: '2rem', overflowY: 'auto' }}>
+                    {/* Right Column: Detail View */}
+                    <div className="pendings-modal-right" style={{ flex: 1, background: '#f8fafc', padding: '2rem', overflowY: 'auto' }}>
                         {selectedItem ? (
                             selectedItem.type === 'task' 
                                 ? renderTaskDetails(tasks.find(t => t.id === selectedItem.id))
@@ -609,15 +915,46 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#fff' }}>
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#fff', alignItems: 'center' }}>
                     <button onClick={onClose} className="btn btn-secondary">Cerrar sin guardar</button>
-                    <button onClick={handleSave} className="btn btn-primary" style={{ padding: '0.6rem 1.5rem' }}>Guardar Cambios</button>
+                    <button 
+                        onClick={handleSave} 
+                        className="btn btn-primary" 
+                        disabled={saveStatus === 'saving'}
+                        style={{ 
+                            padding: '0.6rem 1.5rem', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            background: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : undefined,
+                            borderColor: saveStatus === 'saved' ? '#10b981' : saveStatus === 'error' ? '#ef4444' : undefined,
+                            transition: 'all 0.3s ease',
+                            cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {saveStatus === 'saving' && (
+                            <svg className="animate-spin" style={{ width: '16px', height: '16px', color: '#fff' }} fill="none" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" style={{ opacity: 0.25 }}></circle>
+                                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" style={{ opacity: 0.75 }}></path>
+                            </svg>
+                        )}
+                        {saveStatus === 'saving' && 'Guardando...'}
+                        {saveStatus === 'saved' && '¡Guardado con éxito!'}
+                        {saveStatus === 'error' && 'Error al guardar'}
+                        {saveStatus === null && 'Guardar Cambios'}
+                    </button>
                 </div>
             </div>
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(5px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin {
+                    animation: spin 1s linear infinite;
                 }
             `}</style>
         </div>

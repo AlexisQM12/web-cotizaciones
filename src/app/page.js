@@ -6,7 +6,7 @@ import { getSocket } from '@/lib/socket'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'contabilidad', 'suppliers', 'clients'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'suppliers', 'clients'];
 
 export default function Home() {
     const router = useRouter()
@@ -160,6 +160,20 @@ export default function Home() {
                 </div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mis Proveedores</h2>
                 <p style={{ color: '#667085', fontSize: '0.95rem' }}>Directorio de proveedores, rubros y contactos clave.</p>
+            </>
+        ),
+        team: (
+            <>
+                <div style={{ background: '#f0f9ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mi Equipo</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Directorio de personal, encargados y roles de la empresa.</p>
             </>
         ),
         clients: (
