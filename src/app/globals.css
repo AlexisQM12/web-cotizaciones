@@ -668,13 +668,13 @@ textarea:focus,
     border-bottom: 1px solid #e2e8f0;
     flex: none !important;
     overflow-y: visible !important;
-    max-height: 400px;
+    max-height: none !important;
   }
   .pendings-modal-right {
     width: 100% !important;
     flex: none !important;
     overflow-y: visible !important;
-    min-height: 500px;
+    min-height: 400px;
   }
 }
 
