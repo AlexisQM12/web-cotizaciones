@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { PendingsModal } from '@/components/PendingsModal'
 import { GlobalTimelineModal } from '@/components/GlobalTimelineModal'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function PendingsDashboard() {
     const [allQuotations, setAllQuotations] = useState([])
@@ -16,6 +17,7 @@ export default function PendingsDashboard() {
     const [showGlobalTimeline, setShowGlobalTimeline] = useState(false)
     const [activeTab, setActiveTab] = useState('en_proceso')
     const router = useRouter()
+    const { user } = useAuth()
 
     useEffect(() => {
         fetch('/api/quotations')
@@ -302,10 +304,12 @@ export default function PendingsDashboard() {
                                         </div>
 
                                         <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                                                <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Total Cotizado</span>
-                                                <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>S/ {Number(q.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                            </div>
+                                            {user?.role === 'admin' && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Total Cotizado</span>
+                                                    <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#101828' }}>S/ {Number(q.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                                 <span style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Total Gastado</span>
                                                 <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#ea580c' }}>S/ {totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -361,7 +365,9 @@ export default function PendingsDashboard() {
                                     <div style={{ flex: 1, paddingRight: '1rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1e293b' }}>{q.code}</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#16a34a' }}>S/ {Number(q.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            {user?.role === 'admin' && (
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#16a34a' }}>S/ {Number(q.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            )}
                                         </div>
                                         <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '0.2rem', fontWeight: '600' }}>{q.clientName || 'Sin cliente'}</div>
                                         <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
