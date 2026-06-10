@@ -29,6 +29,18 @@ export async function POST(req) {
 
         console.log('[Auth API] Intento de inicio de sesión:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
 
+        // Admin validation (global admins)
+        if (email) {
+            const adminDoc = await firestore.collection('admins').doc(email.trim().toLowerCase()).get();
+            if (adminDoc.exists) {
+                assignedRole = 'admin';
+                if (!assignedTenantId) {
+                    assignedTenantId = '6'; // Asignar tenant por defecto para que puedan acceder a la plataforma
+                }
+                console.log('[Auth API] Encontrado en admins globales:', { assignedTenantId, assignedRole });
+            }
+        }
+
         // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
         if (!assignedTenantId && email) {
             const normalizedEmail = email.trim().toLowerCase();
