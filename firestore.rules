@@ -12,6 +12,29 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.empresaId;
     }
 
+    // Helper: Is SuperAdmin
+    function isSuperAdmin() {
+      return isAuth() &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    }
+
+    // admins
+    match /admins/{email} {
+      allow read: if isAuth() && request.auth.token.email.lower() == email;
+      allow read, write: if isSuperAdmin();
+    }
+
+    // tenant_users (Whitelist for Tenant Admins)
+    match /tenant_users/{email} {
+      allow read: if isSuperAdmin() || (isAuth() && request.auth.token.email.lower() == email);
+      allow write: if isSuperAdmin();
+    }
+    
+    // allowedTechnicians
+    match /allowedTechnicians/{email} {
+      allow read: if true;
+    }
+
     // Helper: verify if the request matches the user's empresaId
     function isUserInEmpresa(empresaId) {
       return isAuth() && getUserEmpresaId() == empresaId;
@@ -67,16 +90,16 @@ service cloud.firestore {
     // Es path-based (depende de tenantId del path, no de resource.data), por lo que
     // habilita también las consultas de lista (onSnapshot) que usa el dashboard.
     match /tenants/{tenantId} {
-      allow read, write: if isUserInEmpresa(tenantId);
+      allow read, write: if isUserInEmpresa(tenantId) || isSuperAdmin();
       match /{document=**} {
-        allow read, write: if isUserInEmpresa(tenantId);
+        allow read, write: if isUserInEmpresa(tenantId) || isSuperAdmin();
       }
     }
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuth();
-      allow write: if isAuth() && request.auth.uid == userId;
+      allow read: if isAuth() || isSuperAdmin();
+      allow write: if (isAuth() && request.auth.uid == userId) || isSuperAdmin();
     }
   }
 }
