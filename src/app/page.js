@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'suppliers', 'clients'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'suppliers', 'clients', 'inventory'];
 
 export default function Home() {
     const router = useRouter()
@@ -187,6 +187,19 @@ export default function Home() {
                 </div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mis Clientes (CRM)</h2>
                 <p style={{ color: '#667085', fontSize: '0.95rem' }}>Directorio de clientes, contactos y empresas.</p>
+            </>
+        ),
+        inventory: (
+            <>
+                <div style={{ background: '#fef2f2', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mi Inventario</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Control de stock, ingresos, salidas y materiales.</p>
             </>
         )
     };
