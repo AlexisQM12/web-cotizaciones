@@ -286,7 +286,7 @@ export default function Dashboard() {
     const displayList = activeTab === 'published' ? stageFiltered : draftQuotations;
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedModule="quotations">
             <NavBar />
             <main className="container">
                 <div className="dashboard-header">

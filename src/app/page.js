@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import { getSocket } from '@/lib/socket'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
+import { useAuth } from '@/contexts/AuthContext'
 
 const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'suppliers', 'clients'];
 
 export default function Home() {
     const router = useRouter()
+    const { user } = useAuth()
     const [pendingLeads, setPendingLeads] = useState(0)
     const [cardOrder, setCardOrder] = useState(DEFAULT_ORDER)
     const [draggedItemIndex, setDraggedItemIndex] = useState(null)
@@ -205,7 +207,12 @@ export default function Home() {
                         💡 Mantén presionado y arrastra para reordenar las tarjetas
                     </p>
                     <div className="grid-list" style={{ gap: '2rem' }}>
-                        {cardOrder.map((cardId, index) => {
+                        {cardOrder.filter(cardId => {
+                            if (!user) return false;
+                            if (user.role === 'admin') return true;
+                            const allowedModules = user.modules || [];
+                            return allowedModules.includes(cardId);
+                        }).map((cardId, index) => {
                             if (!cardsMap[cardId]) return null;
                             const isDragging = draggedItemIndex === index;
                             const isDragOver = dragOverItemIndex === index;

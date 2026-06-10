@@ -118,7 +118,7 @@ export default function SuppliersDashboard() {
     const filteredSuppliers = suppliers.filter(s => (s.supplierType || 'productos') === activeTab)
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedModule="suppliers">
             <NavBar />
             <main className="container">
                 <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>

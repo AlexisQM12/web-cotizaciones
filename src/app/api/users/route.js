@@ -26,6 +26,7 @@ export async function POST(req) {
         let dbUser = userDoc.exists ? userDoc.data() : null;
         let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
         let assignedRole = dbUser?.role || null;
+        let assignedModules = dbUser?.modules || null;
 
         console.log('[Auth API] Intento de inicio de sesión:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
 
@@ -42,14 +43,15 @@ export async function POST(req) {
         }
 
         // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
-        if (!assignedTenantId && email) {
+        if (email) {
             const normalizedEmail = email.trim().toLowerCase();
             const tenantUserDoc = await firestore.collection('tenant_users').doc(normalizedEmail).get();
             if (tenantUserDoc.exists) {
                 const tenantUserData = tenantUserDoc.data();
-                assignedTenantId = tenantUserData.tenantId;
+                if (!assignedTenantId) assignedTenantId = tenantUserData.tenantId;
                 assignedRole = tenantUserData.role || 'admin';
-                console.log('[Auth API] Encontrado en tenant_users (whitelist):', { assignedTenantId, assignedRole });
+                assignedModules = tenantUserData.role === 'employee' ? (tenantUserData.modules || []) : null;
+                console.log('[Auth API] Encontrado en tenant_users (whitelist):', { assignedTenantId, assignedRole, assignedModules });
             }
         }
 
@@ -79,7 +81,8 @@ export async function POST(req) {
                 photoURL: userData.photoURL,
                 firstName: userData.firstName,
                 ...(assignedTenantId && !dbUser.empresaId ? { empresaId: assignedTenantId, tenantId: assignedTenantId } : {}),
-                ...(assignedRole && !dbUser.role ? { role: assignedRole } : {})
+                ...(assignedRole ? { role: assignedRole } : {}),
+                ...(assignedModules !== null ? { modules: assignedModules } : {})
             });
             const updatedUser = (await userRef.get()).data();
             
@@ -92,11 +95,13 @@ export async function POST(req) {
         } else {
             // User doesn't exist. If we found a tenant via whitelist or domain, let them in!
             if (assignedTenantId) {
+                const defaultRole = assignedRole || 'employee';
                 const newUser = {
                     ...userData,
                     empresaId: assignedTenantId,
                     tenantId: assignedTenantId,
-                    role: assignedRole || 'employee',
+                    role: defaultRole,
+                    modules: assignedModules !== null ? assignedModules : (defaultRole === 'employee' ? [] : null),
                     createdAt: new Date().toISOString()
                 };
                 await userRef.set(newUser);

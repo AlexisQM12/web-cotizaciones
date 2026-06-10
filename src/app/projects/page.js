@@ -42,7 +42,7 @@ export default function Projects() {
     }, [router, user?.empresaId]);
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedModule="projects">
             <NavBar />
             <main className="container">
                 <div className="dashboard-header">

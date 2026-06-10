@@ -118,7 +118,7 @@ export default function TeamDashboard() {
     }
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedModule="team">
             <NavBar />
             <main className="container">
                 <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
