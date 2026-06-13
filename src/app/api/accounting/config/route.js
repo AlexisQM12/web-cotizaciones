@@ -16,7 +16,7 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const doc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'accounting_config').doc(empresaId).get();
+        const doc = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'accounting_config').doc(empresaId).get();
         if (!doc.exists) {
             return Response.json({ exists: false, companyProfileId: empresaId });
         }
@@ -70,7 +70,7 @@ export async function PUT(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'accounting_config').doc(resolvedId);
+        const ref = getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'accounting_config').doc(resolvedId);
         const existing = await ref.get();
         if (!existing.exists) data.createdAt = data.updatedAt;
 

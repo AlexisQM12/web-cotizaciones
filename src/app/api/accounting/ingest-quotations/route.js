@@ -14,15 +14,15 @@ export async function POST(req) {
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         // 1) Cotizaciones completadas
-        const quotsSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations')
+        const quotsSnap = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'quotations')
             .where('quotationStatus', '==', 'completado').get();
 
         // 2) Cargar clientes para resolver RUC
-        const clientsSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'client_profiles').get();
+        const clientsSnap = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'client_profiles').get();
         const clients = Object.fromEntries(clientsSnap.docs.map(d => [d.id, d.data()]));
 
         // 3) Ventas ya ingresadas (para no duplicar)
-        const existingSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'sales_ledger')
+        const existingSnap = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const existingBySource = new Map();
         existingSnap.docs.forEach(d => {
@@ -91,10 +91,10 @@ export async function POST(req) {
 
             if (exists && overwrite) {
                 const existingId = existingBySource.get(doc.id);
-                batch.update(getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'sales_ledger').doc(existingId), data);
+                batch.update(getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'sales_ledger').doc(existingId), data);
                 ingested.push({ id: existingId, source: doc.id, code: q.code, action: 'updated' });
             } else {
-                const ref = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'sales_ledger').doc();
+                const ref = getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'sales_ledger').doc();
                 batch.set(ref, data);
                 ingested.push({ id: ref.id, source: doc.id, code: q.code, action: 'created' });
             }
@@ -103,7 +103,7 @@ export async function POST(req) {
         await batch.commit();
 
         // Desglose por periodo de TODAS las ventas asociadas (nuevas + ya existentes)
-        const allRelevant = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'sales_ledger')
+        const allRelevant = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const byPeriod = {};
         let latestPeriod = null;

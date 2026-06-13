@@ -80,7 +80,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString(),
         };
 
-        const ref = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'purchases_ledger').add(data);
+        const ref = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').add(data);
 
         // Mantenemos directorio de proveedores
         if (numeroDocProveedor) {
@@ -109,7 +109,7 @@ export async function PUT(req) {
             update.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         }
         update.updatedAt = new Date().toISOString();
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'purchases_ledger').doc(id).update(update);
+        await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').doc(id).update(update);
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] PUT error:', err);
@@ -122,7 +122,7 @@ export async function DELETE(req) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
         if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'purchases_ledger').doc(id).delete();
+        await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').doc(id).delete();
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] DELETE error:', err);
