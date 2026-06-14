@@ -60,6 +60,7 @@ export async function GET(req) {
                 quotationPdfUrl: data.pdfUrl || null,
                 ocPdfUrl: data.ocPdfUrl || null,
                 invoicePdfUrl: data.invoicePdfUrl || null,
+                projectDocuments: data.projectDocuments || [],
                 // Extraer el porcentaje de progreso (OperationsData)
                 progress: calculateProgress(data.operationsData),
                 operationsData: data.operationsData || null
