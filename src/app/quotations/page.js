@@ -103,6 +103,21 @@ export default function Dashboard() {
             // Dynamically import pdf() to avoid SSR
             const { pdf } = await import('@react-pdf/renderer');
             const blob = await pdf(<QuotationDocument data={dataForPdf} />).toBlob();
+            
+            // Upload to Firebase Storage
+            const storagePath = `quotations/${user?.empresaId || '6'}/${q.id}.pdf`;
+            const fileRef = ref(storage, storagePath);
+            await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
+            const downloadUrl = await getDownloadURL(fileRef);
+
+            // Update in Firestore
+            await fetch(`/api/quotations/${q.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pdfUrl: downloadUrl })
+            });
+
+            // Trigger browser download
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

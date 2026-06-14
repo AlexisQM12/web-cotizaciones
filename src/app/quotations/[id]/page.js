@@ -355,9 +355,38 @@ export default function QuotationEditor() {
     const saveQuotation = async () => {
         setSaving(true);
         try {
+            let finalData = { ...data };
+
+            try {
+                // Generate and upload PDF automatically
+                const pdfTotal = data.items ? data.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
+                const pdfCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) || data.companyProfiles?.find(p => p.isDefault) || {};
+                const pdfClient = data.clientProfiles?.find(p => String(p.id) === String(data.clientProfileId)) || data.clientProfiles?.find(p => p.isDefault) || {};
+                const localDataForPdf = {
+                    ...data,
+                    total: pdfTotal,
+                    company: pdfCompany,
+                    clientName: pdfClient.name || data.clientName || '',
+                    clientRuc: pdfClient.ruc || data.clientRuc || '',
+                    clientAddress: pdfClient.address || data.clientAddress || '',
+                    notes: (data.notes !== undefined && data.notes !== null && data.notes !== '')
+                        ? data.notes : (pdfCompany?.conditions || data.generalConditions?.text || '')
+                };
+
+                const { pdf } = await import('@react-pdf/renderer');
+                const blob = await pdf(<QuotationDocument data={localDataForPdf} />).toBlob();
+                const storagePath = `quotations/${user?.empresaId || '6'}/${id}.pdf`;
+                const fileRef = ref(storage, storagePath);
+                await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalData.pdfUrl = downloadUrl;
+            } catch (pdfErr) {
+                console.error("Error al generar/subir PDF automático:", pdfErr);
+            }
+
             // First update the quotation data
             if (updateQuotation) {
-                await updateQuotation(data);
+                await updateQuotation(finalData);
             }
 
             // If not published, publish it and assign code
