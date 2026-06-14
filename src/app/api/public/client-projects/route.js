@@ -60,8 +60,8 @@ export async function GET(req) {
 
             // Intentar obtener el logo más reciente desde el CRM
             let crmLogoUrl = null;
-            if (data.clientProfileId && companiesMap[data.clientProfileId]) {
-                crmLogoUrl = companiesMap[data.clientProfileId].logoUrl;
+            if (data.crmCompanyId && companiesMap[data.crmCompanyId]) {
+                crmLogoUrl = companiesMap[data.crmCompanyId].logoUrl;
             } else {
                 // Fallback: buscar la empresa que tenga a este contacto
                 const comp = companiesList.find(c => c.contacts && c.contacts.some(contact => (contact.email || '').toLowerCase() === email.toLowerCase()));
