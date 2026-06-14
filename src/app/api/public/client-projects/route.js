@@ -56,6 +56,7 @@ export async function GET(req) {
                 code: data.code || doc.id.slice(0, 6).toUpperCase(),
                 createdAt: data.createdAt,
                 updatedAt: data.updatedAt,
+                clientLogo: data.clientData?.logoUrl || data.client?.logoUrl || data.clientData?.logo || null,
                 // URLs para descargar documentos si existen
                 quotationPdfUrl: data.pdfUrl || null,
                 ocPdfUrl: data.ocPdfUrl || null,
