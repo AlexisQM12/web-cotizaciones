@@ -83,6 +83,9 @@ export async function GET(req) {
                 ocPdfUrl: data.ocPdfUrl || null,
                 invoicePdfUrl: data.invoicePdfUrl || null,
                 projectDocuments: data.projectDocuments || [],
+                // Extraer fechas de operaciones
+                projectStartDate: data.operationsData?.projectStartDate || null,
+                projectEndDate: data.operationsData?.projectEndDate || null,
                 // Extraer el porcentaje de progreso (OperationsData)
                 progress: calculateProgress(data.operationsData),
                 operationsData: data.operationsData || null
