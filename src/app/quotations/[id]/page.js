@@ -46,7 +46,7 @@ export default function QuotationEditor() {
     const { user } = useAuth();
 
     // Use Firestore realtime hook
-    const { quotation, companyProfiles, clientProfiles, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
+    const { quotation, companyProfiles, clientProfiles, crmClients, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
 
     const [data, setData] = useState({
         clientName: '',
@@ -57,7 +57,8 @@ export default function QuotationEditor() {
         globalProfitPercentage: '',
         globalOtherCosts: '',
         companyProfiles: [],
-        clientProfiles: []
+        clientProfiles: [],
+        crmClients: []
     });
     const [saving, setSaving] = useState(false);
     const [activeUsers, setActiveUsers] = useState([]);
@@ -107,7 +108,7 @@ export default function QuotationEditor() {
 
     // Update local data when Firestore quotation changes
     useEffect(() => {
-        if (quotation && companyProfiles && clientProfiles) {
+        if (quotation && companyProfiles && clientProfiles && crmClients) {
             isRemoteUpdate.current = true;
 
             // Auto-select default company profile if none is selected
@@ -126,8 +127,11 @@ export default function QuotationEditor() {
                     ...quotation,
                     companyProfiles,
                     clientProfiles,
+                    crmClients,
                     companyProfileId: selectedCompanyProfileId,
                     clientProfileId: selectedClientProfileId,
+                    crmCompanyId: quotation.crmCompanyId || prevData.crmCompanyId || '',
+                    crmContactId: quotation.crmContactId || prevData.crmContactId || '',
                     clientName: quotation.clientName || prevData.clientName || '',
                     clientRuc: quotation.clientRuc || prevData.clientRuc || '',
                     clientAddress: quotation.clientAddress || prevData.clientAddress || '',
@@ -148,7 +152,7 @@ export default function QuotationEditor() {
                 setPdfData(newData({ clientName: '', clientRuc: '', clientAddress: '' }));
             }
         }
-    }, [quotation, companyProfiles, clientProfiles]);
+    }, [quotation, companyProfiles, clientProfiles, crmClients]);
 
 
     const handleFocus = (field) => {
@@ -229,6 +233,43 @@ export default function QuotationEditor() {
             clientAddress: newData.clientAddress
         });
 
+        setData(newData);
+    };
+
+    const handleCrmCompanyChange = async (companyId) => {
+        const selectedCompany = data.crmClients?.find(c => String(c.id) === String(companyId));
+        
+        const newData = {
+            ...data,
+            crmCompanyId: companyId,
+            crmContactId: '', // Reset contact when company changes
+            clientName: selectedCompany ? selectedCompany.companyName || '' : '',
+            clientRuc: selectedCompany ? selectedCompany.ruc || '' : '',
+            clientAddress: selectedCompany ? selectedCompany.address || '' : '',
+            clientData: {
+                ...(data.clientData || {}),
+                email: '',
+                name: ''
+            }
+        };
+        setData(newData);
+    };
+
+    const handleCrmContactChange = async (contactId) => {
+        const selectedCompany = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId));
+        const selectedContact = selectedCompany?.contacts?.find(c => String(c.id) === String(contactId));
+        
+        const newData = {
+            ...data,
+            crmContactId: contactId,
+            clientData: {
+                ...(data.clientData || {}),
+                email: selectedContact ? selectedContact.email || '' : '',
+                name: selectedContact ? selectedContact.name || '' : '',
+                whatsapp: selectedContact ? selectedContact.whatsapp || '' : '',
+                contactId: contactId
+            }
+        };
         setData(newData);
     };
 
@@ -460,6 +501,50 @@ export default function QuotationEditor() {
                                     <option value="">Seleccionar Cliente...</option>
                                     {data.clientProfiles && data.clientProfiles.map(p => (
                                         <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminado)' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card-editor" style={{ marginBottom: '1rem', borderLeft: '3px solid #0ea5e9' }}>
+                        <div className="grid-2-col">
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
+                                    Empresa Cliente (CRM) 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Para portal de seguimiento</span>
+                                </label>
+                                {renderRemoteCursorLabel('crmCompanyId')}
+                                <select
+                                    value={data.crmCompanyId || ''}
+                                    onChange={(e) => handleCrmCompanyChange(e.target.value)}
+                                    onFocus={() => handleFocus('crmCompanyId')}
+                                    onBlur={() => handleBlur('crmCompanyId')}
+                                    style={getInputStyle('crmCompanyId')}
+                                >
+                                    <option value="">(No vinculado a CRM)</option>
+                                    {data.crmClients && data.crmClients.map(c => (
+                                        <option key={c.id} value={c.id}>{c.companyName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
+                                    Persona de Contacto 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirá acceso</span>
+                                </label>
+                                {renderRemoteCursorLabel('crmContactId')}
+                                <select
+                                    value={data.crmContactId || ''}
+                                    onChange={(e) => handleCrmContactChange(e.target.value)}
+                                    onFocus={() => handleFocus('crmContactId')}
+                                    onBlur={() => handleBlur('crmContactId')}
+                                    style={getInputStyle('crmContactId')}
+                                    disabled={!data.crmCompanyId}
+                                >
+                                    <option value="">Seleccionar Contacto...</option>
+                                    {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.map(contact => (
+                                        <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
                                     ))}
                                 </select>
                             </div>

@@ -8,6 +8,7 @@ export function useRealtimeQuotation(quotationId) {
     const [quotation, setQuotation] = useState(null);
     const [companyProfiles, setCompanyProfiles] = useState([]);
     const [clientProfiles, setClientProfiles] = useState([]);
+    const [crmClients, setCrmClients] = useState([]);
     const [activeUsers, setActiveUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -79,6 +80,28 @@ export function useRealtimeQuotation(quotationId) {
             }
         );
 
+        // Listen to CRM portfolio companies
+        const crmCompaniesQuery = query(
+            getTenantCollectionClient(empresaId, 'portfolio_companies'),
+            where('empresaId', '==', empresaId)
+        );
+        const unsubscribeCrmCompanies = onSnapshot(
+            crmCompaniesQuery,
+            (snapshot) => {
+                const companies = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                // We'll attach this to a new state, or we can just return it
+                // To avoid breaking existing UI, we'll return it as crmClients
+                setCrmClients(companies);
+            },
+            (error) => {
+                console.error('Error loading CRM companies:', error);
+                setCrmClients([]);
+            }
+        );
+
         // Listen to active users
         const activeUsersRef = collection(getTenantCollectionClient(user?.empresaId || '6', 'quotations'), quotationId, 'activeUsers');
         const unsubscribeUsers = onSnapshot(activeUsersRef, (snapshot) => {
@@ -130,6 +153,7 @@ export function useRealtimeQuotation(quotationId) {
             unsubscribeQuotation();
             unsubscribeCompanyProfiles();
             unsubscribeClientProfiles();
+            unsubscribeCrmCompanies();
             unsubscribeUsers();
             if (heartbeatInterval) {
                 clearInterval(heartbeatInterval);
@@ -164,6 +188,7 @@ export function useRealtimeQuotation(quotationId) {
         quotation,
         companyProfiles,
         clientProfiles,
+        crmClients,
         activeUsers,
         loading,
         error,
