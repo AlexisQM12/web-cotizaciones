@@ -50,12 +50,16 @@ export async function GET(req) {
             // Sanitización: Solo enviamos datos NO confidenciales
             clientProjects.push({
                 id: doc.id,
-                title: data.projectName || data.clientData?.name || 'Proyecto',
+                title: data.projectName || data.serviceDescription || 'Proyecto',
                 status: data.quotationStatus,
-                description: data.details || '',
+                description: data.serviceDescription || '',
                 code: data.code || doc.id.slice(0, 6).toUpperCase(),
                 createdAt: data.createdAt,
                 updatedAt: data.updatedAt,
+                // URLs para descargar documentos si existen
+                quotationPdfUrl: data.pdfUrl || null,
+                ocPdfUrl: data.ocPdfUrl || null,
+                invoicePdfUrl: data.invoicePdfUrl || null,
                 // Extraer el porcentaje de progreso (OperationsData)
                 progress: calculateProgress(data.operationsData),
                 operationsData: data.operationsData || null
