@@ -28,6 +28,17 @@ export async function GET(req) {
         }
 
         // 4. Buscar en Firestore (CGO-Pymes usa el tenant 'ayatech' por defecto)
+        // Obtenemos las empresas para cruzar el logo actual
+        const companiesRef = firestore.collection('tenants').doc('ayatech').collection('portfolio_companies');
+        const companiesSnap = await companiesRef.get();
+        const companiesMap = {};
+        const companiesList = [];
+        companiesSnap.docs.forEach(doc => {
+            const cData = doc.data();
+            companiesMap[doc.id] = cData;
+            companiesList.push(cData);
+        });
+
         // Buscamos todas las cotizaciones de la empresa 'ayatech'
         const quotationsRef = firestore.collection('tenants').doc('ayatech').collection('cgo_quotations');
         const snapshot = await quotationsRef.get(); // Obtenemos todas y filtramos en memoria, o usamos queries si están indexadas
@@ -47,6 +58,16 @@ export async function GET(req) {
             const clientEmail = (data.clientData?.email || data.client?.email || '').toLowerCase();
             if (clientEmail !== email.toLowerCase()) return;
 
+            // Intentar obtener el logo más reciente desde el CRM
+            let crmLogoUrl = null;
+            if (data.clientProfileId && companiesMap[data.clientProfileId]) {
+                crmLogoUrl = companiesMap[data.clientProfileId].logoUrl;
+            } else {
+                // Fallback: buscar la empresa que tenga a este contacto
+                const comp = companiesList.find(c => c.contacts && c.contacts.some(contact => (contact.email || '').toLowerCase() === email.toLowerCase()));
+                if (comp) crmLogoUrl = comp.logoUrl;
+            }
+
             // Sanitización: Solo enviamos datos NO confidenciales
             clientProjects.push({
                 id: doc.id,
@@ -56,7 +77,7 @@ export async function GET(req) {
                 code: data.code || doc.id.slice(0, 6).toUpperCase(),
                 createdAt: data.createdAt,
                 updatedAt: data.updatedAt,
-                clientLogo: data.clientData?.logoUrl || data.client?.logoUrl || data.clientData?.logo || null,
+                clientLogo: crmLogoUrl || data.clientData?.logoUrl || data.client?.logoUrl || data.clientData?.logo || null,
                 // URLs para descargar documentos si existen
                 quotationPdfUrl: data.pdfUrl || null,
                 ocPdfUrl: data.ocPdfUrl || null,
