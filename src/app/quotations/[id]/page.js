@@ -255,19 +255,34 @@ export default function QuotationEditor() {
         setData(newData);
     };
 
-    const handleCrmContactChange = async (contactId) => {
+    const handleToggleCrmContact = async (contactId) => {
         const selectedCompany = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId));
-        const selectedContact = selectedCompany?.contacts?.find(c => String(c.id) === String(contactId));
-        
+        if (!selectedCompany) return;
+
+        const currentIds = data.crmContactIds || (data.crmContactId ? [data.crmContactId] : []);
+        const newIds = currentIds.includes(String(contactId)) 
+            ? currentIds.filter(id => id !== String(contactId)) 
+            : [...currentIds, String(contactId)];
+
+        const selectedContacts = selectedCompany.contacts?.filter(c => newIds.includes(String(c.id))) || [];
+        const emails = selectedContacts.map(c => c.email).filter(Boolean);
+        const names = selectedContacts.map(c => c.name).filter(Boolean);
+        const whatsapps = selectedContacts.map(c => c.whatsapp).filter(Boolean);
+
         const newData = {
             ...data,
-            crmContactId: contactId,
+            crmContactId: newIds.length > 0 ? newIds[0] : '', // Compatibilidad hacia atrás
+            crmContactIds: newIds,
             clientData: {
                 ...(data.clientData || {}),
-                email: selectedContact ? selectedContact.email || '' : '',
-                name: selectedContact ? selectedContact.name || '' : '',
-                whatsapp: selectedContact ? selectedContact.whatsapp || '' : '',
-                contactId: contactId
+                email: emails.length > 0 ? emails[0] : '',
+                emails: emails,
+                name: names.length > 0 ? names[0] : '',
+                names: names,
+                whatsapp: whatsapps.length > 0 ? whatsapps[0] : '',
+                whatsapps: whatsapps,
+                contactId: newIds.length > 0 ? newIds[0] : '',
+                contactIds: newIds
             }
         };
         setData(newData);
@@ -559,23 +574,35 @@ export default function QuotationEditor() {
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
-                                    Persona de Contacto 
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirá acceso</span>
+                                    Personas de Contacto 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirán acceso</span>
                                 </label>
                                 {renderRemoteCursorLabel('crmContactId')}
-                                <select
-                                    value={data.crmContactId || ''}
-                                    onChange={(e) => handleCrmContactChange(e.target.value)}
-                                    onFocus={() => handleFocus('crmContactId')}
-                                    onBlur={() => handleBlur('crmContactId')}
-                                    style={getInputStyle('crmContactId')}
-                                    disabled={!data.crmCompanyId}
-                                >
-                                    <option value="">Seleccionar Contacto...</option>
-                                    {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.map(contact => (
-                                        <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
-                                    ))}
-                                </select>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', border: '1px solid #cbd5e1', padding: '0.3rem 0.4rem', borderRadius: '4px', minHeight: '38px', alignItems: 'center', background: '#f8fafc', opacity: !data.crmCompanyId ? 0.6 : 1 }}>
+                                    {(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).map(id => {
+                                        const contact = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.find(c => String(c.id) === String(id));
+                                        if (!contact) return null;
+                                        return (
+                                            <span key={id} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #cbd5e1', color: '#334155' }}>
+                                                {contact.name}
+                                                <button onClick={() => handleToggleCrmContact(id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8rem', padding: 0, display: 'flex', alignItems: 'center' }}>✕</button>
+                                            </span>
+                                        );
+                                    })}
+                                    <select
+                                        value=""
+                                        onChange={(e) => { if(e.target.value) handleToggleCrmContact(e.target.value); }}
+                                        style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, minWidth: '150px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer', padding: 0 }}
+                                        disabled={!data.crmCompanyId}
+                                        onFocus={() => handleFocus('crmContactId')}
+                                        onBlur={() => handleBlur('crmContactId')}
+                                    >
+                                        <option value="" disabled>+ Añadir contacto...</option>
+                                        {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.filter(c => !(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).includes(String(c.id))).map(contact => (
+                                            <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>

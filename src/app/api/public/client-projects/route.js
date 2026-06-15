@@ -55,8 +55,11 @@ export async function GET(req) {
             if (!allowedStatuses.includes(data.quotationStatus)) return;
             
             // Verificamos email
-            const clientEmail = (data.clientData?.email || data.client?.email || '').toLowerCase();
-            if (clientEmail !== email.toLowerCase()) return;
+            const legacyEmail = (data.clientData?.email || data.client?.email || '').toLowerCase();
+            const emailsArray = Array.isArray(data.clientData?.emails) ? data.clientData.emails.map(e => (e || '').toLowerCase()) : [];
+            const allEmails = new Set([legacyEmail, ...emailsArray].filter(Boolean));
+            
+            if (!allEmails.has(email.toLowerCase())) return;
 
             // Intentar obtener el logo más reciente desde el CRM
             let crmLogoUrl = null;

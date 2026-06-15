@@ -42,6 +42,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
 
     const [projectStartDate, setProjectStartDate] = useState(quotation.operationsData?.projectStartDate || '');
     const [projectEndDate, setProjectEndDate] = useState(quotation.operationsData?.projectEndDate || '');
+    const [projectAssignees, setProjectAssignees] = useState(quotation.operationsData?.projectAssignees || []);
 
     const [saveStatus, setSaveStatus] = useState(null);
 
@@ -247,17 +248,22 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         setMaterials(materials.map(m => m.id === id ? { ...m, [field]: value } : m));
     };
 
-    const handleToggleTaskAssignee = (taskId, memberId) => {
-        setTasks(tasks.map(t => {
+    const handleToggleTaskAssignee = (taskId, assigneeId) => {
+        setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
                 const current = t.assigneeIds || [];
-                const newAssigneeIds = current.includes(memberId) 
-                    ? current.filter(id => id !== memberId) 
-                    : [...current, memberId];
-                return { ...t, assigneeIds: newAssigneeIds };
+                const next = current.includes(assigneeId) ? current.filter(id => id !== assigneeId) : [...current, assigneeId];
+                return { ...t, assigneeIds: next };
             }
             return t;
         }));
+    };
+
+    const handleToggleProjectAssignee = (assigneeId) => {
+        setProjectAssignees(prev => {
+            if (prev.includes(assigneeId)) return prev.filter(id => id !== assigneeId);
+            return [...prev, assigneeId];
+        });
     };
 
     const handleToggleMaterialAssignee = (materialId, memberId) => {
@@ -320,8 +326,8 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const handleSave = async () => {
         setSaveStatus('saving');
         try {
-            await onSave({ tasks, materials, projectStartDate, projectEndDate });
-            setSaveStatus('saved');
+            await onSave({ tasks, materials, projectStartDate, projectEndDate, projectAssignees });
+            setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 2500);
         } catch (error) {
             console.error('Error saving:', error);
@@ -617,6 +623,28 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             </div>
                             <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
                                 <div style={{ width: `${materialsPct}%`, height: '100%', background: materialsPct === 100 ? '#10b981' : '#f59e0b', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+
+                        <div className="dashboard-panel-assignees" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '1.5rem', minWidth: '180px' }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#475569', textTransform: 'uppercase' }}>Encargados del Proyecto</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                {projectAssignees.map(aId => {
+                                    const member = teamMembers.find(tm => tm.id === aId);
+                                    if (!member) return null;
+                                    const color = ASSIGNEE_COLORS[member.name.length % ASSIGNEE_COLORS.length];
+                                    return (
+                                        <div key={aId} title={member.name} style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', border: '2px solid #fff', boxShadow: '0 0 0 1px #cbd5e1' }} onClick={() => handleToggleProjectAssignee(aId)}>
+                                            {member.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    );
+                                })}
+                                <select value="" onChange={e => { if(e.target.value) handleToggleProjectAssignee(e.target.value); }} style={{ appearance: 'none', width: '28px', height: '28px', borderRadius: '50%', background: '#f1f5f9', border: '1px dashed #cbd5e1', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center', padding: 0 }}>
+                                    <option value="" disabled>+</option>
+                                    {teamMembers.filter(tm => !projectAssignees.includes(tm.id)).map(tm => (
+                                        <option key={tm.id} value={tm.id}>{tm.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
