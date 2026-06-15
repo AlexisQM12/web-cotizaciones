@@ -515,7 +515,7 @@ export default function QuotationEditor() {
                     </div>
 
                     <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-2-col">
+                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -532,27 +532,7 @@ export default function QuotationEditor() {
                                     ))}
                                 </select>
                             </div>
-                            <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Perfil de Cliente</label>
-                                {renderRemoteCursorLabel('clientProfileId')}
-                                <select
-                                    value={data.clientProfileId || ''}
-                                    onChange={(e) => handleClientProfileChange(e.target.value)}
-                                    onFocus={() => handleFocus('clientProfileId')}
-                                    onBlur={() => handleBlur('clientProfileId')}
-                                    style={getInputStyle('clientProfileId')}
-                                >
-                                    <option value="">Seleccionar Cliente...</option>
-                                    {data.clientProfiles && data.clientProfiles.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminado)' : ''}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card-editor" style={{ marginBottom: '1rem', borderLeft: '3px solid #0ea5e9' }}>
-                        <div className="grid-2-col">
+                            
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
                                     Empresa Cliente (CRM) 
@@ -572,6 +552,7 @@ export default function QuotationEditor() {
                                     ))}
                                 </select>
                             </div>
+
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
                                     Personas de Contacto 
