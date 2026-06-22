@@ -7,9 +7,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper: get user's empresaId
-    function getUserEmpresaId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.empresaId;
+    // Helper: get user's empresaId as string
+    function getUserEmpresaIdStr() {
+      let docData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let eid = docData.empresaId != null ? docData.empresaId : docData.tenantId;
+      return eid != null ? string(eid) : '';
     }
 
     // Helper: Is SuperAdmin
@@ -37,14 +39,14 @@ service cloud.firestore {
 
     // Helper: verify if the request matches the user's empresaId
     function isUserInEmpresa(empresaId) {
-      return isAuth() && getUserEmpresaId() == empresaId;
+      return isAuth() && getUserEmpresaIdStr() == string(empresaId);
     }
 
     // Quotations: authenticated users can only access quotations for their empresaId
     match /quotations/{quotationId} {
-      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
-      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
-      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow read: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
+      allow create: if isAuth() && string(request.resource.data.empresaId) == getUserEmpresaIdStr();
+      allow update, delete: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
 
       // ActiveUsers subcollection: authenticated users can read/write their own doc
       match /activeUsers/{userId} {
@@ -57,16 +59,16 @@ service cloud.firestore {
     // Company profiles
     match /company_profiles/{profileId} {
       // The profileId is essentially the empresaId for the main tenant architecture
-      allow read, update, delete: if isAuth() && getUserEmpresaId() == profileId;
+      allow read, update, delete: if isAuth() && getUserEmpresaIdStr() == string(profileId);
       // Anyone authenticated can create a company (happens during onboarding)
       allow create: if isAuth();
     }
 
     // Client profiles
     match /client_profiles/{profileId} {
-      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
-      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
-      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow read: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
+      allow create: if isAuth() && string(request.resource.data.empresaId) == getUserEmpresaIdStr();
+      allow update, delete: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
     }
 
     // Settings (general conditions, etc.)
@@ -76,7 +78,7 @@ service cloud.firestore {
     
     // Accounting config
     match /accounting_config/{configId} {
-      allow read, update, delete: if isAuth() && getUserEmpresaId() == configId;
+      allow read, update, delete: if isAuth() && getUserEmpresaIdStr() == string(configId);
       allow create: if isAuth();
     }
 
@@ -86,9 +88,6 @@ service cloud.firestore {
     }
 
     // ── Multi-tenant SaaS (modelo actual): datos bajo tenants/{empresaId}/cgo_* ──
-    // Permite a los miembros de una empresa leer/escribir los datos de SU tenant.
-    // Es path-based (depende de tenantId del path, no de resource.data), por lo que
-    // habilita también las consultas de lista (onSnapshot) que usa el dashboard.
     match /tenants/{tenantId} {
       allow read, write: if isUserInEmpresa(tenantId) || isSuperAdmin();
       match /{document=**} {

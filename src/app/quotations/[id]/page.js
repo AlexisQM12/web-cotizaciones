@@ -61,6 +61,8 @@ export default function QuotationEditor() {
         crmClients: []
     });
     const [saving, setSaving] = useState(false);
+    const [downloadingPreview, setDownloadingPreview] = useState(false)
+    const [assigningCode, setAssigningCode] = useState(false)
     const [activeUsers, setActiveUsers] = useState([]);
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
@@ -161,6 +163,30 @@ export default function QuotationEditor() {
 
     const handleBlur = (field) => {
         // Blur tracking removed - not needed with Firestore
+    };
+
+    const handleAssignLatestCode = async () => {
+        if (!confirm('¿Estás seguro de que quieres asignar la última numeración a esta cotización? Esto cambiará su código actual.')) return;
+        setAssigningCode(true);
+        try {
+            const res = await fetch(`/api/quotations/${id}/assign-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empresaId: user?.empresaId })
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                setData(prev => ({ ...prev, code: result.code }));
+                alert(`Nueva numeración asignada: ${result.code}`);
+            } else {
+                alert('Error al asignar nueva numeración: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error assigning code:', error);
+            alert('Error al procesar la solicitud.');
+        } finally {
+            setAssigningCode(false);
+        }
     };
 
     const getInputStyle = (field, baseStyle = {}) => {
@@ -503,7 +529,17 @@ export default function QuotationEditor() {
                 {/* Left: Editor Form */}
                 <div className="editor-left">
                     <div className="editor-header">
-                        <h1 style={{ color: '#1e293b', fontSize: '1.4rem' }}>Editor de Cotización</h1>
+                        <div>
+                            <h1 style={{ color: '#1e293b', fontSize: '1.4rem', marginBottom: '0.2rem' }}>Editor de Cotización</h1>
+                            {data.code && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'bold' }}>{data.code}</span>
+                                    <button onClick={handleAssignLatestCode} disabled={assigningCode} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '2px 8px', fontSize: '0.75rem', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }} title="Asignar numeración más reciente (ej. si duplicaste la cotización)">
+                                        {assigningCode ? 'Actualizando...' : '🔄 Actualizar Nro.'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                             <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/quotations')}>
                                 ← Menú Principal
