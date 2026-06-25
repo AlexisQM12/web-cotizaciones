@@ -35,6 +35,7 @@ export default function ClientsDashboard() {
 
     const [contactForm, setContactForm] = useState({
         name: '',
+        department: '',
         area: '',
         whatsapp: '',
         email: ''
@@ -150,13 +151,14 @@ export default function ClientsDashboard() {
             setEditingContact(contact)
             setContactForm({
                 name: contact.name || '',
+                department: contact.department || '',
                 area: contact.area || '',
                 whatsapp: contact.whatsapp || '',
                 email: contact.email || ''
             })
         } else {
             setEditingContact(null)
-            setContactForm({ name: '', area: '', whatsapp: '', email: '' })
+            setContactForm({ name: '', department: '', area: '', whatsapp: '', email: '' })
         }
         setShowContactModal(true)
     }
@@ -293,33 +295,51 @@ export default function ClientsDashboard() {
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                {company.contacts.map((c, index) => (
-                                                    <div key={c.id} style={{ paddingBottom: '1rem', borderBottom: index < company.contacts.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                                            <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#334155' }}>
-                                                                {c.name || 'Sin Nombre'}
-                                                            </div>
-                                                            {c.area && (
-                                                                <span style={{ padding: '0.1rem 0.5rem', background: '#eff6ff', color: '#3b82f6', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase' }}>
-                                                                    {c.area}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                                            {c.whatsapp && (
-                                                                <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                                    <strong>WhatsApp:</strong> <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#25D366', textDecoration: 'none' }}>{c.whatsapp}</a>
+                                                {Object.entries((company.contacts || []).reduce((acc, c) => {
+                                                    const dep = c.department ? c.department.trim() : 'Sin Departamento Asignado';
+                                                    if (!acc[dep]) acc[dep] = [];
+                                                    acc[dep].push(c);
+                                                    return acc;
+                                                }, {}))
+                                                .sort(([a], [b]) => a === 'Sin Departamento Asignado' ? 1 : b === 'Sin Departamento Asignado' ? -1 : a.localeCompare(b))
+                                                .map(([department, contacts]) => (
+                                                    <div key={department} style={{ marginBottom: '0.5rem' }}>
+                                                        <h4 style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.8rem', textTransform: 'uppercase', borderBottom: '2px solid #f1f5f9', paddingBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                                            {department}
+                                                            <span style={{ fontSize: '0.65rem', background: '#e2e8f0', color: '#475569', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>{contacts.length}</span>
+                                                        </h4>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingLeft: '0.5rem' }}>
+                                                            {contacts.map((c, index) => (
+                                                                <div key={c.id} style={{ paddingBottom: '1rem', borderBottom: index < contacts.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                                                        <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#334155' }}>
+                                                                            {c.name || 'Sin Nombre'}
+                                                                        </div>
+                                                                        {c.area && (
+                                                                            <span style={{ padding: '0.1rem 0.5rem', background: '#eff6ff', color: '#3b82f6', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                                                                                {c.area}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                                                        {c.whatsapp && (
+                                                                            <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                                <strong>WhatsApp:</strong> <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#25D366', textDecoration: 'none' }}>{c.whatsapp}</a>
+                                                                            </div>
+                                                                        )}
+                                                                        {c.email && (
+                                                                            <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                                <strong>Email:</strong> {c.email}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                                        <button onClick={() => handleOpenContactModal(company.id, c)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>Editar</button>
+                                                                        <button onClick={() => deleteContact(company.id, c.id)} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>Borrar</button>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                            {c.email && (
-                                                                <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                                    <strong>Email:</strong> {c.email}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                            <button onClick={() => handleOpenContactModal(company.id, c)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>Editar</button>
-                                                            <button onClick={() => deleteContact(company.id, c.id)} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>Borrar</button>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -419,6 +439,10 @@ export default function ClientsDashboard() {
                             <div className="form-group">
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Nombre del Contacto *</label>
                                 <input required type="text" value={contactForm.name} onChange={e => setContactForm({...contactForm, name: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: María López" />
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Departamento / Ubicación (Opcional)</label>
+                                <input type="text" value={contactForm.department} onChange={e => setContactForm({...contactForm, department: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: Lima, Ventas, Sucursal Norte..." />
                             </div>
                             <div className="form-group">
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Área o Cargo</label>
