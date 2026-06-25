@@ -28,8 +28,11 @@ export default function ClientsDashboard() {
         razonSocial: '',
         ruc: '',
         address: '',
-        logoUrl: ''
+        logoUrl: '',
+        departments: []
     })
+    
+    const [newDepartment, setNewDepartment] = useState('')
 
     const [uploadingLogo, setUploadingLogo] = useState(false)
 
@@ -70,11 +73,14 @@ export default function ClientsDashboard() {
                 razonSocial: company.razonSocial || '',
                 ruc: company.ruc || '',
                 address: company.address || '',
-                logoUrl: company.logoUrl || ''
+                logoUrl: company.logoUrl || '',
+                departments: company.departments || []
             })
+            setNewDepartment('')
         } else {
             setEditingCompany(null)
-            setCompanyForm({ companyName: '', razonSocial: '', ruc: '', address: '', logoUrl: '' })
+            setCompanyForm({ companyName: '', razonSocial: '', ruc: '', address: '', logoUrl: '', departments: [] })
+            setNewDepartment('')
         }
         setShowCompanyModal(true)
     }
@@ -413,6 +419,53 @@ export default function ClientsDashboard() {
                                 <input type="text" value={companyForm.address} onChange={e => setCompanyForm({...companyForm, address: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: Av. Principal 123" />
                             </div>
 
+                            <div className="form-group" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Departamentos / Áreas (Opcional)</label>
+                                <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>Crea los departamentos disponibles para poder agrupar a los contactos de esta empresa.</p>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                                    <input 
+                                        type="text" 
+                                        value={newDepartment} 
+                                        onChange={e => setNewDepartment(e.target.value)} 
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const val = newDepartment.trim();
+                                                if (val && !companyForm.departments.includes(val)) {
+                                                    setCompanyForm(prev => ({ ...prev, departments: [...prev.departments, val] }));
+                                                    setNewDepartment('');
+                                                }
+                                            }
+                                        }}
+                                        style={{ flex: 1, padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} 
+                                        placeholder="Ej: Ventas, Operaciones..." 
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            const val = newDepartment.trim();
+                                            if (val && !companyForm.departments.includes(val)) {
+                                                setCompanyForm(prev => ({ ...prev, departments: [...prev.departments, val] }));
+                                                setNewDepartment('');
+                                            }
+                                        }}
+                                        style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 1rem', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        Añadir
+                                    </button>
+                                </div>
+                                {companyForm.departments.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        {companyForm.departments.map((dep, i) => (
+                                            <span key={i} style={{ background: '#f1f5f9', color: '#334155', padding: '0.3rem 0.6rem', borderRadius: '16px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #e2e8f0' }}>
+                                                {dep}
+                                                <button type="button" onClick={() => setCompanyForm(prev => ({ ...prev, departments: prev.departments.filter(d => d !== dep) }))} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>&times;</button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
                                 <button type="button" onClick={() => setShowCompanyModal(false)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
                                     Cancelar
@@ -442,7 +495,16 @@ export default function ClientsDashboard() {
                             </div>
                             <div className="form-group">
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Departamento / Ubicación (Opcional)</label>
-                                <input type="text" value={contactForm.department} onChange={e => setContactForm({...contactForm, department: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: Lima, Ventas, Sucursal Norte..." />
+                                <select 
+                                    value={contactForm.department} 
+                                    onChange={e => setContactForm({...contactForm, department: e.target.value})} 
+                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', background: 'white' }}
+                                >
+                                    <option value="">-- Seleccionar Departamento --</option>
+                                    {(companies.find(c => c.id === activeCompanyIdForContact)?.departments || []).map(dep => (
+                                        <option key={dep} value={dep}>{dep}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="form-group">
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Área o Cargo</label>
