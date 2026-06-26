@@ -105,14 +105,15 @@ export async function POST(req) {
         }
 
         // ── Extracción Segura ──
-        const amount      = extractTotalAmount(extractedText);
+        const amountData  = extractTotalAmountAndCurrency(extractedText);
         const ruc         = extractRUC(extractedText);
         const serie       = extractSerieNumero(extractedText, name);
         const fecha       = extractFecha(extractedText);
         const razonSocial = extractRazonSocial(extractedText, ruc);
 
         return NextResponse.json({
-            amount,
+            amount: amountData.amount,
+            currency: amountData.currency,
             ruc,
             serie:  serie?.serie  || null,
             numero: serie?.numero || null,
@@ -132,14 +133,19 @@ export async function POST(req) {
 }
 
 // ─── Extracción del MONTO TOTAL ──────────────────────────────────────────
-function extractTotalAmount(text) {
-    if (!text) return null;
+function extractTotalAmountAndCurrency(text) {
+    if (!text) return { amount: null, currency: 'PEN' };
     const upper = text.toUpperCase().replace(/\s+/g, ' ');
 
+    let currency = 'PEN';
+    if (upper.includes('US$') || upper.includes('USD') || upper.includes('DOLARES') || upper.includes('DÓLARES')) {
+        currency = 'USD';
+    }
+
     const regexes = [
-        /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
     ];
 
     for (const regex of regexes) {
@@ -148,21 +154,29 @@ function extractTotalAmount(text) {
         const matches = [];
         while ((match = regex.exec(upper)) !== null) {
             const val = parseFloat(match[1].replace(/,/g, ''));
-            if (val > 0 && val < 1000000) matches.push(val);
+            if (val > 0 && val < 1000000) matches.push({ val, matchStr: match[0] });
         }
-        if (matches.length > 0) return matches[matches.length - 1];
+        if (matches.length > 0) {
+            const m = matches[matches.length - 1];
+            if (m.matchStr.includes('US$') || m.matchStr.includes('USD')) currency = 'USD';
+            return { amount: m.val, currency };
+        }
     }
 
-    const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
+    const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|US\$\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
     let m;
     const moneyValues = [];
     while ((m = moneyRegex.exec(upper)) !== null) {
         const val = parseFloat(m[1].replace(/,/g, ''));
-        if (val > 0 && val < 1000000) moneyValues.push(val);
+        if (val > 0 && val < 1000000) moneyValues.push({ val, matchStr: m[0] });
     }
-    if (moneyValues.length > 0) return moneyValues[moneyValues.length - 1];
+    if (moneyValues.length > 0) {
+        const mv = moneyValues[moneyValues.length - 1];
+        if (mv.matchStr.includes('US$') || mv.matchStr.includes('USD')) currency = 'USD';
+        return { amount: mv.val, currency };
+    }
 
-    return null;
+    return { amount: null, currency };
 }
 
 // ─── Extracción del RUC ───────────────────────────────────────

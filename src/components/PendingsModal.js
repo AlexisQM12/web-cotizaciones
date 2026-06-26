@@ -150,11 +150,14 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     alert('No se pudo contactar al OCR: ' + e.message);
                 }
 
+                const detectedCurrency = scanData?.currency || 'PEN';
+
                 setMaterials(prev => prev.map(m => m.id === itemId ? {
                     ...m,
                     attachmentUrl: url,
                     purchased: detectedCost ? true : m.purchased,
                     cost: detectedCost !== null ? detectedCost : m.cost,
+                    moneda: detectedCurrency || m.moneda || 'PEN',
                     ocrData: scanData ? {
                         ruc: scanData.ruc || null,
                         serie: scanData.serie || null,
@@ -187,6 +190,8 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                 },
                                 attachmentUrl: url,
                                 fundingSourceId: currentMaterial.fundingSourceId || '',
+                                moneda: detectedCurrency,
+                                tipoCambio: currentMaterial.tipoCambio || null,
                             }),
                         });
                         setMaterials(prev => prev.map(m =>
@@ -504,9 +509,21 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                         <input type="text" className="input" value={m.model || ''} onChange={e => updateMaterialField(m.id, 'model', e.target.value)} style={{ padding: '0.5rem' }} />
                     </div>
                     <div>
-                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Costo Total (S/)</label>
-                        <input type="number" className="input" value={m.cost || ''} onChange={e => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ padding: '0.5rem' }} />
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Costo Total</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <select className="input" value={m.moneda || 'PEN'} onChange={e => updateMaterialField(m.id, 'moneda', e.target.value)} style={{ padding: '0.5rem', width: '80px' }}>
+                                <option value="PEN">S/</option>
+                                <option value="USD">$</option>
+                            </select>
+                            <input type="number" className="input" value={m.cost || ''} onChange={e => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ padding: '0.5rem', flex: 1 }} />
+                        </div>
                     </div>
+                    {m.moneda === 'USD' && (
+                        <div>
+                            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Tipo de Cambio (S/)</label>
+                            <input type="number" step="0.001" className="input" value={m.tipoCambio || ''} onChange={e => updateMaterialField(m.id, 'tipoCambio', parseFloat(e.target.value))} style={{ padding: '0.5rem', width: '100%' }} placeholder="Ej. 3.75" />
+                        </div>
+                    )}
                     <div>
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fondo de la Compra</label>
                         <select className="input" value={m.fundingSourceId || ''} onChange={e => updateMaterialField(m.id, 'fundingSourceId', e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>

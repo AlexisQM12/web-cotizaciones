@@ -9,7 +9,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId } = body;
+        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio } = body;
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
         if (!ocrData)          return Response.json({ error: 'Sin datos OCR para registrar la compra' }, { status: 400 });
@@ -51,8 +51,8 @@ export async function POST(req) {
             igv,
             noGravadas: 0, isc: 0, otrosTributos: 0,
             total,
-            moneda: 'PEN',
-            tipoCambio: null,
+            moneda: moneda || 'PEN',
+            tipoCambio: tipoCambio ? parseFloat(tipoCambio) : null,
             tipoGasto: 'MERCADERIA', // material → mercadería por defecto
             aceptaCreditoFiscal: !!ocrData.ruc, // sin RUC no tiene derecho a crédito
             anulado: false,
