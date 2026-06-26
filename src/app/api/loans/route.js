@@ -20,7 +20,19 @@ export async function GET(req) {
 
         for (const loan of loans) {
             const loanPurchases = purchases.filter(p => p.fundingSourceId === loan.id);
-            loan.totalSpent = loanPurchases.reduce((acc, p) => acc + (parseFloat(p.total) || 0), 0);
+            loan.totalSpent = loanPurchases.reduce((acc, p) => {
+                let amount = parseFloat(p.total) || 0;
+                const pMoneda = p.moneda || 'PEN';
+                const lMoneda = loan.currency || 'PEN';
+                const tc = parseFloat(p.tipoCambio) || 1;
+                
+                if (lMoneda === 'PEN' && pMoneda === 'USD') {
+                    amount = amount * tc;
+                } else if (lMoneda === 'USD' && pMoneda === 'PEN') {
+                    amount = amount / tc;
+                }
+                return acc + amount;
+            }, 0);
             loan.availableBalance = Math.max(0, loan.amount - loan.totalSpent);
         }
 
@@ -34,7 +46,7 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { empresaId, entity, amount, interestRate, installments, startDate, monthlyPayment, status } = body;
+        const { empresaId, entity, amount, currency, interestRate, installments, startDate, monthlyPayment, status } = body;
 
         if (!empresaId || !entity || !amount) {
             return Response.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
@@ -43,6 +55,7 @@ export async function POST(req) {
         const data = {
             entity,
             amount: parseFloat(amount) || 0,
+            currency: currency || 'PEN',
             interestRate: parseFloat(interestRate) || 0,
             installments: parseInt(installments, 10) || 1,
             startDate: startDate || new Date().toISOString().split('T')[0],
@@ -69,7 +82,7 @@ export async function PUT(req) {
             return Response.json({ error: 'id y empresaId requeridos' }, { status: 400 });
         }
 
-        const allowedFields = ['entity', 'amount', 'interestRate', 'installments', 'startDate', 'monthlyPayment', 'status'];
+        const allowedFields = ['entity', 'amount', 'currency', 'interestRate', 'installments', 'startDate', 'monthlyPayment', 'status'];
         const dataToUpdate = {};
         for (const field of allowedFields) {
             if (updates[field] !== undefined) {

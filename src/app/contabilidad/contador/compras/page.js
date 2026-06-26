@@ -117,9 +117,14 @@ function RegistroCompras() {
 
     const totals = items.reduce((acc, s) => {
         const sign = s.tipoComprobante === '07' ? -1 : 1;
-        acc.base  += (s.aceptaCreditoFiscal ? (s.baseImponible || 0) : 0) * sign;
-        acc.igv   += (s.aceptaCreditoFiscal ? (s.igv || 0) : 0) * sign;
-        acc.total += (s.total || 0) * sign;
+        const tc = s.moneda === 'USD' ? (parseFloat(s.tipoCambio) || 1) : 1;
+        const base = (s.baseImponible || 0) * sign * tc;
+        const igv = (s.igv || 0) * sign * tc;
+        const total = (s.total || 0) * sign * tc;
+
+        acc.base  += s.aceptaCreditoFiscal ? base : 0;
+        acc.igv   += s.aceptaCreditoFiscal ? igv : 0;
+        acc.total += total;
         return acc;
     }, { base: 0, igv: 0, total: 0 });
 
@@ -153,9 +158,9 @@ function RegistroCompras() {
             </div>
 
             <div className="acc-grid acc-grid-3" style={{ marginBottom: '1.25rem' }}>
-                <KpiSmall label="Base con Crédito" value={fmt(totals.base)} />
-                <KpiSmall label="IGV Crédito Fiscal" value={fmt(totals.igv)} accent="success" />
-                <KpiSmall label="Total Comprobantes" value={fmt(totals.total)} />
+                <KpiSmall label="Base con Crédito (S/ eq)" value={fmt(totals.base, 'PEN')} />
+                <KpiSmall label="IGV Crédito Fiscal (S/ eq)" value={fmt(totals.igv, 'PEN')} accent="success" />
+                <KpiSmall label="Total Comprobantes (S/ eq)" value={fmt(totals.total, 'PEN')} />
             </div>
 
             <div className="acc-table-wrap">
@@ -188,9 +193,9 @@ function RegistroCompras() {
                                     <td style={{ whiteSpace: 'nowrap' }}><strong>{s.serie}</strong>-{s.numero}</td>
                                     <td>{s.proveedorName}</td>
                                     <td>{s.numeroDocProveedor}</td>
-                                    <td style={{ textAlign: 'right' }}>{fmt(s.baseImponible)}</td>
-                                    <td style={{ textAlign: 'right' }}>{fmt(s.igv)}</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(s.total)}</td>
+                                    <td style={{ textAlign: 'right' }}>{fmt(s.baseImponible, s.moneda)}</td>
+                                    <td style={{ textAlign: 'right' }}>{fmt(s.igv, s.moneda)}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(s.total, s.moneda)}</td>
                                     <td>
                                         {s.aceptaCreditoFiscal
                                             ? <span className="acc-badge acc-badge-success">Sí</span>
@@ -242,7 +247,7 @@ function emptyPurchase(period) {
         tipoDocProveedor: '6', numeroDocProveedor: '',
         proveedorName: '',
         baseImponible: 0, igv: 0, noGravadas: 0, isc: 0, otrosTributos: 0, total: 0,
-        moneda: 'PEN', tipoGasto: 'SERVICIO',
+        moneda: 'PEN', tipoCambio: '', tipoGasto: 'SERVICIO',
         aceptaCreditoFiscal: true, anulado: false, fundingSourceId: ''
     };
 }
@@ -300,6 +305,20 @@ function PurchaseFormModal({ purchase, loans, onClose, onSave }) {
                             <option value="OTRO">Otros gastos (65)</option>
                         </select>
                     </Field>
+                    
+                    <Field label="Moneda">
+                        <select className="acc-select" value={f.moneda || 'PEN'} onChange={e => u('moneda', e.target.value)}>
+                            <option value="PEN">Soles (S/)</option>
+                            <option value="USD">Dólares ($)</option>
+                        </select>
+                    </Field>
+
+                    {f.moneda === 'USD' && (
+                        <Field label="Tipo de Cambio (S/)">
+                            <input type="number" step="0.001" className="acc-input" value={f.tipoCambio || ''} onChange={e => u('tipoCambio', e.target.value)} placeholder="Ej: 3.80" required />
+                        </Field>
+                    )}
+
                     <Field label="Base imponible"><input type="number" step="0.01" className="acc-input" value={f.baseImponible} onChange={e => u('baseImponible', e.target.value)} /></Field>
                     <Field label="IGV"><input type="number" step="0.01" className="acc-input" value={f.igv} onChange={e => u('igv', e.target.value)} /></Field>
                     <Field label="Total"><input type="number" step="0.01" className="acc-input" value={f.total} onChange={e => u('total', e.target.value)} /></Field>
@@ -308,7 +327,7 @@ function PurchaseFormModal({ purchase, loans, onClose, onSave }) {
                         <select className="acc-select" value={f.fundingSourceId || ''} onChange={e => u('fundingSourceId', e.target.value)}>
                             <option value="">Fondos Propios de la Empresa</option>
                             {loans?.map(l => (
-                                <option key={l.id} value={l.id}>Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(l.availableBalance)})</option>
+                                <option key={l.id} value={l.id}>Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: l.currency || 'PEN' }).format(l.availableBalance)})</option>
                             ))}
                         </select>
                     </Field>
@@ -355,7 +374,10 @@ function KpiSmall({ label, value, accent }) {
     );
 }
 
-function fmt(n) { return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0); }
+function fmt(n, c) { 
+    if (c) return new Intl.NumberFormat('es-PE', { style: 'currency', currency: c }).format(n || 0);
+    return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0); 
+}
 function fmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);

@@ -17,6 +17,7 @@ export default function LoansDashboard() {
     const [formData, setFormData] = useState({
         entity: '',
         amount: '',
+        currency: 'PEN',
         interestRate: '',
         installments: '',
         startDate: '',
@@ -52,6 +53,7 @@ export default function LoansDashboard() {
             setFormData({
                 entity: loan.entity || '',
                 amount: loan.amount || '',
+                currency: loan.currency || 'PEN',
                 interestRate: loan.interestRate || '',
                 installments: loan.installments || '',
                 startDate: loan.startDate || '',
@@ -63,6 +65,7 @@ export default function LoansDashboard() {
             setFormData({
                 entity: '',
                 amount: '',
+                currency: 'PEN',
                 interestRate: '',
                 installments: '',
                 startDate: new Date().toISOString().split('T')[0],
@@ -125,8 +128,8 @@ export default function LoansDashboard() {
         }
     }
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(amount || 0);
+    const formatCurrency = (amount, currency = 'PEN') => {
+        return new Intl.NumberFormat('es-PE', { style: 'currency', currency: currency }).format(amount || 0);
     }
 
     return (
@@ -199,15 +202,15 @@ export default function LoansDashboard() {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Capital Inicial:</span>
-                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(loan.amount)}</strong>
+                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(loan.amount, loan.currency)}</strong>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Total Ejecutado (Compras):</span>
-                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(loan.totalSpent)}</strong>
+                                                <strong style={{ color: '#0f172a' }}>{formatCurrency(loan.totalSpent, loan.currency)}</strong>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Saldo Disponible:</span>
-                                                <strong style={{ color: '#059669' }}>{formatCurrency(loan.availableBalance)}</strong>
+                                                <strong style={{ color: '#059669' }}>{formatCurrency(loan.availableBalance, loan.currency)}</strong>
                                             </div>
                                             
                                             {/* Progress Bar */}
@@ -217,7 +220,7 @@ export default function LoansDashboard() {
                                         </div>
 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
-                                            <span>Cuota: {formatCurrency(loan.monthlyPayment)}</span>
+                                            <span>Cuota: {formatCurrency(loan.monthlyPayment, loan.currency)}</span>
                                             <span>Plazo: {loan.installments} meses</span>
                                             <span>TEA: {loan.interestRate}%</span>
                                         </div>
@@ -243,21 +246,28 @@ export default function LoansDashboard() {
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Monto Aprobado (S/) *</label>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Moneda *</label>
+                                        <select name="currency" value={formData.currency} onChange={handleChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem', background: '#fff' }}>
+                                            <option value="PEN">Soles (S/)</option>
+                                            <option value="USD">Dólares ($)</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Monto Aprobado *</label>
                                         <input required type="number" step="0.01" name="amount" value={formData.amount} onChange={handleChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 50000" />
                                     </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div className="form-group">
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Tasa de Interés (%)</label>
                                         <input type="number" step="0.01" name="interestRate" value={formData.interestRate} onChange={handleChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 14.5" />
                                     </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div className="form-group">
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Plazo (Meses) *</label>
                                         <input required type="number" name="installments" value={formData.installments} onChange={handleChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 24" />
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Cuota Mensual (S/)</label>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Cuota Mensual</label>
                                         <input type="number" step="0.01" name="monthlyPayment" value={formData.monthlyPayment} onChange={handleChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 2350.50" />
                                     </div>
                                 </div>
