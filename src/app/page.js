@@ -189,6 +189,17 @@ export default function Home() {
                 <p style={{ color: '#667085', fontSize: '0.95rem' }}>Directorio de clientes, contactos y empresas.</p>
             </>
         ),
+        loans: (
+            <>
+                <div style={{ background: '#f0f9ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Préstamos</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Control de líneas de crédito y capital.</p>
+            </>
+        ),
         inventory: (
             <>
                 <div style={{ background: '#fef2f2', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
