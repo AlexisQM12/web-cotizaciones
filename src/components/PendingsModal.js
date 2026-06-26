@@ -192,6 +192,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                 fundingSourceId: currentMaterial.fundingSourceId || '',
                                 moneda: detectedCurrency,
                                 tipoCambio: currentMaterial.tipoCambio || null,
+                                totalCost: detectedCost,
                             }),
                         });
                         setMaterials(prev => prev.map(m =>
@@ -323,13 +324,21 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     materialTitle: material.title,
                     ocrData:      material.ocrData,
                     attachmentUrl: material.attachmentUrl,
+                    fundingSourceId: material.fundingSourceId || '',
+                    moneda: material.moneda || 'PEN',
+                    tipoCambio: material.tipoCambio || null,
+                    totalCost: material.cost,
                 }),
             });
             const data = await res.json();
             if (!res.ok) { alert(data.error || 'Error al registrar'); return; }
 
             if (data.alreadyExists) {
-                alert(`Ya está registrada (${data.serie || ''}-${data.numero || ''}).`);
+                if (data.updated) {
+                    alert('Compra actualizada en contabilidad exitosamente.');
+                } else {
+                    alert(`Ya está registrada (${data.serie || ''}-${data.numero || ''}) y no hubo cambios.`);
+                }
             } else {
                 alert('Compra registrada en contabilidad exitosamente.');
             }
@@ -585,7 +594,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                 <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'underline' }}>Ver Comprobante</a>
                                 {m.ocrData?.amount && (
                                     <button onClick={() => handleRegisterAsPurchase(m)} style={{ border: 'none', background: m.purchaseLedgerId ? '#dcfce7' : '#f1f5f9', color: m.purchaseLedgerId ? '#16a34a' : '#0f172a', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
-                                        {m.purchaseLedgerId ? 'Contabilizado' : 'Enviar a Contabilidad'}
+                                        {m.purchaseLedgerId ? 'Actualizar Contab.' : 'Enviar a Contabilidad'}
                                     </button>
                                 )}
                                 <button onClick={() => handleFileDelete(m.id, 'material')} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>✕</button>
