@@ -20,8 +20,26 @@ function RegistroCompras() {
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
+    const [loans, setLoans] = useState([]);
 
-    useEffect(() => { if (companyProfileId) load(); }, [companyProfileId, period]);
+    useEffect(() => { 
+        if (companyProfileId) {
+            load();
+            loadLoans();
+        } 
+    }, [companyProfileId, period]);
+
+    const loadLoans = async () => {
+        try {
+            const r = await fetch(`/api/loans?empresaId=${companyProfileId}`);
+            if (r.ok) {
+                const data = await r.json();
+                setLoans(data.filter(l => l.status === 'ACTIVE'));
+            }
+        } catch (e) {
+            console.error('[compras] fetch loans error:', e);
+        }
+    };
 
     const load = async () => {
         if (!companyProfileId) return;
@@ -204,7 +222,12 @@ function RegistroCompras() {
             </div>
 
             {showForm && (
-                <PurchaseFormModal purchase={editing} onClose={() => { setShowForm(false); setEditing(null); }} onSave={handleSave} />
+                <PurchaseFormModal 
+                    purchase={editing} 
+                    loans={loans}
+                    onClose={() => { setShowForm(false); setEditing(null); }} 
+                    onSave={handleSave} 
+                />
             )}
         </AccountingShell>
     );
@@ -220,11 +243,11 @@ function emptyPurchase(period) {
         proveedorName: '',
         baseImponible: 0, igv: 0, noGravadas: 0, isc: 0, otrosTributos: 0, total: 0,
         moneda: 'PEN', tipoGasto: 'SERVICIO',
-        aceptaCreditoFiscal: true, anulado: false,
+        aceptaCreditoFiscal: true, anulado: false, fundingSourceId: ''
     };
 }
 
-function PurchaseFormModal({ purchase, onClose, onSave }) {
+function PurchaseFormModal({ purchase, loans, onClose, onSave }) {
     const [f, setF] = useState(purchase);
     const u = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
@@ -280,6 +303,16 @@ function PurchaseFormModal({ purchase, onClose, onSave }) {
                     <Field label="Base imponible"><input type="number" step="0.01" className="acc-input" value={f.baseImponible} onChange={e => u('baseImponible', e.target.value)} /></Field>
                     <Field label="IGV"><input type="number" step="0.01" className="acc-input" value={f.igv} onChange={e => u('igv', e.target.value)} /></Field>
                     <Field label="Total"><input type="number" step="0.01" className="acc-input" value={f.total} onChange={e => u('total', e.target.value)} /></Field>
+                    
+                    <Field label="Fuente de Financiamiento" full>
+                        <select className="acc-select" value={f.fundingSourceId || ''} onChange={e => u('fundingSourceId', e.target.value)}>
+                            <option value="">Fondos Propios de la Empresa</option>
+                            {loans?.map(l => (
+                                <option key={l.id} value={l.id}>Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(l.availableBalance)})</option>
+                            ))}
+                        </select>
+                    </Field>
+
                     <div style={{ gridColumn: 'span 3', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                         <label className="acc-check-row">
                             <input type="checkbox" checked={!!f.aceptaCreditoFiscal} onChange={e => u('aceptaCreditoFiscal', e.target.checked)} />

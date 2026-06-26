@@ -41,7 +41,7 @@ export async function POST(req) {
             serie, numero, tipoDocProveedor, numeroDocProveedor, proveedorName,
             baseImponible, igv, noGravadas, isc, otrosTributos, total,
             moneda, tipoCambio, tipoGasto, aceptaCreditoFiscal, anulado,
-            detrFecha, detrNumero, detrImporte, detrTipoCP, anioDUA, pdfUrl,
+            detrFecha, detrNumero, detrImporte, detrTipoCP, anioDUA, pdfUrl, fundingSourceId
         } = body;
 
         if (!companyProfileId || !fechaEmision || !tipoComprobante) {
@@ -76,6 +76,7 @@ export async function POST(req) {
             detrTipoCP: detrTipoCP || '',
             anioDUA: anioDUA || '',
             pdfUrl: pdfUrl || null,
+            fundingSourceId: fundingSourceId || null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
