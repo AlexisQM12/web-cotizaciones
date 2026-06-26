@@ -9,7 +9,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl } = body;
+        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId } = body;
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
         if (!ocrData)          return Response.json({ error: 'Sin datos OCR para registrar la compra' }, { status: 400 });
@@ -60,6 +60,7 @@ export async function POST(req) {
             sourceKey,
             sourceQuotationId: quotationId,
             sourceMaterialTitle: materialTitle || null,
+            fundingSourceId: fundingSourceId || '',
             needsReview: !ocrData.serie || !ocrData.numero || !ocrData.ruc, // datos incompletos
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

@@ -51,14 +51,24 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const [uploadingState, setUploadingState] = useState({});
     
     const [teamMembers, setTeamMembers] = useState([]);
+    const [loans, setLoans] = useState([]);
     
     useEffect(() => {
-        fetch(`/api/team?empresaId=${user?.empresaId || ''}`)
+        if (!user?.empresaId) return;
+        
+        fetch(`/api/team?empresaId=${user.empresaId}`)
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) setTeamMembers(data);
             })
             .catch(err => console.error('Error fetching team', err));
+
+        fetch(`/api/loans?empresaId=${user.empresaId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setLoans(data.filter(l => l.status === 'ACTIVE'));
+            })
+            .catch(err => console.error('Error fetching loans', err));
     }, [user]);
 
     // null | { type: 'task' | 'material', id: number/string }
@@ -176,6 +186,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                     amount:     scanData.amount,
                                 },
                                 attachmentUrl: url,
+                                fundingSourceId: currentMaterial.fundingSourceId || '',
                             }),
                         });
                         setMaterials(prev => prev.map(m =>
@@ -495,6 +506,17 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     <div>
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Costo Total (S/)</label>
                         <input type="number" className="input" value={m.cost || ''} onChange={e => updateMaterialField(m.id, 'cost', parseFloat(e.target.value))} style={{ padding: '0.5rem' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fondo de la Compra</label>
+                        <select className="input" value={m.fundingSourceId || ''} onChange={e => updateMaterialField(m.id, 'fundingSourceId', e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                            <option value="">Fondos de la Empresa</option>
+                            {loans.map(l => (
+                                <option key={l.id} value={l.id}>
+                                    Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: l.currency || 'PEN' }).format(l.availableBalance)})
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Link de Compra</label>
