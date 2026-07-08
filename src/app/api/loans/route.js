@@ -34,6 +34,9 @@ export async function GET(req) {
                 return acc + amount;
             }, 0);
             loan.availableBalance = Math.max(0, loan.amount - loan.totalSpent);
+            
+            // Sort purchases by date desc
+            loan.purchases = loanPurchases.sort((a, b) => new Date(b.fechaEmision || 0) - new Date(a.fechaEmision || 0));
         }
 
         return Response.json(loans);

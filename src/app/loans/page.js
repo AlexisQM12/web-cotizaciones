@@ -11,6 +11,7 @@ export default function LoansDashboard() {
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [editingLoan, setEditingLoan] = useState(null)
+    const [viewingLoan, setViewingLoan] = useState(null)
     const router = useRouter()
     const { user } = useAuth()
 
@@ -178,7 +179,7 @@ export default function LoansDashboard() {
                             {loans.map(loan => {
                                 const percentSpent = loan.amount > 0 ? (loan.totalSpent / loan.amount) * 100 : 0;
                                 return (
-                                    <div key={loan.id} style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                                    <div key={loan.id} onClick={() => setViewingLoan(loan)} style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
@@ -188,15 +189,14 @@ export default function LoansDashboard() {
                                                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Inicio: {loan.startDate}</span>
                                                 </div>
                                                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>{loan.entity}</h3>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                <button onClick={() => handleOpenModal(loan)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}>
+                                                                               <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(loan); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                                                 </button>
-                                                <button onClick={() => handleDelete(loan.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.25rem' }}>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(loan.id); }} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.25rem' }}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                 </button>
-                                            </div>
+                                            </div>          </div>
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
@@ -230,6 +230,50 @@ export default function LoansDashboard() {
                         </div>
                     )}
                 </div>
+
+                {viewingLoan && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => setViewingLoan(null)}>
+                        <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>Compras de: {viewingLoan.entity}</h3>
+                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Total ejecutado: {formatCurrency(viewingLoan.totalSpent, viewingLoan.currency)}</span>
+                                </div>
+                                <button onClick={() => setViewingLoan(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#64748b' }}>✕</button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {viewingLoan.purchases && viewingLoan.purchases.length > 0 ? (
+                                    viewingLoan.purchases.map(p => (
+                                        <div key={p.sourceKey || p.id || Math.random()} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                                                    {p.proveedorName || 'Proveedor no especificado'}
+                                                    {(p.serie || p.numero) ? ` (${p.serie}-${p.numero})` : ''}
+                                                </strong>
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{p.fechaEmision} | {p.source === 'pendings' ? 'Subido desde Pendientes' : 'Contabilidad'}</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                                <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                                                    {formatCurrency(p.total, p.moneda || 'PEN')}
+                                                </strong>
+                                                {p.moneda !== viewingLoan.currency && (
+                                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                                        TC: {p.tipoCambio}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                        No hay compras registradas con este fondo.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {showModal && (
                     <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>

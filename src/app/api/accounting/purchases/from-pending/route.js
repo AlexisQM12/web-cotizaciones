@@ -9,7 +9,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio, totalCost } = body;
+        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio, totalCost, pendienteFactura } = body;
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
         if (!ocrData)          return Response.json({ error: 'Sin datos OCR para registrar la compra' }, { status: 400 });
@@ -28,6 +28,7 @@ export async function POST(req) {
             const updates = {};
             if (fundingSourceId !== undefined && currentData.fundingSourceId !== fundingSourceId) updates.fundingSourceId = fundingSourceId;
             if (moneda !== undefined && currentData.moneda !== moneda) updates.moneda = moneda;
+            if (pendienteFactura !== undefined && currentData.pendienteFactura !== pendienteFactura) updates.pendienteFactura = pendienteFactura;
             
             const newTipoCambio = tipoCambio ? parseFloat(tipoCambio) : null;
             if (tipoCambio !== undefined && currentData.tipoCambio !== newTipoCambio) updates.tipoCambio = newTipoCambio;
@@ -85,6 +86,7 @@ export async function POST(req) {
             sourceQuotationId: quotationId,
             sourceMaterialTitle: materialTitle || null,
             fundingSourceId: fundingSourceId || '',
+            pendienteFactura: pendienteFactura || false,
             needsReview: !ocrData.serie || !ocrData.numero || !ocrData.ruc, // datos incompletos
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

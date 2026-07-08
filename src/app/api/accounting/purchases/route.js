@@ -11,11 +11,8 @@ export async function GET(req) {
             return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
         }
 
-        // Query solo por companyProfileId para evitar requerir índice compuesto
-        const snap = await firestore
-            .collection('purchases_ledger')
-            .where('companyProfileId', '==', companyProfileId)
-            .get();
+        // Query en la colección del tenant
+        const snap = await getTenantCollection(companyProfileId, 'purchases_ledger').get();
 
         let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -103,14 +100,14 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, ...update } = body;
-        if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
+        const { id, companyProfileId, ...update } = body;
+        if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });
         if (update.fechaEmision) {
             const d = new Date(update.fechaEmision);
             update.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         }
         update.updatedAt = new Date().toISOString();
-        await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').doc(id).update(update);
+        await getTenantCollection(companyProfileId, 'purchases_ledger').doc(id).update(update);
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] PUT error:', err);
@@ -122,8 +119,9 @@ export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
-        if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
-        await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').doc(id).delete();
+        const companyProfileId = searchParams.get('companyProfileId');
+        if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });
+        await getTenantCollection(companyProfileId, 'purchases_ledger').doc(id).delete();
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] DELETE error:', err);

@@ -306,9 +306,9 @@ export function PendingsModal({ quotation, onClose, onSave }) {
         if (selectedItem?.id === id) setSelectedItem(null);
     };
 
-    const handleRegisterAsPurchase = async (material) => {
+    const handleRegisterAsPurchase = async (material, silent = false) => {
         if (!material.ocrData) {
-            alert('Sube primero un comprobante para usar el OCR.');
+            if (!silent) alert('Sube primero un comprobante para usar el OCR.');
             return;
         }
         try {
@@ -328,29 +328,42 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     moneda: material.moneda || 'PEN',
                     tipoCambio: material.tipoCambio || null,
                     totalCost: material.cost,
+                    pendienteFactura: material.pendienteFactura || false,
                 }),
             });
             const data = await res.json();
-            if (!res.ok) { alert(data.error || 'Error al registrar'); return; }
+            if (!res.ok) { 
+                if (!silent) alert(data.error || 'Error al registrar'); 
+                return; 
+            }
 
-            if (data.alreadyExists) {
-                if (data.updated) {
-                    alert('Compra actualizada en contabilidad exitosamente.');
+            if (!silent) {
+                if (data.alreadyExists) {
+                    if (data.updated) {
+                        alert('Compra actualizada en contabilidad exitosamente.');
+                    } else {
+                        alert(`Ya está registrada (${data.serie || ''}-${data.numero || ''}) y no hubo cambios.`);
+                    }
                 } else {
-                    alert(`Ya está registrada (${data.serie || ''}-${data.numero || ''}) y no hubo cambios.`);
+                    alert('Compra registrada en contabilidad exitosamente.');
                 }
-            } else {
-                alert('Compra registrada en contabilidad exitosamente.');
             }
             setMaterials(prev => prev.map(m => m.id === material.id ? { ...m, purchaseLedgerId: data.id } : m));
         } catch (e) {
-            alert('Error al registrar: ' + e.message);
+            if (!silent) alert('Error al registrar: ' + e.message);
         }
     };
 
     const handleSave = async () => {
         setSaveStatus('saving');
         try {
+            // Sincronizar automáticamente a contabilidad los materiales que ya hayan sido subidos
+            await Promise.all(
+                materials
+                    .filter(m => m.ocrData && m.purchaseLedgerId)
+                    .map(m => handleRegisterAsPurchase(m, true))
+            );
+
             await onSave({ tasks, materials, projectStartDate, projectEndDate, projectAssignees });
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 2500);
@@ -570,6 +583,12 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             ))}
                         </select>
                     </div>
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <input type="checkbox" id={`pendienteFactura-${m.id}`} checked={m.pendienteFactura || false} onChange={e => updateMaterialField(m.id, 'pendienteFactura', e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                        <label htmlFor={`pendienteFactura-${m.id}`} style={{ fontSize: '0.8rem', color: '#475569', cursor: 'pointer', fontWeight: '500' }}>
+                            Gasto sin comprobante fiscal (Pendiente de Factura)
+                        </label>
+                    </div>
                 </div>
 
                 <div style={{ background: '#fff', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -592,7 +611,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                         {m.attachmentUrl && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'underline' }}>Ver Comprobante</a>
-                                {m.ocrData?.amount && (
+                                {m.ocrData && (
                                     <button onClick={() => handleRegisterAsPurchase(m)} style={{ border: 'none', background: m.purchaseLedgerId ? '#dcfce7' : '#f1f5f9', color: m.purchaseLedgerId ? '#16a34a' : '#0f172a', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
                                         {m.purchaseLedgerId ? 'Actualizar Contab.' : 'Enviar a Contabilidad'}
                                     </button>
