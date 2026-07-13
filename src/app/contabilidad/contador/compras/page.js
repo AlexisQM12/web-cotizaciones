@@ -75,6 +75,7 @@ function RegistroCompras() {
         }
         setEditing(null); setShowForm(false);
         load();
+        loadLoans(); // Refresh loans balance after editing a purchase
     };
 
     const handleDelete = async (id) => {

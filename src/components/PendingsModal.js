@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
+import DuplicateAmountAlert from './DuplicateAmountAlert';
 
 const actionBtnStyle = {
     display: 'flex',
@@ -49,6 +50,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const [newTask, setNewTask] = useState('');
     const [newMaterial, setNewMaterial] = useState('');
     const [uploadingState, setUploadingState] = useState({});
+    const [duplicateStatuses, setDuplicateStatuses] = useState({});
     
     const [teamMembers, setTeamMembers] = useState([]);
     const [loans, setLoans] = useState([]);
@@ -546,6 +548,20 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             <input type="number" step="0.001" className="input" value={m.tipoCambio || ''} onChange={e => updateMaterialField(m.id, 'tipoCambio', parseFloat(e.target.value))} style={{ padding: '0.5rem', width: '100%' }} placeholder="Ej. 3.75" />
                         </div>
                     )}
+                    
+                    <DuplicateAmountAlert 
+                        amount={m.cost} 
+                        initialAmount={quotation?.operationsData?.materials?.find(mat => mat.id === m.id)?.cost}
+                        empresaId={user?.empresaId} 
+                        excludeSourceKey={`pendings:${quotation.id}:${m.id}`}
+                        onDuplicateStatusChange={(status) => {
+                            setDuplicateStatuses(prev => ({
+                                ...prev,
+                                [m.id]: status
+                            }));
+                        }} 
+                    />
+
                     <div>
                         <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Fondo de la Compra</label>
                         <select className="input" value={m.fundingSourceId || ''} onChange={e => updateMaterialField(m.id, 'fundingSourceId', e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>

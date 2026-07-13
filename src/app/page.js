@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'loans', 'suppliers', 'clients', 'inventory'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
 
 export default function Home() {
     const router = useRouter()
@@ -211,6 +211,18 @@ export default function Home() {
                 </div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mi Inventario</h2>
                 <p style={{ color: '#667085', fontSize: '0.95rem' }}>Control de stock, ingresos, salidas y materiales.</p>
+            </>
+        ),
+        "caja-chica": (
+            <>
+                <div style={{ background: '#fef3c7', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Caja Chica</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Gestión de gastos operativos, consumibles y compras generales.</p>
             </>
         )
     };

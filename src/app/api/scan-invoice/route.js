@@ -110,6 +110,7 @@ export async function POST(req) {
         const serie       = extractSerieNumero(extractedText, name);
         const fecha       = extractFecha(extractedText);
         const razonSocial = extractRazonSocial(extractedText, ruc);
+        const items       = extractItems(extractedText);
 
         return NextResponse.json({
             amount: amountData.amount,
@@ -119,6 +120,7 @@ export async function POST(req) {
             numero: serie?.numero || null,
             fecha,
             razonSocial,
+            items,
             text: (extractedText || '').slice(0, 3000),
             textSource,
             stages: [
@@ -130,6 +132,39 @@ export async function POST(req) {
         console.error('[scan-invoice] Error crítico:', err);
         return NextResponse.json({ error: err?.message || 'Error interno en el servidor.' }, { status: 500 });
     }
+}
+
+// ─── Extracción de Ítems (Básico) ──────────────────────────────────────────
+function extractItems(text) {
+    if (!text) return [];
+    const lines = text.split('\n');
+    const items = [];
+    
+    // Busca patrones tipo: "2 [UND] Teclado Inalambrico 50.00 100.00"
+    const itemRegex = /^(\d+(?:\.\d{1,2})?)\s+(?:(?:UND|PZA|KG|LT|MTR|U|NIU)\s+)?([A-Za-z0-9\s\-\.,/]+?)\s+([\d,]+\.\d{2})(?:\s+([\d,]+\.\d{2}))?$/i;
+    
+    for (const line of lines) {
+        const match = line.trim().match(itemRegex);
+        if (match) {
+            const qty = parseFloat(match[1]);
+            let desc = match[2].trim();
+            const price = parseFloat(match[3].replace(/,/g, ''));
+            const total = match[4] ? parseFloat(match[4].replace(/,/g, '')) : (qty * price);
+            
+            // Filtros para evitar basura
+            const descLower = desc.toLowerCase();
+            if (desc.length > 2 && !descLower.includes('total') && !descLower.includes('subtotal') && !descLower.includes('igv') && !descLower.includes('dscto')) {
+                items.push({
+                    quantity: qty,
+                    description: desc,
+                    unitPrice: price,
+                    total: total
+                });
+            }
+        }
+    }
+    
+    return items;
 }
 
 // ─── Extracción del MONTO TOTAL ──────────────────────────────────────────

@@ -56,6 +56,36 @@ export default function PendingsDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ operationsData })
             });
+            
+            // Sync any purchased materials to accounting ledger
+            if (operationsData.materials && user?.empresaId) {
+                for (const m of operationsData.materials) {
+                    if (m.purchased) {
+                        try {
+                            await fetch('/api/accounting/purchases/from-pending', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    companyProfileId: user.empresaId,
+                                    quotationId: id,
+                                    materialId: m.id,
+                                    materialTitle: m.title || '',
+                                    ocrData: { amount: m.cost || 0 }, 
+                                    fundingSourceId: m.fundingSourceId || '',
+                                    moneda: m.moneda || 'PEN',
+                                    tipoCambio: m.tipoCambio || null,
+                                    totalCost: m.cost || 0,
+                                    pendienteFactura: m.pendienteFactura || false,
+                                    attachmentUrl: m.attachmentUrl || null
+                                })
+                            });
+                        } catch (err) {
+                            console.error('Error syncing material to ledger:', err);
+                        }
+                    }
+                }
+            }
+
             setQuotations(prev => prev.map(q => q.id === id ? { ...q, operationsData } : q));
             setSelectedQuotation(prev => prev && prev.id === id ? { ...prev, operationsData } : prev);
         } catch (err) {
@@ -231,7 +261,11 @@ export default function PendingsDashboard() {
                                 const overallCompleted = completedMaterials + completedTasks;
                                 const overallPct = overallTotal === 0 ? 0 : Math.round((overallCompleted / overallTotal) * 100);
 
-                                const totalSpent = ops.materials.reduce((sum, m) => sum + (parseFloat(m.cost) || 0), 0);
+                                const totalSpent = ops.materials.reduce((sum, m) => {
+                                    const cost = parseFloat(m.cost) || 0;
+                                    const exchange = m.moneda === 'USD' ? (parseFloat(m.tipoCambio) || 3.75) : 1;
+                                    return sum + (cost * exchange);
+                                }, 0);
 
                                 return (
                                     <div key={q.id} className="card" style={{ padding: '2rem', border: '1px solid #f1f5f9' }}>
