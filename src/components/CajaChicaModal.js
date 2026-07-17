@@ -5,10 +5,11 @@ import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import DuplicateAmountAlert from './DuplicateAmountAlert';
 
-export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, expenseToEdit = null }) {
+export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, expenseToEdit = null, existingCategories = ['Alquileres', 'Combustible', 'Consumibles', 'Equipo de computo', 'Herramientas', 'Muebleria', 'Otros', 'RH'] }) {
     const [loans, setLoans] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [customCategory, setCustomCategory] = useState('');
     const [duplicateStatus, setDuplicateStatus] = useState({ hasDuplicate: false, isAcknowledged: false });
     const [formData, setFormData] = useState({
         category: '',
@@ -48,10 +49,9 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 ocrData: null,
                 items: []
             });
+            setCustomCategory('');
         }
     }, [expenseToEdit, isOpen]);
-
-    const categories = ['Consumibles', 'Muebleria', 'Equipo de computo', 'Herramientas', 'Alquileres', 'Combustible', 'RH', 'Otros'];
 
     useEffect(() => {
         if (!empresaId || !isOpen) return;
@@ -121,11 +121,19 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
             alert('Existe una alerta de posible duplicado. Por favor, marca la casilla de confirmación para continuar.');
             return;
         }
-        if (!formData.category) return alert('Debes seleccionar una categoría.');
+        
+        const categoryToSave = formData.category === '__NEW__' ? customCategory.trim() : formData.category;
+        
+        if (!categoryToSave) return alert('Debes seleccionar o escribir una categoría.');
         if (!formData.totalAmount) return alert('Debes ingresar el monto total.');
 
+        const dataToSave = {
+            ...formData,
+            category: categoryToSave
+        };
+
         setIsSubmitting(true);
-        await onSave(formData);
+        await onSave(dataToSave);
         setIsSubmitting(false);
     };
 
@@ -146,8 +154,20 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Categoría *</label>
                             <select className="input" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                                 <option value="">Selecciona una categoría...</option>
-                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                {existingCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                <option value="__NEW__" style={{ fontWeight: 'bold', color: '#2563eb' }}>+ Agregar nueva categoría...</option>
                             </select>
+                            {formData.category === '__NEW__' && (
+                                <input 
+                                    type="text" 
+                                    className="input" 
+                                    placeholder="Escribe la nueva categoría" 
+                                    value={customCategory} 
+                                    onChange={e => setCustomCategory(e.target.value)} 
+                                    required
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #3b82f6', marginTop: '0.5rem' }} 
+                                />
+                            )}
                             <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
                                 {['Consumibles', 'Muebleria', 'Equipo de computo', 'Herramientas'].includes(formData.category) && 'Los ítems ingresados se sumarán al inventario.'}
                                 {['Alquileres', 'Combustible', 'RH', 'Otros'].includes(formData.category) && 'Esta categoría no suma ítems al inventario físico.'}

@@ -94,6 +94,14 @@ export default function CajaChicaPage() {
         return { totalMonth, countMonth };
     }, [expenses, currentMonth]);
 
+    const uniqueCategories = useMemo(() => {
+        const cats = new Set(['Alquileres', 'Combustible', 'Consumibles', 'Equipo de computo', 'Herramientas', 'Muebleria', 'Otros', 'RH']);
+        expenses.forEach(e => {
+            if (e.category) cats.add(e.category);
+        });
+        return Array.from(cats).sort();
+    }, [expenses]);
+
     return (
         <ProtectedRoute>
             <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
@@ -282,6 +290,7 @@ export default function CajaChicaPage() {
                     onSave={handleSaveExpense} 
                     empresaId={user?.empresaId}
                     expenseToEdit={expenseToEdit}
+                    existingCategories={uniqueCategories}
                 />
             </div>
         </ProtectedRoute>
