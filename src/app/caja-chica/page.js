@@ -11,6 +11,7 @@ export default function CajaChicaPage() {
     const { user } = useAuth();
     const router = useRouter();
     const [expenses, setExpenses] = useState([]);
+    const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [expenseToEdit, setExpenseToEdit] = useState(null);
@@ -18,8 +19,21 @@ export default function CajaChicaPage() {
     useEffect(() => {
         if (user?.empresaId) {
             fetchExpenses();
+            fetchTeamMembers();
         }
     }, [user]);
+
+    const fetchTeamMembers = async () => {
+        try {
+            const res = await fetch(`/api/team?empresaId=${user.empresaId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setTeamMembers(data);
+            }
+        } catch (error) {
+            console.error('Error fetching team members:', error);
+        }
+    };
 
     const fetchExpenses = async () => {
         setLoading(true);
@@ -154,6 +168,7 @@ export default function CajaChicaPage() {
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Fecha</th>
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Categoría</th>
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Descripción</th>
+                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Declarado por</th>
                                             <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Monto</th>
                                             <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Comprobante</th>
                                             <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Acciones</th>
@@ -173,6 +188,7 @@ export default function CajaChicaPage() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{expense.description || '-'}</td>
+                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{expense.declaredBy ? teamMembers.find(m => m.id === expense.declaredBy)?.name || '-' : '-'}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#0f172a', fontWeight: 'bold', textAlign: 'right' }}>
                                                     {expense.currency === 'USD' ? '$' : 'S/'} {Number(expense.totalAmount).toFixed(2)}
                                                 </td>
@@ -204,7 +220,7 @@ export default function CajaChicaPage() {
                                     </tbody>
                                     <tfoot style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                                         <tr>
-                                            <td colSpan="3" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total Sustentados:</td>
+                                            <td colSpan="4" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total Sustentados:</td>
                                             <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {expenses.filter(e => !e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
                                             <td colSpan="2" style={{ borderTop: '2px solid #e2e8f0' }}></td>
                                         </tr>
@@ -223,6 +239,7 @@ export default function CajaChicaPage() {
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Fecha</th>
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Categoría</th>
                                             <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Descripción</th>
+                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Declarado por</th>
                                             <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Monto</th>
                                             <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Comprobante</th>
                                             <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>Acciones</th>
@@ -242,6 +259,7 @@ export default function CajaChicaPage() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{expense.description || '-'}</td>
+                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{expense.declaredBy ? teamMembers.find(m => m.id === expense.declaredBy)?.name || '-' : '-'}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#0f172a', fontWeight: 'bold', textAlign: 'right' }}>
                                                     {expense.currency === 'USD' ? '$' : 'S/'} {Number(expense.totalAmount).toFixed(2)}
                                                 </td>
@@ -273,7 +291,7 @@ export default function CajaChicaPage() {
                                     </tbody>
                                     <tfoot style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                                         <tr>
-                                            <td colSpan="3" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total No Sustentados:</td>
+                                            <td colSpan="4" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total No Sustentados:</td>
                                             <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {expenses.filter(e => e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
                                             <td colSpan="2" style={{ borderTop: '2px solid #e2e8f0' }}></td>
                                         </tr>
@@ -291,6 +309,7 @@ export default function CajaChicaPage() {
                     empresaId={user?.empresaId}
                     expenseToEdit={expenseToEdit}
                     existingCategories={uniqueCategories}
+                    teamMembers={teamMembers}
                 />
             </div>
         </ProtectedRoute>

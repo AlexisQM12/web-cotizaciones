@@ -54,7 +54,7 @@ export default function PendingsDashboard() {
             await fetch(`/api/quotations/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ operationsData })
+                body: JSON.stringify({ operationsData, empresaId: user?.empresaId || 'ayatech' })
             });
             
             // Sync any purchased materials to accounting ledger

@@ -40,6 +40,34 @@ export async function POST(req) {
                 updates.igv = Math.round((newTotal - updates.baseImponible) * 100) / 100;
             }
 
+            // Update OCR and invoice data if provided
+            if (attachmentUrl && currentData.pdfUrl !== attachmentUrl) updates.pdfUrl = attachmentUrl;
+            if (ocrData.serie && currentData.serie !== ocrData.serie) updates.serie = ocrData.serie;
+            if (ocrData.numero && currentData.numero !== ocrData.numero) updates.numero = ocrData.numero;
+            
+            const newProveedorName = ocrData.razonSocial || materialTitle;
+            if (newProveedorName && currentData.proveedorName !== newProveedorName && newProveedorName !== 'Proveedor por completar') {
+                updates.proveedorName = newProveedorName;
+            }
+            if (ocrData.ruc && currentData.numeroDocProveedor !== ocrData.ruc) {
+                updates.numeroDocProveedor = ocrData.ruc;
+                updates.aceptaCreditoFiscal = true;
+            }
+            if (ocrData.fecha) {
+                const newFechaEmision = ocrData.fecha;
+                if (currentData.fechaEmision !== newFechaEmision) {
+                    updates.fechaEmision = newFechaEmision;
+                    const d = new Date(newFechaEmision);
+                    updates.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                }
+            }
+            
+            // Re-evaluate needsReview
+            const isMissingData = !(updates.serie || currentData.serie) || !(updates.numero || currentData.numero) || !(updates.numeroDocProveedor || currentData.numeroDocProveedor);
+            if (currentData.needsReview !== isMissingData) {
+                updates.needsReview = isMissingData;
+            }
+
             if (Object.keys(updates).length > 0) {
                 updates.updatedAt = new Date().toISOString();
                 await doc.ref.update(updates);

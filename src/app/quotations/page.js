@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSocket } from '@/lib/socket'
 import { query, where, onSnapshot } from 'firebase/firestore'
@@ -26,6 +26,8 @@ export default function Dashboard() {
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
     const [selectedQuotationForEmail, setSelectedQuotationForEmail] = useState(null)
     const [leadsOpen, setLeadsOpen] = useState(false) // Panel Gmail Leads: abierto (desktop) o replegado en botón (móvil)
+    const [selectedClient, setSelectedClient] = useState('all') // pestaña de cliente activa
+    const [crmClients, setCrmClients] = useState([]) // clientes del CRM (para logos)
     const router = useRouter()
 
     const deleteQuotation = async (id, e) => {
@@ -206,6 +208,15 @@ export default function Dashboard() {
         return () => unsubscribe();
     }, [user?.empresaId]);
 
+    // ── Clientes del CRM (portfolio_companies) para extraer sus logos ──
+    useEffect(() => {
+        if (!user?.empresaId) return;
+        fetch(`/api/clients?empresaId=${user.empresaId}`)
+            .then(r => r.json())
+            .then(d => { if (Array.isArray(d)) setCrmClients(d); })
+            .catch(() => {});
+    }, [user?.empresaId]);
+
     // ── Socket.IO solo para el modal del escáner en desarrollo (localhost) ──
     // En producción getSocket() devuelve un stub inerte; el modal lee sus logs
     // y estado directamente de Firestore, así que esto no afecta a la lista.
@@ -282,9 +293,71 @@ export default function Dashboard() {
         }).catch(() => {});
     };
 
+    // ── Agrupación por cliente ──
+    // Clave estable: usa clientProfileId si existe; si no, el nombre normalizado.
+    const clientKeyOf = (q) =>
+        q.clientProfileId != null && q.clientProfileId !== ''
+            ? `id:${q.clientProfileId}`
+            : `name:${(q.clientName || 'Sin Cliente').trim().toLowerCase()}`;
+
+    // Lista de clientes distintos (con conteo) derivada de las cotizaciones.
+    const clientTabs = useMemo(() => {
+        const map = new Map();
+        for (const q of quotations) {
+            const key = clientKeyOf(q);
+            const name = (q.clientName || '').trim() || 'Sin Cliente';
+            if (!map.has(key)) {
+                map.set(key, { key, name, code: acronymOf(name), ruc: '', crmCompanyId: null, count: 0 });
+            }
+            const entry = map.get(key);
+            entry.count++;
+            // Completa RUC / vínculo al CRM con la primera cotización que los tenga.
+            if (!entry.ruc && q.clientRuc) entry.ruc = String(q.clientRuc).trim();
+            if (!entry.crmCompanyId && q.crmCompanyId) entry.crmCompanyId = q.crmCompanyId;
+        }
+        return Array.from(map.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    }, [quotations]);
+
+    // Índices de logos del CRM: por id de empresa, por RUC y por nombre.
+    const crmLogos = useMemo(() => {
+        const normName = s => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const normRuc  = s => (s || '').replace(/\D/g, '');
+        const byId = new Map(), byRuc = new Map(), byName = new Map();
+        for (const c of crmClients) {
+            if (!c.logoUrl) continue;
+            if (c.id)          byId.set(String(c.id), c.logoUrl);
+            if (c.ruc)         byRuc.set(normRuc(c.ruc), c.logoUrl);
+            if (c.companyName) byName.set(normName(c.companyName), c.logoUrl);
+            if (c.razonSocial) byName.set(normName(c.razonSocial), c.logoUrl);
+        }
+        return { byId, byRuc, byName, normName, normRuc };
+    }, [crmClients]);
+
+    // Resuelve el logo de una pestaña: primero por vínculo directo al CRM,
+    // luego por RUC, y por último por nombre. Si no hay, cae en la sigla.
+    const resolveLogo = (tab) => {
+        const { byId, byRuc, byName, normName, normRuc } = crmLogos;
+        if (tab.crmCompanyId && byId.has(String(tab.crmCompanyId))) return byId.get(String(tab.crmCompanyId));
+        if (tab.ruc && byRuc.has(normRuc(tab.ruc))) return byRuc.get(normRuc(tab.ruc));
+        const byN = byName.get(normName(tab.name));
+        return byN || null;
+    };
+
+    // Si el cliente seleccionado ya no existe (p. ej. tras borrar), vuelve a "Todos".
+    useEffect(() => {
+        if (selectedClient !== 'all' && !clientTabs.some(c => c.key === selectedClient)) {
+            setSelectedClient('all');
+        }
+    }, [clientTabs, selectedClient]);
+
+    // Filtro por cliente aplicado antes del split publicadas/borradores.
+    const clientFiltered = selectedClient === 'all'
+        ? quotations
+        : quotations.filter(q => clientKeyOf(q) === selectedClient);
+
     // Filter quotations based on active tab
-    const publishedQuotations = quotations.filter(q => q.isPublished === true);
-    const draftQuotations = quotations.filter(q => q.isPublished === false || q.isPublished === undefined);
+    const publishedQuotations = clientFiltered.filter(q => q.isPublished === true);
+    const draftQuotations = clientFiltered.filter(q => q.isPublished === false || q.isPublished === undefined);
 
     const STAGES = [
         { key: 'todas',    label: 'Todas' },
@@ -408,6 +481,40 @@ export default function Dashboard() {
                         }
                     }
                 `}</style>
+
+                {/* ── Mini-tarjetas por cliente ── */}
+                <div className="client-cards" role="tablist" aria-label="Filtrar por cliente">
+                    <button
+                        role="tab"
+                        aria-selected={selectedClient === 'all'}
+                        className={`client-card ${selectedClient === 'all' ? 'active' : ''}`}
+                        onClick={() => setSelectedClient('all')}
+                        title="Todos los clientes"
+                    >
+                        <span className="client-card-code">Todos</span>
+                        <span className="client-card-count">{quotations.length}</span>
+                    </button>
+                    {clientTabs.map(c => {
+                        const logo = resolveLogo(c);
+                        return (
+                            <button
+                                key={c.key}
+                                role="tab"
+                                aria-selected={selectedClient === c.key}
+                                className={`client-card ${selectedClient === c.key ? 'active' : ''}`}
+                                onClick={() => setSelectedClient(c.key)}
+                                title={c.name}
+                            >
+                                {logo ? (
+                                    <img src={logo} alt={c.name} className="client-card-logo" />
+                                ) : (
+                                    <span className="client-card-code">{c.code}</span>
+                                )}
+                                <span className="client-card-count">{c.count}</span>
+                            </button>
+                        );
+                    })}
+                </div>
 
                 {/* Tabs */}
                 <div className="dashboard-tabs">
@@ -777,6 +884,23 @@ export default function Dashboard() {
             )}
         </ProtectedRoute>
     )
+}
+
+// Genera una sigla corta a partir del nombre del cliente para las mini-tarjetas.
+// "UNIVERSIDAD CATOLICA SAN PABLO" → "UCSP" · "Ferrelectro" → "FERR" · "" → "S/C"
+const ACRONYM_STOP = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'para', 'con', 'sa', 'sac', 'eirl', 'srl', 'ltda', 'srltda', 'sac', 'inc', 'cia']);
+function acronymOf(name) {
+    const clean = (name || '').trim();
+    if (!clean || clean.toLowerCase() === 'sin cliente') return 'S/C';
+    // Descarta conectores y letras sueltas (que suelen venir de siglas
+    // jurídicas partidas por puntos: S.A.C, E.I.R.L).
+    const words = clean
+        .replace(/[.,&/]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 1 && !ACRONYM_STOP.has(w.toLowerCase()));
+    if (words.length === 0) return clean.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'S/C';
+    if (words.length === 1) return words[0].slice(0, 4).toUpperCase();
+    return words.map(w => w[0]).join('').slice(0, 5).toUpperCase();
 }
 
 function formatLeadDate(iso) {

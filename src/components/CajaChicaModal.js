@@ -5,7 +5,7 @@ import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import DuplicateAmountAlert from './DuplicateAmountAlert';
 
-export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, expenseToEdit = null, existingCategories = ['Alquileres', 'Combustible', 'Consumibles', 'Equipo de computo', 'Herramientas', 'Muebleria', 'Otros', 'RH'] }) {
+export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, expenseToEdit = null, existingCategories = ['Alquileres', 'Combustible', 'Consumibles', 'Equipo de computo', 'Herramientas', 'Muebleria', 'Otros', 'RH'], teamMembers = [] }) {
     const [loans, setLoans] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,6 +18,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
         currency: 'PEN',
         fundingSourceId: '',
         pendienteFactura: false,
+        declaredBy: '',
         receiptUrl: '',
         ocrData: null,
         items: []
@@ -32,6 +33,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 currency: expenseToEdit.currency || 'PEN',
                 fundingSourceId: expenseToEdit.fundingSourceId || '',
                 pendienteFactura: expenseToEdit.pendienteFactura || false,
+                declaredBy: expenseToEdit.declaredBy || '',
                 receiptUrl: expenseToEdit.receiptUrl || '',
                 ocrData: expenseToEdit.ocrData || null,
                 items: expenseToEdit.items || []
@@ -45,6 +47,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 currency: 'PEN',
                 fundingSourceId: '',
                 pendienteFactura: false,
+                declaredBy: '',
                 receiptUrl: '',
                 ocrData: null,
                 items: []
@@ -236,6 +239,15 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                                     <option key={l.id} value={l.id}>
                                         Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: l.currency || 'PEN' }).format(l.availableBalance)})
                                     </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Declarado por</label>
+                            <select className="input" value={formData.declaredBy} onChange={e => setFormData({...formData, declaredBy: e.target.value})} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                                <option value="">No especificado</option>
+                                {teamMembers.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
                             </select>
                         </div>

@@ -74,7 +74,38 @@ export async function PUT(req, { params }) {
             updateData.total = body.items.reduce((acc, item) => acc + (parseFloat(item.quantity || 0) * parseFloat(item.price || 0)), 0);
         }
 
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'quotations').doc(id).update(updateData);
+        const tenantId = body.empresaId || 'ayatech';
+        await getTenantCollection(tenantId, 'quotations').doc(id).update(updateData);
+
+        // Check for orphaned materials in purchases_ledger and delete them
+        if (body.operationsData && body.operationsData.materials) {
+            try {
+                const currentMaterialIds = body.operationsData.materials.map(m => String(m.id));
+                const purchasesSnap = await getTenantCollection(tenantId, 'purchases_ledger')
+                    .where('sourceQuotationId', '==', id)
+                    .get();
+                
+                const batch = getTenantCollection(tenantId, 'purchases_ledger').firestore.batch();
+                let hasDeletes = false;
+                
+                purchasesSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.sourceKey && data.sourceKey.startsWith(`pending:${id}:`)) {
+                        const matId = data.sourceKey.split(':')[2];
+                        if (matId && !currentMaterialIds.includes(matId)) {
+                            batch.delete(doc.ref);
+                            hasDeletes = true;
+                        }
+                    }
+                });
+                
+                if (hasDeletes) {
+                    await batch.commit();
+                }
+            } catch (err) {
+                console.error('Error cleaning up orphaned purchases:', err);
+            }
+        }
 
         return Response.json({ success: true });
     } catch (error) {

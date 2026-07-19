@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'logistica', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
 
 export default function Home() {
     const router = useRouter()
@@ -148,6 +148,21 @@ export default function Home() {
                 </div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Mi Contador y Adm.</h2>
                 <p style={{ color: '#667085', fontSize: '0.95rem' }}>Reportes financieros, métricas e integraciones contables.</p>
+            </>
+        ),
+        logistica: (
+            <>
+                <div style={{ background: '#f5f3ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 17H5a2 2 0 0 0-2 2 2 2 0 0 0 2 2h4"></path>
+                        <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Asistente Logístico</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Compara cotizaciones de proveedores contra tus requerimientos.</p>
             </>
         ),
         suppliers: (

@@ -599,6 +599,15 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                             ))}
                         </select>
                     </div>
+                    <div>
+                        <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.4rem', display: 'block' }}>Declarado por</label>
+                        <select className="input" value={m.declaredBy || ''} onChange={e => updateMaterialField(m.id, 'declaredBy', e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                            <option value="">No especificado</option>
+                            {teamMembers.map(tm => (
+                                <option key={tm.id} value={tm.id}>{tm.name}</option>
+                            ))}
+                        </select>
+                    </div>
                     <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                         <input type="checkbox" id={`pendienteFactura-${m.id}`} checked={m.pendienteFactura || false} onChange={e => updateMaterialField(m.id, 'pendienteFactura', e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                         <label htmlFor={`pendienteFactura-${m.id}`} style={{ fontSize: '0.8rem', color: '#475569', cursor: 'pointer', fontWeight: '500' }}>
