@@ -80,8 +80,14 @@ function RegistroCompras() {
 
     const handleDelete = async (id) => {
         if (!confirm('¿Eliminar esta compra?')) return;
-        await fetch(`/api/accounting/purchases?id=${id}`, { method: 'DELETE' });
+        const r = await fetch(`/api/accounting/purchases?id=${id}&companyProfileId=${companyProfileId}`, { method: 'DELETE' });
+        if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            alert(d.error || 'Error al eliminar');
+            return;
+        }
         load();
+        loadLoans(); // Refresh loans balance after deleting a purchase
     };
 
     const handleScan = async (file) => {
