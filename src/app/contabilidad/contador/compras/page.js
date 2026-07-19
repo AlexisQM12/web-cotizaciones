@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
+import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
 import { VOUCHER_TYPES, DOC_ID_TYPES } from '@/lib/accounting/sunatRules';
 
@@ -13,6 +14,7 @@ export default function Page() {
 
 function RegistroCompras() {
     const searchParams = useSearchParams();
+    const { user } = useAuth();
     const { companyProfileId } = useAccountingConfig();
     const [period, setPeriod] = useState(searchParams.get('period') || getCurrentDeclarationPeriod());
     const [items, setItems]   = useState([]);
@@ -21,6 +23,7 @@ function RegistroCompras() {
     const [showForm, setShowForm] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
     const [loans, setLoans] = useState([]);
+    const [expandedRow, setExpandedRow] = useState(null);
 
     useEffect(() => { 
         if (companyProfileId) {
@@ -63,7 +66,7 @@ function RegistroCompras() {
 
     const handleSave = async (entry) => {
         const method = entry.id ? 'PUT' : 'POST';
-        const body   = entry.id ? entry : { ...entry, companyProfileId };
+        const body   = entry.id ? entry : { ...entry, companyProfileId, uploadedBy: user?.email };
         const r = await fetch('/api/accounting/purchases', {
             method, headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -194,7 +197,8 @@ function RegistroCompras() {
                                 </td></tr>
                             )}
                             {items.map(s => (
-                                <tr key={s.id} style={{ opacity: s.anulado ? 0.5 : 1 }}>
+                                <React.Fragment key={s.id}>
+                                <tr style={{ opacity: s.anulado ? 0.5 : 1 }}>
                                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.fechaEmision)}</td>
                                     <td>{VOUCHER_TYPES[s.tipoComprobante]?.name || s.tipoComprobante}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}><strong>{s.serie}</strong>-{s.numero}</td>
@@ -210,6 +214,13 @@ function RegistroCompras() {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                            <button 
+                                                className={`acc-icon-btn ${expandedRow === s.id ? 'active' : ''}`} 
+                                                title="Detalles adicionales" 
+                                                onClick={() => setExpandedRow(expandedRow === s.id ? null : s.id)}
+                                            >
+                                                <Icon name="eye" size={14} />
+                                            </button>
                                             {s.pdfUrl && (
                                                 <a
                                                     href={s.pdfUrl}
@@ -227,6 +238,17 @@ function RegistroCompras() {
                                         </div>
                                     </td>
                                 </tr>
+                                {expandedRow === s.id && (
+                                    <tr key={`${s.id}-details`} style={{ backgroundColor: '#f8fafc' }}>
+                                        <td colSpan={10} style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', gap: '2rem' }}>
+                                                <div><strong>Subido por:</strong> {s.uploadedBy || 'Desconocido'}</div>
+                                                <div><strong>Fecha de subida:</strong> {s.createdAt ? new Date(s.createdAt).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }) : 'Desconocido'}</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>

@@ -38,7 +38,7 @@ export async function POST(req) {
             serie, numero, tipoDocProveedor, numeroDocProveedor, proveedorName,
             baseImponible, igv, noGravadas, isc, otrosTributos, total,
             moneda, tipoCambio, tipoGasto, aceptaCreditoFiscal, anulado,
-            detrFecha, detrNumero, detrImporte, detrTipoCP, anioDUA, pdfUrl, fundingSourceId
+            detrFecha, detrNumero, detrImporte, detrTipoCP, anioDUA, pdfUrl, fundingSourceId, uploadedBy
         } = body;
 
         if (!companyProfileId || !fechaEmision || !tipoComprobante) {
@@ -76,6 +76,7 @@ export async function POST(req) {
             fundingSourceId: fundingSourceId || null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            uploadedBy: uploadedBy || null,
         };
 
         const ref = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').add(data);

@@ -195,6 +195,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                                 moneda: detectedCurrency,
                                 tipoCambio: currentMaterial.tipoCambio || null,
                                 totalCost: detectedCost,
+                                uploadedBy: user?.email || null,
                             }),
                         });
                         setMaterials(prev => prev.map(m =>
@@ -331,6 +332,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     tipoCambio: material.tipoCambio || null,
                     totalCost: material.cost,
                     pendienteFactura: material.pendienteFactura || false,
+                    uploadedBy: user?.email || null,
                 }),
             });
             const data = await res.json();
