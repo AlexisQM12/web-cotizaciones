@@ -79,7 +79,7 @@ function RegistroCompras() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('¿Eliminar esta compra?')) return;
+        if (!confirm('⚠️ ¿Estás seguro de eliminar esta compra?\n\nEsta acción quitará la compra del registro y restituirá el dinero al saldo del fondo/préstamo de forma permanente.')) return;
         const r = await fetch(`/api/accounting/purchases?id=${id}&companyProfileId=${companyProfileId}`, { method: 'DELETE' });
         if (!r.ok) {
             const d = await r.json().catch(() => ({}));
