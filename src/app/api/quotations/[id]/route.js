@@ -92,9 +92,13 @@ export async function PUT(req, { params }) {
                     const data = doc.data();
                     if (data.sourceKey && data.sourceKey.startsWith(`pending:${id}:`)) {
                         const matId = data.sourceKey.split(':')[2];
-                        if (matId && !currentMaterialIds.includes(matId)) {
-                            batch.delete(doc.ref);
-                            hasDeletes = true;
+                        if (matId) {
+                            const material = body.operationsData.materials.find(m => String(m.id) === matId);
+                            // Delete if material is deleted or if it's no longer marked as purchased
+                            if (!material || !material.purchased) {
+                                batch.delete(doc.ref);
+                                hasDeletes = true;
+                            }
                         }
                     }
                 });

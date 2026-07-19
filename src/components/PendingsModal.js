@@ -224,7 +224,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
     const handleFileDelete = (itemId, type) => {
         if (!window.confirm("¿Estás seguro de eliminar este archivo?")) return;
         if (type === 'material') {
-            setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, attachmentUrl: null, cost: '' } : m));
+            setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, attachmentUrl: null, cost: '', purchased: false, purchaseLedgerId: null } : m));
         } else if (type === 'material_image') {
             setMaterials(prev => prev.map(m => m.id === itemId ? { ...m, productImageUrl: null } : m));
         } else {
