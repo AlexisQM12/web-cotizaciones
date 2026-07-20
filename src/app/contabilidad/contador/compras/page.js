@@ -244,7 +244,7 @@ function RegistroCompras() {
                                             <div style={{ display: 'flex', gap: '2rem' }}>
                                                 <div><strong>Subido por:</strong> {s.uploadedBy || 'Desconocido'}</div>
                                                 <div><strong>Fecha de subida:</strong> {s.createdAt ? new Date(s.createdAt).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }) : 'Desconocido'}</div>
-                                                {s.sourceQuotationId && <div><strong>Cotización N°:</strong> {s.sourceQuotationId}</div>}
+                                                {s.sourceQuotationNumber && <div><strong>Cotización N°:</strong> {s.sourceQuotationNumber}</div>}
                                             </div>
                                         </td>
                                     </tr>

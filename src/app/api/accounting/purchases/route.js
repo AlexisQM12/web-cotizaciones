@@ -22,6 +22,32 @@ export async function GET(req) {
         }
 
         items.sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
+
+        // Obtener códigos de cotización legibles
+        const quotationIds = [...new Set(items.filter(i => i.sourceQuotationId).map(i => i.sourceQuotationId))];
+        if (quotationIds.length > 0) {
+            const quotesCache = {};
+            // Fetch quotations one by one to avoid 30-limit 'in' query issues, or batch if there are many. 
+            // Usually there are not hundreds per month.
+            await Promise.all(quotationIds.map(async (qid) => {
+                try {
+                    const qDoc = await getTenantCollection(companyProfileId, 'quotations').doc(qid).get();
+                    if (qDoc.exists) {
+                        quotesCache[qid] = qDoc.data().code || qid;
+                    } else {
+                        quotesCache[qid] = qid;
+                    }
+                } catch (e) {
+                    quotesCache[qid] = qid;
+                }
+            }));
+            for (const item of items) {
+                if (item.sourceQuotationId) {
+                    item.sourceQuotationNumber = quotesCache[item.sourceQuotationId];
+                }
+            }
+        }
+
         return Response.json(items);
     } catch (err) {
         console.error('[accounting/purchases] GET error:', err);
@@ -103,12 +129,65 @@ export async function PUT(req) {
         const body = await req.json();
         const { id, companyProfileId, ...update } = body;
         if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });
+
         if (update.fechaEmision) {
             const d = new Date(update.fechaEmision);
             update.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         }
         update.updatedAt = new Date().toISOString();
-        await getTenantCollection(companyProfileId, 'purchases_ledger').doc(id).update(update);
+
+        const docRef = getTenantCollection(companyProfileId, 'purchases_ledger').doc(id);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+            const oldData = docSnap.data();
+
+            // Sincronizar si cambió el total o la fuente de fondos
+            const totalChanged = update.total !== undefined && update.total !== oldData.total;
+            const fundChanged = update.fundingSourceId !== undefined && update.fundingSourceId !== oldData.fundingSourceId;
+
+            if (totalChanged || fundChanged) {
+                // Sync con Caja Chica
+                if (oldData.sourceKey && oldData.sourceKey.startsWith('caja-chica:')) {
+                    const cajaChicaId = oldData.sourceKey.split(':')[1];
+                    if (cajaChicaId) {
+                        const ccUpdates = {};
+                        if (totalChanged) ccUpdates.totalAmount = update.total;
+                        if (fundChanged) ccUpdates.fundingSourceId = update.fundingSourceId;
+                        if (update.pdfUrl !== undefined) ccUpdates.receiptUrl = update.pdfUrl;
+                        
+                        if (Object.keys(ccUpdates).length > 0) {
+                            ccUpdates.updatedAt = new Date().toISOString();
+                            await getTenantCollection(companyProfileId, 'caja_chica').doc(cajaChicaId).update(ccUpdates).catch(console.error);
+                        }
+                    }
+                }
+
+                // Sync con Cotizaciones (Mis Pendientes)
+                if (oldData.sourceQuotationId) {
+                    const qRef = getTenantCollection(companyProfileId, 'quotations').doc(oldData.sourceQuotationId);
+                    const qSnap = await qRef.get();
+                    if (qSnap.exists) {
+                        const qData = qSnap.data();
+                        let qUpdated = false;
+                        if (qData.operationsData && Array.isArray(qData.operationsData.materials)) {
+                            for (const mat of qData.operationsData.materials) {
+                                if (mat.purchaseLedgerId === id || (oldData.sourceKey && oldData.sourceKey.endsWith(`:${mat.id}`))) {
+                                    if (totalChanged) mat.cost = update.total;
+                                    if (fundChanged) mat.fundingSourceId = update.fundingSourceId;
+                                    qUpdated = true;
+                                }
+                            }
+                            if (qUpdated) {
+                                await qRef.update({ 'operationsData.materials': qData.operationsData.materials });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        await docRef.update(update);
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] PUT error:', err);
@@ -122,7 +201,45 @@ export async function DELETE(req) {
         const id = searchParams.get('id');
         const companyProfileId = searchParams.get('companyProfileId');
         if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });
-        await getTenantCollection(companyProfileId, 'purchases_ledger').doc(id).delete();
+
+        const docRef = getTenantCollection(companyProfileId, 'purchases_ledger').doc(id);
+        const docSnap = await docRef.get();
+        
+        if (docSnap.exists) {
+            const data = docSnap.data();
+
+            // 1. Sync con Caja Chica
+            if (data.sourceKey && data.sourceKey.startsWith('caja-chica:')) {
+                const cajaChicaId = data.sourceKey.split(':')[1];
+                if (cajaChicaId) {
+                    await getTenantCollection(companyProfileId, 'caja_chica').doc(cajaChicaId).delete().catch(console.error);
+                }
+            }
+            
+            // 2. Sync con Cotizaciones (Mis Pendientes)
+            if (data.sourceQuotationId) {
+                const qRef = getTenantCollection(companyProfileId, 'quotations').doc(data.sourceQuotationId);
+                const qSnap = await qRef.get();
+                if (qSnap.exists) {
+                    const qData = qSnap.data();
+                    let updated = false;
+                    if (qData.operationsData && Array.isArray(qData.operationsData.materials)) {
+                        for (const mat of qData.operationsData.materials) {
+                            if (mat.purchaseLedgerId === id || (data.sourceKey && data.sourceKey.endsWith(`:${mat.id}`))) {
+                                mat.purchased = false;
+                                delete mat.purchaseLedgerId;
+                                updated = true;
+                            }
+                        }
+                        if (updated) {
+                            await qRef.update({ 'operationsData.materials': qData.operationsData.materials });
+                        }
+                    }
+                }
+            }
+        }
+
+        await docRef.delete();
         return Response.json({ success: true });
     } catch (err) {
         console.error('[accounting/purchases] DELETE error:', err);
