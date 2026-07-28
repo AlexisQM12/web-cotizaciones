@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
-import BarcodeScanner from '@/components/BarcodeScanner'
+import dynamic from 'next/dynamic'
+const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), { ssr: false })
 import { storage } from '@/lib/firebaseConfig'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
