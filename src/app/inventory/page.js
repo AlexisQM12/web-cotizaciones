@@ -377,8 +377,8 @@ export default function InventoryDashboard() {
                 {showModal && (
                     <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                         <div className="modal-content" style={{ background: '#fff', width: '100%', maxWidth: '500px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-                            <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>
+                            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>
                                     {editingItem ? 'Editar Ítem' : 'Nuevo Ítem de Inventario'}
                                 </h3>
                                 <button onClick={handleCloseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
@@ -389,8 +389,8 @@ export default function InventoryDashboard() {
                                 </button>
                             </div>
                             
-                            <form onSubmit={handleSubmit} style={{ padding: '1.5rem', overflowY: 'auto' }}>
-                                <div style={{ display: 'grid', gap: '1rem' }}>
+                            <form onSubmit={handleSubmit} style={{ padding: '1rem 1.5rem', overflowY: 'auto' }}>
+                                <div style={{ display: 'grid', gap: '0.75rem' }}>
                                     
                                     {/* Image Upload Area */}
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
@@ -404,19 +404,31 @@ export default function InventoryDashboard() {
                                                 <button type="button" onClick={() => { setSelectedImage(null); setFormData(p => ({...p, imageUrl: ''})) }} style={{ position: 'absolute', top: -10, right: -10, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
                                             </div>
                                         ) : (
-                                            <div style={{ width: '120px', height: '120px', background: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                            <div style={{ width: '100px', height: '100px', background: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                             </div>
                                         )}
-                                        <button 
-                                            type="button" 
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="btn btn-primary"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#475569', borderColor: '#475569' }}
-                                        >
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                            Tomar / Subir Foto
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="btn btn-primary"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#475569', borderColor: '#475569', padding: '0.4rem 0.75rem', fontSize: '0.9rem' }}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                                Foto
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setShowScanner(true)}
+                                                className="btn btn-primary"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#475569', borderColor: '#475569', padding: '0.4rem 0.75rem', fontSize: '0.9rem' }}
+                                                title="Escanear Código de Barras"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10"></rect></svg>
+                                                Escanear
+                                            </button>
+                                        </div>
                                         <input 
                                             type="file" 
                                             ref={fileInputRef}
@@ -439,30 +451,20 @@ export default function InventoryDashboard() {
                                             value={formData.name} 
                                             onChange={handleChange} 
                                             required 
-                                            style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
+                                            style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
                                         />
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>SKU / Código</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <input 
-                                                    type="text" 
-                                                    name="sku" 
-                                                    value={formData.sku} 
-                                                    onChange={handleChange} 
-                                                    placeholder="Ej. HER-001"
-                                                    style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
-                                                />
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setShowScanner(true)}
-                                                    style={{ padding: '0 0.8rem', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#475569' }}
-                                                    title="Escanear Código de Barras"
-                                                >
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10"></rect></svg>
-                                                </button>
-                                            </div>
+                                            <input 
+                                                type="text" 
+                                                name="sku" 
+                                                value={formData.sku} 
+                                                onChange={handleChange} 
+                                                placeholder="Ej. HER-001"
+                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
+                                            />
                                         </div>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Categoría</label>
@@ -473,7 +475,7 @@ export default function InventoryDashboard() {
                                                 onChange={handleChange} 
                                                 placeholder="Ej. Consumibles"
                                                 list="category-suggestions"
-                                                style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
+                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
                                             />
                                             <datalist id="category-suggestions">
                                                 {uniqueCategories.map(cat => (
@@ -482,7 +484,7 @@ export default function InventoryDashboard() {
                                             </datalist>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Stock Actual *</label>
                                             <input 
@@ -493,7 +495,7 @@ export default function InventoryDashboard() {
                                                 required
                                                 min="0"
                                                 step="0.01"
-                                                style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
+                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
                                             />
                                         </div>
                                         <div>
@@ -507,7 +509,7 @@ export default function InventoryDashboard() {
                                                 min="0"
                                                 step="0.01"
                                                 title="Cantidad mínima para generar alerta"
-                                                style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
+                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
                                             />
                                         </div>
                                         <div>
@@ -517,7 +519,7 @@ export default function InventoryDashboard() {
                                                 value={formData.unit} 
                                                 onChange={handleChange} 
                                                 required
-                                                style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', background: '#fff' }} 
+                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: '#fff' }} 
                                             >
                                                 <option value="Unidades">Unidades</option>
                                                 <option value="Kg">Kg</option>
@@ -543,7 +545,7 @@ export default function InventoryDashboard() {
                                         />
                                     </div>
                                 </div>
-                                <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                                     <button 
                                         type="button" 
                                         className="btn btn-secondary"
