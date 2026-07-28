@@ -82,8 +82,8 @@ export async function POST(req) {
             }, { merge: true });
         }
 
-        // 4. Si es tangible, registrar cada item en inventario
-        if (categoriasTangibles.includes(data.category) && Array.isArray(data.items)) {
+        // 4. Si es tangible o se activó el switch, registrar cada item en inventario
+        if ((data.sendToInventory || categoriasTangibles.includes(data.category)) && Array.isArray(data.items)) {
             for (const item of data.items) {
                 if (!item.description) continue;
                 

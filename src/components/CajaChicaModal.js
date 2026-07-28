@@ -21,7 +21,8 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
         declaredBy: '',
         receiptUrl: '',
         ocrData: null,
-        items: []
+        items: [],
+        sendToInventory: false
     });
 
     useEffect(() => {
@@ -36,7 +37,8 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 declaredBy: expenseToEdit.declaredBy || '',
                 receiptUrl: expenseToEdit.receiptUrl || '',
                 ocrData: expenseToEdit.ocrData || null,
-                items: expenseToEdit.items || []
+                items: expenseToEdit.items || [],
+                sendToInventory: expenseToEdit.sendToInventory || false
             });
         } else if (isOpen) {
             // Reset if new
@@ -50,7 +52,8 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 declaredBy: '',
                 receiptUrl: '',
                 ocrData: null,
-                items: []
+                items: [],
+                sendToInventory: false
             });
             setCustomCategory('');
         }
@@ -135,6 +138,15 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
             category: categoryToSave
         };
 
+        if (formData.sendToInventory) {
+            dataToSave.items = [{
+                quantity: 1,
+                description: formData.description || categoryToSave,
+                unitPrice: Number(formData.totalAmount) || 0,
+                total: Number(formData.totalAmount) || 0
+            }];
+        }
+
         setIsSubmitting(true);
         await onSave(dataToSave);
         setIsSubmitting(false);
@@ -202,22 +214,44 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                         )}
                     </div>
 
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Detalle de Ítems</label>
-                            <button type="button" onClick={handleAddItem} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>+ Añadir Ítem</button>
-                        </div>
-                        {formData.items.length === 0 && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No hay ítems registrados.</p>}
-                        
-                        {formData.items.map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <input type="number" placeholder="Cant." value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} style={{ width: '70px', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
-                                <input type="text" placeholder="Descripción" value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)} style={{ flex: 1, padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
-                                <input type="number" step="0.01" placeholder="P.Unit" value={item.unitPrice} onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)} style={{ width: '90px', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
-                                <button type="button" onClick={() => handleRemoveItem(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '1rem', cursor: 'pointer' }}>&times;</button>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                            <div style={{ position: 'relative', display: 'inline-block', width: '40px', height: '24px' }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.sendToInventory} 
+                                    onChange={e => setFormData({...formData, sendToInventory: e.target.checked})} 
+                                    style={{ opacity: 0, width: 0, height: 0 }} 
+                                    id="send-inventory-switch"
+                                />
+                                <span style={{ position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: formData.sendToInventory ? '#3b82f6' : '#cbd5e1', transition: '.4s', borderRadius: '24px' }}>
+                                    <span style={{ position: 'absolute', content: '""', height: '18px', width: '18px', left: formData.sendToInventory ? '18px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%' }}></span>
+                                </span>
                             </div>
-                        ))}
+                            <label htmlFor="send-inventory-switch" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', userSelect: 'none' }}>
+                                Ingresar automáticamente el gasto como producto en Inventario
+                            </label>
+                        </div>
                     </div>
+
+                    {!formData.sendToInventory && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Detalle de Ítems (Opcional si usas el switch superior)</label>
+                                <button type="button" onClick={handleAddItem} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>+ Añadir Ítem</button>
+                            </div>
+                            {formData.items.length === 0 && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No hay ítems detallados.</p>}
+                            
+                            {formData.items.map((item, idx) => (
+                                <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <input type="number" placeholder="Cant." value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} style={{ width: '70px', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
+                                    <input type="text" placeholder="Descripción" value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)} style={{ flex: 1, padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
+                                    <input type="number" step="0.01" placeholder="P.Unit" value={item.unitPrice} onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)} style={{ width: '90px', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }} />
+                                    <button type="button" onClick={() => handleRemoveItem(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '1rem', cursor: 'pointer' }}>&times;</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
                         <div style={{ flex: 1 }}>
