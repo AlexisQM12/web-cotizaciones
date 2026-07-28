@@ -545,15 +545,16 @@ export default function InventoryDashboard() {
                                 <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                     <button 
                                         type="button" 
+                                        className="btn btn-secondary"
                                         onClick={handleCloseModal}
-                                        style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
                                     >
                                         Cancelar
                                     </button>
                                     <button 
                                         type="submit"
                                         disabled={isSaving}
-                                        style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)' }}
+                                        className="btn btn-primary"
+                                        style={{ cursor: isSaving ? 'not-allowed' : 'pointer' }}
                                     >
                                         {isSaving ? 'Guardando...' : (editingItem ? 'Actualizar Ítem' : 'Crear Ítem')}
                                     </button>
