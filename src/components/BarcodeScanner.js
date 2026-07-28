@@ -61,11 +61,10 @@ export default function BarcodeScanner({ onScan, onClose }) {
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 600 }}>Escanear Código</h3>
                     <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>&times;</button>
                 </div>
-                
-                <div id="reader" style={{ width: '100%', overflow: 'hidden', borderRadius: '8px', background: '#f1f5f9', minHeight: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {isStarting && <span style={{ color: '#64748b' }}>Iniciando cámara...</span>}
+                <div style={{ position: 'relative', width: '100%', minHeight: '250px', borderRadius: '8px', background: '#f1f5f9', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isStarting && <span style={{ color: '#64748b', position: 'absolute', zIndex: 10 }}>Iniciando cámara...</span>}
+                    <div id="reader" style={{ width: '100%', height: '100%' }}></div>
                 </div>
-                
                 <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem', marginTop: '1rem' }}>
                     Apunta la cámara trasera al código de barras o QR para escanearlo automáticamente.
                 </p>
