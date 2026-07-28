@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
+import BarcodeScanner from '@/components/BarcodeScanner'
+import { storage } from '@/lib/firebaseConfig'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 export default function InventoryDashboard() {
     const { user } = useAuth()
@@ -23,8 +26,13 @@ export default function InventoryDashboard() {
         stock: '',
         minStock: '',
         unit: 'Unidades',
-        cost: ''
+        cost: '',
+        imageUrl: ''
     })
+    const [selectedImage, setSelectedImage] = useState(null)
+    const [showScanner, setShowScanner] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const fileInputRef = useRef(null)
 
     useEffect(() => {
         if (user) {
@@ -48,6 +56,7 @@ export default function InventoryDashboard() {
     }
 
     const handleOpenModal = (item = null) => {
+        setSelectedImage(null)
         if (item) {
             setEditingItem(item)
             setFormData({
@@ -57,7 +66,8 @@ export default function InventoryDashboard() {
                 stock: item.stock || 0,
                 minStock: item.minStock || 0,
                 unit: item.unit || 'Unidades',
-                cost: item.cost || 0
+                cost: item.cost || 0,
+                imageUrl: item.imageUrl || ''
             })
         } else {
             setEditingItem(null)
@@ -68,7 +78,8 @@ export default function InventoryDashboard() {
                 stock: '',
                 minStock: '',
                 unit: 'Unidades',
-                cost: ''
+                cost: '',
+                imageUrl: ''
             })
         }
         setShowModal(true)
@@ -86,8 +97,17 @@ export default function InventoryDashboard() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        setIsSaving(true)
         try {
-            const payload = { ...formData, empresaId: user?.empresaId || null };
+            let finalImageUrl = formData.imageUrl;
+            
+            if (selectedImage) {
+                const imgRef = ref(storage, `inventory/${Date.now()}_${selectedImage.name}`);
+                const snapshot = await uploadBytes(imgRef, selectedImage);
+                finalImageUrl = await getDownloadURL(snapshot.ref);
+            }
+
+            const payload = { ...formData, imageUrl: finalImageUrl, empresaId: user?.empresaId || null };
             if (editingItem) {
                 await fetch(`/api/inventory/${editingItem.id}?empresaId=${user?.empresaId || ''}`, {
                     method: 'PUT',
@@ -107,6 +127,7 @@ export default function InventoryDashboard() {
             console.error('Error saving item:', error)
             alert('Error al guardar el ítem.')
         }
+        setIsSaving(false)
     }
 
     const handleDelete = async (id) => {
@@ -164,7 +185,7 @@ export default function InventoryDashboard() {
                         <h1>Inventario</h1>
                         <p>Control de stock, ingresos, salidas y valorización de materiales.</p>
                     </div>
-                    <button className="btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button className="btn btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -284,8 +305,19 @@ export default function InventoryDashboard() {
                                     filteredItems.map(item => (
                                         <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                                             <td style={{ padding: '1rem 0.5rem' }}>
-                                                <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</div>
-                                                {item.sku && <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>SKU: {item.sku}</div>}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    {item.imageUrl ? (
+                                                        <img src={item.imageUrl} alt={item.name} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '40px', height: '40px', background: '#f1f5f9', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</div>
+                                                        {item.sku && <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>SKU: {item.sku}</div>}
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td style={{ padding: '1rem 0.5rem' }}>
                                                 <span style={{ display: 'inline-block', padding: '0.2rem 0.6rem', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500 }}>
@@ -358,6 +390,46 @@ export default function InventoryDashboard() {
                             
                             <form onSubmit={handleSubmit} style={{ padding: '1.5rem', overflowY: 'auto' }}>
                                 <div style={{ display: 'grid', gap: '1rem' }}>
+                                    
+                                    {/* Image Upload Area */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
+                                        { (selectedImage || formData.imageUrl) ? (
+                                            <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '1rem' }}>
+                                                <img 
+                                                    src={selectedImage ? URL.createObjectURL(selectedImage) : formData.imageUrl} 
+                                                    alt="Preview" 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '2px solid #e2e8f0' }} 
+                                                />
+                                                <button type="button" onClick={() => { setSelectedImage(null); setFormData(p => ({...p, imageUrl: ''})) }} style={{ position: 'absolute', top: -10, right: -10, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ width: '120px', height: '120px', background: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                            </div>
+                                        )}
+                                        <button 
+                                            type="button" 
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="btn btn-primary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#475569', borderColor: '#475569' }}
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                            Tomar / Subir Foto
+                                        </button>
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef}
+                                            accept="image/*"
+                                            capture="environment"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setSelectedImage(e.target.files[0])
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Nombre del Material / Producto *</label>
                                         <input 
@@ -372,14 +444,24 @@ export default function InventoryDashboard() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>SKU / Código</label>
-                                            <input 
-                                                type="text" 
-                                                name="sku" 
-                                                value={formData.sku} 
-                                                onChange={handleChange} 
-                                                placeholder="Ej. HER-001"
-                                                style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
-                                            />
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input 
+                                                    type="text" 
+                                                    name="sku" 
+                                                    value={formData.sku} 
+                                                    onChange={handleChange} 
+                                                    placeholder="Ej. HER-001"
+                                                    style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }} 
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setShowScanner(true)}
+                                                    style={{ padding: '0 0.8rem', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#475569' }}
+                                                    title="Escanear Código de Barras"
+                                                >
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10"></rect></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>Categoría</label>
@@ -470,14 +552,21 @@ export default function InventoryDashboard() {
                                     </button>
                                     <button 
                                         type="submit"
-                                        style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)' }}
+                                        disabled={isSaving}
+                                        style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)' }}
                                     >
-                                        {editingItem ? 'Actualizar Ítem' : 'Crear Ítem'}
+                                        {isSaving ? 'Guardando...' : (editingItem ? 'Actualizar Ítem' : 'Crear Ítem')}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
+                )}
+                {showScanner && (
+                    <BarcodeScanner 
+                        onScan={(code) => setFormData(p => ({ ...p, sku: code }))} 
+                        onClose={() => setShowScanner(false)} 
+                    />
                 )}
             </main>
         </ProtectedRoute>
