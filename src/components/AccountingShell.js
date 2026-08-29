@@ -79,6 +79,7 @@ export default function AccountingShell({ children, requireSetup = true }) {
                         {mode === 'empresario' ? (
                             <>
                                 <NavLink href="/contabilidad/empresario" icon="home" active={pathname === '/contabilidad/empresario'}>Resumen</NavLink>
+                                <NavLink href="/contabilidad/proyecciones" icon="chart-bar" active={pathname === '/contabilidad/proyecciones'}>Proyecciones</NavLink>
                                 <NavLink href="/contabilidad/setup" icon="settings" active={pathname === '/contabilidad/setup'}>Configuración</NavLink>
                             </>
                         ) : (
@@ -86,6 +87,7 @@ export default function AccountingShell({ children, requireSetup = true }) {
                                 <NavLink href="/contabilidad/contador" icon="home" active={pathname === '/contabilidad/contador'}>Panel Contador</NavLink>
                                 <NavLink href="/contabilidad/contador/ventas" icon="doc-up" active={pathname.startsWith('/contabilidad/contador/ventas')}>Registro de Ventas</NavLink>
                                 <NavLink href="/contabilidad/contador/compras" icon="doc-down" active={pathname.startsWith('/contabilidad/contador/compras')}>Registro de Compras</NavLink>
+                                <NavLink href="/contabilidad/proyecciones" icon="chart-bar" active={pathname === '/contabilidad/proyecciones'}>Proyecciones</NavLink>
                                 <NavLink href="/contabilidad/contador/diario" icon="book" active={pathname.startsWith('/contabilidad/contador/diario')}>Libro Diario / Mayor</NavLink>
                                 <NavLink href="/contabilidad/contador/igv" icon="receipt" active={pathname.startsWith('/contabilidad/contador/igv')}>Determinación IGV / Renta</NavLink>
                                 <NavLink href="/contabilidad/contador/exportar" icon="package" active={pathname.startsWith('/contabilidad/contador/exportar')}>Exportar SIRE</NavLink>

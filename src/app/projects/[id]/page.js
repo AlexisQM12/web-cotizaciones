@@ -14,6 +14,7 @@ export default function ProjectDocumentation({ params }) {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [savingDetails, setSavingDetails] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -128,6 +129,29 @@ export default function ProjectDocumentation({ params }) {
         }
     };
 
+    const handleSaveExecutionDetails = async () => {
+        setSavingDetails(true);
+        try {
+            const updatedFields = {
+                isOcInvoiced: project.isOcInvoiced || false,
+                isExcludedFromProjections: project.isExcludedFromProjections || false,
+            };
+            
+            const res = await fetch(`/api/quotations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedFields)
+            });
+            if (!res.ok) throw new Error('Failed to update execution details');
+            alert('Detalles de ejecución guardados exitosamente.');
+        } catch (error) {
+            console.error('Error saving execution details:', error);
+            alert('Error al guardar detalles.');
+        } finally {
+            setSavingDetails(false);
+        }
+    };
+
     const formatBytes = (bytes) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -161,6 +185,57 @@ export default function ProjectDocumentation({ params }) {
                                         </span>
                                     </h1>
                                     <p style={{ maxWidth: '800px' }}>{project.serviceDescription || 'Sin descripción de servicio'}</p>
+                                </div>
+                                
+                                {/* Panel de Ejecución */}
+                                <div className="card" style={{ padding: '2rem', marginTop: '1.5rem', width: '100%' }}>
+                                    <h3 style={{ fontSize: '1.25rem', color: '#101828', marginBottom: '1.5rem' }}>Proyecciones y Facturación</h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                                        Las fechas de proyección se calculan automáticamente a partir del Cronograma de Actividades del proyecto.
+                                    </p>
+                                    
+                                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', flex: 1 }}>
+                                            <input 
+                                                type="checkbox" 
+                                                id="isOcInvoiced" 
+                                                checked={project.isOcInvoiced || false}
+                                                onChange={e => setProject({ ...project, isOcInvoiced: e.target.checked })}
+                                                style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#10b981' }}
+                                            />
+                                            <div>
+                                                <label htmlFor="isOcInvoiced" style={{ cursor: 'pointer', color: '#334155', fontWeight: '600', display: 'block' }}>
+                                                    OC Facturada
+                                                </label>
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Marca esto si ya cobraste o facturaste el proyecto.</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', flex: 1 }}>
+                                            <input 
+                                                type="checkbox" 
+                                                id="isExcludedFromProjections" 
+                                                checked={project.isExcludedFromProjections || false}
+                                                onChange={e => setProject({ ...project, isExcludedFromProjections: e.target.checked })}
+                                                style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#dc2626' }}
+                                            />
+                                            <div>
+                                                <label htmlFor="isExcludedFromProjections" style={{ cursor: 'pointer', color: '#991b1b', fontWeight: '600', display: 'block' }}>
+                                                    Excluir de Proyecciones
+                                                </label>
+                                                <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>Oculta este proyecto de las gráficas de ingresos esperados.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        className="btn btn-primary" 
+                                        style={{ marginTop: '1.5rem' }}
+                                        onClick={handleSaveExecutionDetails}
+                                        disabled={savingDetails}
+                                    >
+                                        {savingDetails ? 'Guardando...' : 'Guardar Configuraciones'}
+                                    </button>
                                 </div>
                             </div>
                         </div>

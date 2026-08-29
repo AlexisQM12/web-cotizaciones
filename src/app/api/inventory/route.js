@@ -1,23 +1,21 @@
-import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { getTenantCollection } from '@/lib/firebase-admin';
+import { getInventoryConfig } from '@/lib/cgoConfig.server';
+import { sanitizeAttributes } from '@/lib/inventoryPayload';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'inventory');
-        if (empresaId) {
-            query = query.where('empresaId', '==', empresaId);
+        if (!empresaId) {
+            return Response.json({ error: 'empresaId es obligatorio' }, { status: 400 });
         }
 
-        const snapshot = await query.get();
+        const snapshot = await getTenantCollection(empresaId, 'inventory').get();
 
-        let inventoryItems = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-
-        inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
+        const inventoryItems = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         return Response.json(inventoryItems);
     } catch (error) {
@@ -32,18 +30,26 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { name, sku, category, stock, minStock, unit, cost, empresaId } = body;
+        const { name, sku, category, stock, minStock, unit, cost, imageUrl, attributes, empresaId } = body;
 
-        const newItemRef = getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'inventory').doc();
+        if (!empresaId) {
+            return Response.json({ error: 'empresaId es obligatorio' }, { status: 400 });
+        }
+
+        const config = await getInventoryConfig(empresaId);
+
+        const newItemRef = getTenantCollection(empresaId, 'inventory').doc();
         const itemData = {
             name,
             sku: sku || '',
             category: category || '',
             stock: Number(stock) || 0,
             minStock: Number(minStock) || 0,
-            unit: unit || 'Unidades',
+            unit: unit || config.unitOptions[0] || 'Unidades',
             cost: Number(cost) || 0,
-            empresaId: empresaId || null,
+            imageUrl: imageUrl || '',
+            attributes: sanitizeAttributes(attributes, config),
+            empresaId,
             createdAt: new Date().toISOString()
         };
 
@@ -51,7 +57,7 @@ export async function POST(req) {
 
         return Response.json({ id: newItemRef.id, ...itemData });
     } catch (error) {
-        console.error(error);
+        console.error('API Error (inventory POST):', error);
         return Response.json({ error: 'Failed to create inventory item' }, { status: 500 });
     }
 }

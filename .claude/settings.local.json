@@ -24,7 +24,17 @@
       "Bash(git ls-files *)",
       "Bash(grep -n \"env\" .gitignore)",
       "Bash(git commit -m 'feat\\(cotizaciones\\): scanner→ayatech, fix factura PDF upload, panel Gmail replegable + botones icono móvil' -m '- Scanner \\(emailListener\\) apunta a TENANT_ID \\(default ayatech\\) en vez del tenant legado 6 *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Read(//d/ZenLogic/**)",
+      "Bash(cd /d/ZenLogic && echo \"=== src ===\" && ls src && echo \"\" && echo \"=== src/pages o views ===\" && ls src/pages src/views src/components 2>/dev/null | head -40)",
+      "Bash(cd /d/ZenLogic && grep -rlniE \"activeTools|sacModules|tenants\" src --include=*.jsx --include=*.js | head -20)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('firebase.json','utf8'\\)\\); console.log\\('firebase.json: JSON válido ✓'\\); const j=JSON.parse\\(require\\('fs'\\).readFileSync\\('firebase.json','utf8'\\)\\); console.log\\('bloque firestore presente:', 'firestore' in j\\);\")",
+      "Bash(cp '/c/Users/LENOVO/Documents/WEB DE cotizaciones/src/lib/cgoConfig.js' /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/cgoConfig.mjs)",
+      "Read(//c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/**)",
+      "Bash(node --input-type=module -e ' *)",
+      "PowerShell(Remove-Item -Recurse -Force \".next\" -ErrorAction SilentlyContinue; Write-Output \".next limpiado \\(artefactos de produccion\\) : $\\(-not \\(Test-Path '.next'\\)\\)\")",
+      "Bash(cp /d/ZenLogic/src/utils/toolsCatalog.js /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/tc.mjs)",
+      "Bash(node --check /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/tc.mjs)"
     ]
   }
 }

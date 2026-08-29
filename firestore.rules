@@ -1,3 +1,14 @@
+// ⚠️ COPIA DE REFERENCIA — NO DESPLEGAR DESDE ESTE REPO ⚠️
+//
+// La base de datos zenlogic-8a575 es compartida por los 3 productos de Zentria
+// (CGO, SAC, ResLab). Las reglas vivas se despliegan desde el repo de ZenLogic
+// (D:\ZenLogic\firestore.rules), que es la ÚNICA fuente de verdad y contiene
+// además las reglas de `admins`, `tenant_users` y `allowedTechnicians`.
+//
+// Este archivo NO incluye esas reglas: desplegarlo tumbaría el panel de ZenLogic
+// y el login por whitelist de los tres productos. Por eso se quitó el bloque
+// "firestore" de firebase.json. Cualquier cambio de reglas se hace en ZenLogic.
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
