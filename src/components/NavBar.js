@@ -68,7 +68,7 @@ export function NavBar() {
     return (
         <div className="navbar">
             {/* CGO System Logo + Company Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <img
                     src="/icono-cgo.png"
                     alt="Logo CGO"
@@ -89,56 +89,53 @@ export function NavBar() {
                 />
 
                 {companyLogo && (
-                    <>
-                        <div style={{ width: 1, height: 28, background: '#e2e8f0' }} />
-                        <div
+                    <div
+                        style={{
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            cursor: 'pointer',
+                            background: '#fff',
+                            padding: '4px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            transition: 'all 0.3s ease',
+                            maxWidth: '38px', // Only show icon by default
+                            height: '38px',
+                            overflow: 'hidden'
+                        }}
+                        onClick={() => router.push('/settings')}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.maxWidth = '250px';
+                            e.currentTarget.style.padding = '4px 12px 4px 4px';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.maxWidth = '38px';
+                            e.currentTarget.style.padding = '4px';
+                        }}
+                    >
+                        <img
+                            src={companyLogo}
+                            alt={companyName || 'Logo empresa'}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                cursor: 'pointer',
-                                background: '#fff',
-                                padding: '4px 10px 4px 6px',
-                                borderRadius: '10px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                transition: 'transform 0.2s'
+                                height: '30px',
+                                minWidth: '30px',
+                                maxWidth: '30px',
+                                objectFit: 'contain',
+                                borderRadius: '4px'
                             }}
-                            onClick={() => router.push('/settings')}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                            <img
-                                src={companyLogo}
-                                alt={companyName || 'Logo empresa'}
-                                title={companyName}
-                                style={{
-                                    height: '34px',
-                                    maxWidth: '80px',
-                                    objectFit: 'contain',
-                                    borderRadius: '6px',
-                                    transition: 'opacity 0.2s'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'}
-                                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-                            />
-                            {companyName && (
-                                <span style={{
-                                    fontSize: '0.72rem',
-                                    fontWeight: 400,
-                                    color: '#475569',
-                                    letterSpacing: '0',
-                                    whiteSpace: 'normal',
-                                    maxWidth: 90,
-                                    lineHeight: 1.2,
-                                    wordBreak: 'break-word',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden'
-                                }}>
-                                    {companyName}
-                                </span>
-                            )}
-                        </div>
-                    </>
+                        />
+                        {companyName && (
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: '#475569',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {companyName}
+                            </span>
+                        )}
+                    </div>
                 )}
             </div>
 

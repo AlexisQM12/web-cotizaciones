@@ -85,6 +85,37 @@ export default function ClientsDashboard() {
         setShowCompanyModal(true)
     }
 
+    const [searchingCompanyRuc, setSearchingCompanyRuc] = useState(false);
+
+    const searchCompanyRuc = async () => {
+        const ruc = companyForm.ruc || '';
+        if (!/^\d{8}$/.test(ruc) && !/^\d{11}$/.test(ruc)) {
+            alert('Por favor, ingresa un RUC (11 dígitos) o DNI (8 dígitos) válido.');
+            return;
+        }
+        setSearchingCompanyRuc(true);
+        try {
+            const isDni = ruc.length === 8;
+            const endpoint = isDni ? `/api/sunat/dni?dni=${ruc}` : `/api/sunat/ruc?ruc=${ruc}`;
+            const res = await fetch(endpoint);
+            if (res.ok) {
+                const data = await res.json();
+                setCompanyForm(f => ({
+                    ...f,
+                    companyName: f.companyName || (isDni ? data.nombreCompleto : data.razonSocial),
+                    razonSocial: isDni ? data.nombreCompleto : (data.razonSocial || f.razonSocial),
+                    address: isDni ? f.address : (data.direccion || f.address),
+                }));
+            } else {
+                alert(`No se pudo encontrar el ${isDni ? 'DNI' : 'RUC'}.`);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setSearchingCompanyRuc(false);
+        }
+    };
+
     const uploadLogo = async (e) => {
         const file = e.target.files[0];
         if (!file || !storage || !user?.empresaId) return;
@@ -407,8 +438,18 @@ export default function ClientsDashboard() {
                                 <input required type="text" value={companyForm.companyName} onChange={e => setCompanyForm({...companyForm, companyName: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: Constructora XYZ" />
                             </div>
                             <div className="form-group">
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>RUC</label>
-                                <input type="text" value={companyForm.ruc} onChange={e => setCompanyForm({...companyForm, ruc: e.target.value})} style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 20123456789" />
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>RUC / DNI</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input type="text" value={companyForm.ruc} onChange={e => setCompanyForm({...companyForm, ruc: e.target.value})} style={{ flex: 1, padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.9rem' }} placeholder="Ej: 20123456789" />
+                                    <button 
+                                        type="button"
+                                        onClick={searchCompanyRuc}
+                                        disabled={searchingCompanyRuc || !((companyForm.ruc || '').length === 8 || (companyForm.ruc || '').length === 11)}
+                                        style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '0 1rem', borderRadius: '6px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}
+                                    >
+                                        {searchingCompanyRuc ? '...' : 'SUNAT'}
+                                    </button>
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.3rem', color: '#475569' }}>Razón Social</label>

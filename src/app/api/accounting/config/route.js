@@ -35,6 +35,7 @@ export async function PUT(req) {
             companyProfileId, empresaId: bodyEmpresaId, companyType, taxRegime, ruc, razonSocial,
             direccionFiscal, fechaInicioActividades, esBuenContribuyente,
             tieneTrabajadores, ingresosAnualesProyectados, coeficienteRenta,
+            clientId, clientSecret, solUser, solPass
         } = body;
 
         // Accept either companyProfileId (legacy) or empresaId (SaaS)
@@ -67,6 +68,10 @@ export async function PUT(req) {
             tieneTrabajadores: !!tieneTrabajadores,
             ingresosAnualesProyectados: parseFloat(ingresosAnualesProyectados) || 0,
             coeficienteRenta: parseFloat(coeficienteRenta) || 0.015,
+            clientId: clientId || '',
+            clientSecret: clientSecret || '',
+            solUser: solUser || '',
+            solPass: solPass || '',
             updatedAt: new Date().toISOString(),
         };
 

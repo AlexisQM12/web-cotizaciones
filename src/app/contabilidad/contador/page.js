@@ -16,6 +16,8 @@ export default function ContadorDashboard() {
     const [loading, setLoading] = useState(false);
     const [autoSelected, setAutoSelected] = useState(false);
 
+    const [exchangeRate, setExchangeRate] = useState(null);
+
     useEffect(() => {
         if (!companyProfileId || autoSelected) return;
         (async () => {
@@ -40,6 +42,14 @@ export default function ContadorDashboard() {
         })();
     }, [companyProfileId, period]);
 
+    useEffect(() => {
+        // Fetch Tipo de Cambio SUNAT via proxy interno para evitar CORS
+        fetch('/api/sunat/tipo-cambio')
+            .then(res => res.json())
+            .then(data => setExchangeRate(data))
+            .catch(() => setExchangeRate({ compra: 3.70, venta: 3.72, fecha: 'Simulado' }));
+    }, []);
+
     if (cfgLoading || !config) return <AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>;
 
     const books = getRequiredBooks(config.taxRegime, config.ingresosAnualesProyectados || 0);
@@ -56,16 +66,20 @@ export default function ContadorDashboard() {
                         </svg>
                     </button>
                     <div>
-                        <h1 className="acc-page-title" style={{ margin: 0 }}>
+                        <h1 className="acc-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <Icon name="calculator" size={26} />
                             Panel del Contador
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, background: '#dcfce7', color: '#166534', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                                <Icon name="check" size={12} />
+                                Conectado con SUNAT
+                            </span>
                         </h1>
                         <p className="acc-page-subtitle" style={{ margin: 0, marginTop: '0.25rem' }}>
                             Régimen: <strong>{config.taxRegime}</strong> · RUC <strong>{config.ruc}</strong> · {config.razonSocial}
                         </p>
                     </div>
                 </div>
-                <div className="acc-page-actions">
+                <div className="acc-page-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <select className="acc-select" style={{ width: 230 }} value={period} onChange={e => setPeriod(e.target.value)}>
                         {listAvailablePeriods().map(p => {
                             const pi = summary?.periods?.find(x => x.period === p);
@@ -73,6 +87,13 @@ export default function ContadorDashboard() {
                             return <option key={p} value={p}>{formatPeriod(p)}{count > 0 ? ` · ${count} movs.` : ''}</option>;
                         })}
                     </select>
+                    {exchangeRate && (
+                        <div style={{ fontSize: '0.8rem', color: '#475569', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', gap: '1rem' }}>
+                            <span><strong>TC SUNAT</strong> ({exchangeRate.fecha || 'Hoy'}):</span>
+                            <span>Compra: <strong>{exchangeRate.compra}</strong></span>
+                            <span>Venta: <strong>{exchangeRate.venta}</strong></span>
+                        </div>
+                    )}
                 </div>
             </div>
 

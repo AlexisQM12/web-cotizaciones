@@ -85,6 +85,8 @@ export default function AccountingShell({ children, requireSetup = true }) {
                         ) : (
                             <>
                                 <NavLink href="/contabilidad/contador" icon="home" active={pathname === '/contabilidad/contador'}>Panel Contador</NavLink>
+                                <NavLink href="/contabilidad/sire" icon="cloud-download" active={pathname.startsWith('/contabilidad/sire')}>Buzón SIRE (SUNAT)</NavLink>
+                                <NavLink href="/contabilidad/xml-validator" icon="shield-check" active={pathname.startsWith('/contabilidad/xml-validator')}>Validador XML</NavLink>
                                 <NavLink href="/contabilidad/contador/ventas" icon="doc-up" active={pathname.startsWith('/contabilidad/contador/ventas')}>Registro de Ventas</NavLink>
                                 <NavLink href="/contabilidad/contador/compras" icon="doc-down" active={pathname.startsWith('/contabilidad/contador/compras')}>Registro de Compras</NavLink>
                                 <NavLink href="/contabilidad/proyecciones" icon="chart-bar" active={pathname === '/contabilidad/proyecciones'}>Proyecciones</NavLink>

@@ -245,7 +245,7 @@ export default function Home() {
     return (
         <ProtectedRoute>
             <NavBar />
-            <main className="container">
+            <main className="container" style={{ maxWidth: '1500px' }}>
                 <div className="dashboard-header">
                     <div className="dashboard-title-area">
                         <h1>CGO-Pymes</h1>
@@ -257,7 +257,7 @@ export default function Home() {
                     <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem', textAlign: 'right' }}>
                         💡 Mantén presionado y arrastra para reordenar las tarjetas
                     </p>
-                    <div className="grid-list" style={{ gap: '2rem' }}>
+                    <div className="grid-list" style={{ gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
                         {cardOrder.filter(cardId => {
                             if (!user) return false;
                             if (user.role === 'admin') return true;

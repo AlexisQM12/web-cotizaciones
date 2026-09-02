@@ -88,7 +88,32 @@ export default function Settings() {
         }
     };
 
+    const [searchingCompanyRuc, setSearchingCompanyRuc] = useState(false);
 
+    const searchCompanyRuc = async () => {
+        if (!/^\d{11}$/.test(companyFormData.ruc)) {
+            alert('Por favor, ingresa un RUC válido de 11 dígitos.');
+            return;
+        }
+        setSearchingCompanyRuc(true);
+        try {
+            const res = await fetch(`/api/sunat/ruc?ruc=${companyFormData.ruc}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCompanyFormData(f => ({
+                    ...f,
+                    name: data.razonSocial || f.name,
+                    address: data.direccion || f.address,
+                }));
+            } else {
+                alert('No se pudo encontrar el RUC en SUNAT.');
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setSearchingCompanyRuc(false);
+        }
+    };
 
     const handleCompanySubmit = async (e) => {
         e.preventDefault();
@@ -150,6 +175,34 @@ export default function Settings() {
             ...companyFormData,
             accounts: newAccounts
         });
+    const [searchingClientRuc, setSearchingClientRuc] = useState(false);
+
+    const searchClientRuc = async () => {
+        const ruc = clientFormData.ruc || '';
+        if (!/^\d{8}$/.test(ruc) && !/^\d{11}$/.test(ruc)) {
+            alert('Por favor, ingresa un RUC (11 dígitos) o DNI (8 dígitos) válido.');
+            return;
+        }
+        setSearchingClientRuc(true);
+        try {
+            const isDni = ruc.length === 8;
+            const endpoint = isDni ? `/api/sunat/dni?dni=${ruc}` : `/api/sunat/ruc?ruc=${ruc}`;
+            const res = await fetch(endpoint);
+            if (res.ok) {
+                const data = await res.json();
+                setClientFormData(f => ({
+                    ...f,
+                    name: isDni ? data.nombreCompleto : (data.razonSocial || f.name),
+                    address: isDni ? f.address : (data.direccion || f.address),
+                }));
+            } else {
+                alert(`No se pudo encontrar el ${isDni ? 'DNI' : 'RUC'}.`);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setSearchingClientRuc(false);
+        }
     };
 
     const handleClientSubmit = async (e) => {
@@ -318,13 +371,24 @@ export default function Settings() {
                                     <div className="grid-2-col" style={{ gap: '1.5rem' }}>
                                         <div className="input-group">
                                             <label className="label">RUC</label>
-                                            <input
-                                                className="input"
-                                                type="text"
-                                                value={companyFormData.ruc || ''}
-                                                onChange={(e) => setCompanyFormData({ ...companyFormData, ruc: e.target.value })}
-                                                placeholder="20123456789"
-                                            />
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    className="input"
+                                                    type="text"
+                                                    style={{ flex: 1 }}
+                                                    value={companyFormData.ruc || ''}
+                                                    onChange={(e) => setCompanyFormData({ ...companyFormData, ruc: e.target.value })}
+                                                    placeholder="20123456789"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    onClick={searchCompanyRuc}
+                                                    disabled={searchingCompanyRuc || (companyFormData.ruc || '').length !== 11}
+                                                >
+                                                    {searchingCompanyRuc ? '...' : 'SUNAT'}
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="input-group">
                                             <label className="label">Sitio Web</label>
@@ -529,13 +593,24 @@ export default function Settings() {
                                     </div>
                                     <div className="input-group">
                                         <label className="label">RUC / DNI</label>
-                                        <input
-                                            className="input"
-                                            type="text"
-                                            value={clientFormData.ruc || ''}
-                                            onChange={(e) => setClientFormData({ ...clientFormData, ruc: e.target.value })}
-                                            placeholder="12345678901"
-                                        />
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <input
+                                                className="input"
+                                                type="text"
+                                                style={{ flex: 1 }}
+                                                value={clientFormData.ruc || ''}
+                                                onChange={(e) => setClientFormData({ ...clientFormData, ruc: e.target.value })}
+                                                placeholder="12345678901"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary"
+                                                onClick={searchClientRuc}
+                                                disabled={searchingClientRuc || !((clientFormData.ruc || '').length === 8 || (clientFormData.ruc || '').length === 11)}
+                                            >
+                                                {searchingClientRuc ? '...' : 'SUNAT / RENIEC'}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="input-group">
                                         <label className="label">Dirección</label>
