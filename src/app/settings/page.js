@@ -175,6 +175,7 @@ export default function Settings() {
             ...companyFormData,
             accounts: newAccounts
         });
+    };
     const [searchingClientRuc, setSearchingClientRuc] = useState(false);
 
     const searchClientRuc = async () => {
