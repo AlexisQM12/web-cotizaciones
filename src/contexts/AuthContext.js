@@ -72,6 +72,52 @@ export function AuthProvider({ children }) {
         return () => unsubscribe();
     }, []);
 
+    // Global fetch interceptor to inject empresaId automatically
+    useEffect(() => {
+        if (!user?.empresaId) return;
+
+        const originalFetch = window.fetch;
+        window.fetch = async function (...args) {
+            let [resource, config] = args;
+            let urlStr = typeof resource === 'string' ? resource : (resource instanceof Request ? resource.url : resource.toString());
+            
+            if (urlStr.startsWith('/api/') || urlStr.includes(window.location.origin + '/api/')) {
+                try {
+                    const url = new URL(urlStr, window.location.origin);
+                    if (!url.searchParams.has('empresaId')) {
+                        url.searchParams.set('empresaId', user.empresaId);
+                        if (typeof resource === 'string') {
+                            resource = url.pathname + url.search;
+                        } else if (resource instanceof Request) {
+                            resource = new Request(url, resource);
+                        }
+                    }
+
+                    if (config && ['POST', 'PUT', 'PATCH'].includes(config.method?.toUpperCase())) {
+                        if (config.body && typeof config.body === 'string') {
+                            try {
+                                const bodyObj = JSON.parse(config.body);
+                                if (typeof bodyObj === 'object' && bodyObj !== null && !bodyObj.empresaId) {
+                                    bodyObj.empresaId = user.empresaId;
+                                    config.body = JSON.stringify(bodyObj);
+                                }
+                            } catch (e) {
+                                // Ignore JSON parse errors (might not be JSON)
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Fetch intercept error:', e);
+                }
+            }
+            return originalFetch.apply(this, [resource, config]);
+        };
+
+        return () => {
+            window.fetch = originalFetch;
+        };
+    }, [user?.empresaId]);
+
     const signInWithGoogle = async () => {
         try {
             const provider = new GoogleAuthProvider();
