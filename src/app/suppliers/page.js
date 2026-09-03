@@ -28,11 +28,10 @@ export default function SuppliersDashboard() {
     }, [])
 
     const fetchSuppliers = async () => {
+        if (!user?.empresaId) return;
         setLoading(true)
         try {
-            // Assuming the user is logged in, we can just fetch all suppliers.
-            // If multi-tenant with empresaId is needed, we'd add ?empresaId=X
-            const res = await fetch('/api/suppliers')
+            const res = await fetch(`/api/suppliers?empresaId=${encodeURIComponent(user.empresaId)}`)
             const data = await res.json()
             if (Array.isArray(data)) {
                 setSuppliers(data)
@@ -82,18 +81,23 @@ export default function SuppliersDashboard() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!user?.empresaId) {
+            alert('No tienes una empresa asignada. Por favor, contacta a soporte.');
+            return;
+        }
         try {
+            const payload = { ...formData, empresaId: user.empresaId };
             if (editingSupplier) {
-                await fetch(`/api/suppliers/${editingSupplier.id}`, {
+                await fetch(`/api/suppliers/${editingSupplier.id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(payload)
                 })
             } else {
-                await fetch('/api/suppliers', {
+                await fetch(`/api/suppliers?empresaId=${encodeURIComponent(user.empresaId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(payload)
                 })
             }
             handleCloseModal()
@@ -105,9 +109,10 @@ export default function SuppliersDashboard() {
     }
 
     const handleDelete = async (id) => {
+        if (!user?.empresaId) return;
         if (!confirm('¿Estás seguro de eliminar este proveedor?')) return
         try {
-            await fetch(`/api/suppliers/${id}`, { method: 'DELETE' })
+            await fetch(`/api/suppliers/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, { method: 'DELETE' })
             fetchSuppliers()
         } catch (error) {
             console.error('Error deleting supplier:', error)

@@ -5,7 +5,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'suppliers');
+        let query = getTenantCollection(empresaId, 'suppliers');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -34,7 +34,7 @@ export async function POST(req) {
         const body = await req.json();
         const { name, category, whatsapp, city, email, notes, empresaId, supplierType } = body;
 
-        const newSupplierRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'suppliers').doc();
+        const newSupplierRef = getTenantCollection(empresaId, 'suppliers').doc();
         const supplierData = {
             name,
             category: category || '',

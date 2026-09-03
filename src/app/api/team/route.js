@@ -5,7 +5,7 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const empresaId = searchParams.get('empresaId');
         
-        let query = getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'team');
+        let query = getTenantCollection(empresaId, 'team');
 
         const snapshot = await query.get();
         let team = snapshot.docs.map(doc => ({
@@ -30,7 +30,7 @@ export async function POST(request) {
         const body = await request.json();
         const empresaId = body.empresaId;
         
-        const newMemberRef = getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'team').doc();
+        const newMemberRef = getTenantCollection(empresaId, 'team').doc();
         
         const memberData = {
             name: body.name || '',

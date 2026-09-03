@@ -83,7 +83,7 @@ export async function POST(req) {
         await transporter.sendMail(mailOptions);
 
         // 5. Update Quotation status to sent
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations').doc(quotationId).update({
+        await getTenantCollection(empresaId, 'quotations').doc(quotationId).update({
             isSent: true,
             quotationStatus: 'pendiente', // Keep it pending or whatever is current, but mark sent
             updatedAt: new Date().toISOString()

@@ -5,7 +5,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
 
-        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations');
+        let query = getTenantCollection(empresaId, 'quotations');
         if (empresaId) {
             query = query.where('empresaId', '==', empresaId);
         }
@@ -50,7 +50,7 @@ export async function POST(req) {
 
         // Fetch default profiles
         const companySnap = await getTenantDoc(empresaId).get();
-        const clientSnap = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'client_profiles').where('empresaId', '==', empresaId).where('isDefault', '==', true).limit(1).get();
+        const clientSnap = await getTenantCollection(empresaId, 'client_profiles').where('empresaId', '==', empresaId).where('isDefault', '==', true).limit(1).get();
 
         const defaultCompany = companySnap.exists ? companySnap : null;
         const defaultClient = !clientSnap.empty ? clientSnap.docs[0] : null;
@@ -71,7 +71,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString()
         };
 
-        const docRef = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations').add(newQuote);
+        const docRef = await getTenantCollection(empresaId, 'quotations').add(newQuote);
 
         return Response.json({ id: docRef.id, ...newQuote });
     } catch (error) {

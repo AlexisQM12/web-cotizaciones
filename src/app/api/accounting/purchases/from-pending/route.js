@@ -17,7 +17,7 @@ export async function POST(req) {
         const sourceKey = `pending:${quotationId}:${materialId}`;
 
         // Evitar duplicados
-        const existing = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger')
+        const existing = await getTenantCollection((empresaId), 'purchases_ledger')
             .where('companyProfileId', '==', companyProfileId)
             .where('sourceKey', '==', sourceKey)
             .limit(1).get();
@@ -121,7 +121,7 @@ export async function POST(req) {
             uploadedBy: uploadedBy || null,
         };
 
-        const ref = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').add(data);
+        const ref = await getTenantCollection((empresaId), 'purchases_ledger').add(data);
 
         // Directorio de proveedores
         if (ocrData.ruc) {

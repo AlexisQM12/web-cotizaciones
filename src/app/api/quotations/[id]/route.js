@@ -74,7 +74,7 @@ export async function PUT(req, { params }) {
             updateData.total = body.items.reduce((acc, item) => acc + (parseFloat(item.quantity || 0) * parseFloat(item.price || 0)), 0);
         }
 
-        const tenantId = body.empresaId || 'ayatech';
+        const tenantId = body.empresaId;
         await getTenantCollection(tenantId, 'quotations').doc(id).update(updateData);
 
         // Check for orphaned materials in purchases_ledger and delete them

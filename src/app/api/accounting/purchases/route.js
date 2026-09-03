@@ -105,7 +105,7 @@ export async function POST(req) {
             uploadedBy: uploadedBy || null,
         };
 
-        const ref = await getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger').add(data);
+        const ref = await getTenantCollection((empresaId), 'purchases_ledger').add(data);
 
         // Mantenemos directorio de proveedores
         if (numeroDocProveedor) {

@@ -15,10 +15,10 @@ export async function GET(req) {
         }
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'sales_ledger')
+            getTenantCollection((empresaId), 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
-            getTenantCollection((typeof empresaId !== 'undefined' ? empresaId : (typeof companyProfileId !== 'undefined' && companyProfileId ? companyProfileId : 'ayatech')), 'purchases_ledger')
+            getTenantCollection((empresaId), 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
         ]);

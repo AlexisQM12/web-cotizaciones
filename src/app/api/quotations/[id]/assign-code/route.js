@@ -9,7 +9,7 @@ export async function POST(req, { params }) {
         const currentYear = new Date().getFullYear();
 
         // Get all published quotations and filter in memory
-        const snapshot = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations')
+        const snapshot = await getTenantCollection(empresaId, 'quotations')
             .where('isPublished', '==', true)
             .get();
 
@@ -45,7 +45,7 @@ export async function POST(req, { params }) {
         console.log('🔄 Manual Code Update:', { codeNumbers, maxCodeNumber, nextNumber, code });
 
         // Update quotation code
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : 'ayatech', 'quotations').doc(id).update({
+        await getTenantCollection(empresaId, 'quotations').doc(id).update({
             code,
             updatedAt: new Date().toISOString()
         });

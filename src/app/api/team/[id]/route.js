@@ -16,7 +16,7 @@ export async function PUT(request, { params }) {
             updatedAt: new Date().toISOString()
         };
 
-        await getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'team').doc(id).update(updateData);
+        await getTenantCollection(empresaId, 'team').doc(id).update(updateData);
 
         return Response.json({
             id,
@@ -37,7 +37,7 @@ export async function DELETE(request, { params }) {
         const { searchParams } = new URL(request.url);
         const empresaId = searchParams.get('empresaId');
 
-        await getTenantCollection(typeof empresaId !== 'undefined' && empresaId ? empresaId : 'ayatech', 'team').doc(id).delete();
+        await getTenantCollection(empresaId, 'team').doc(id).delete();
 
         return Response.json({ success: true });
     } catch (error) {
