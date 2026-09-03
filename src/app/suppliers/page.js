@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SuppliersDashboard() {
+    const { user } = useAuth()
     const [suppliers, setSuppliers] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -24,8 +26,10 @@ export default function SuppliersDashboard() {
     })
 
     useEffect(() => {
-        fetchSuppliers()
-    }, [])
+        if (user?.empresaId) {
+            fetchSuppliers()
+        }
+    }, [user?.empresaId])
 
     const fetchSuppliers = async () => {
         if (!user?.empresaId) return;
