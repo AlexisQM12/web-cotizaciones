@@ -30,7 +30,8 @@ export async function GET(req) {
 // PUT /api/accounting/config — crea o actualiza
 export async function PUT(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const {
             companyProfileId, empresaId: bodyEmpresaId, companyType, taxRegime, ruc, razonSocial,
             direccionFiscal, fechaInicioActividades, esBuenContribuyente,

@@ -59,7 +59,8 @@ export async function GET(req) {
 // POST /api/accounting/purchases — crea entrada manual de compra
 export async function POST(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const {
             companyProfileId, fechaEmision, fechaVencimiento, tipoComprobante,
             serie, numero, tipoDocProveedor, numeroDocProveedor, proveedorName,
@@ -127,7 +128,8 @@ export async function POST(req) {
 
 export async function PUT(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const { id, companyProfileId, ...update } = body;
         if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });
 

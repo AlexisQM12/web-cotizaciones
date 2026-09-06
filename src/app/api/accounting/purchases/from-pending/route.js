@@ -8,7 +8,8 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 // sin crear duplicado.
 export async function POST(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio, totalCost, pendienteFactura, uploadedBy } = body;
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });

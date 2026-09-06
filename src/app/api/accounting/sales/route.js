@@ -26,7 +26,8 @@ export async function GET(req) {
 // POST /api/accounting/sales — crea entrada manual o desde cotización
 export async function POST(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const {
             companyProfileId, fechaEmision, fechaVencimiento, tipoComprobante,
             serie, numero, tipoDocCliente, numeroDocCliente, clienteName,
@@ -77,7 +78,8 @@ export async function POST(req) {
 // PUT /api/accounting/sales — actualiza
 export async function PUT(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const { id, ...update } = body;
         if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
 

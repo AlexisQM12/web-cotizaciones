@@ -9,7 +9,8 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 // Body: { companyProfileId, defaultSerie?, defaultFechaEmision? }
 export async function POST(req) {
     try {
-        const body = await req.json();
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+
         const { companyProfileId, defaultSerie = 'F001', overwrite = false } = body;
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
