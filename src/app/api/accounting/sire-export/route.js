@@ -5,7 +5,8 @@ import { buildSire141, buildSire81 } from '@/lib/accounting/sireExporter';
 // Devuelve el archivo plano como texto descargable.
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
         const period           = searchParams.get('period');
         const libro            = searchParams.get('libro');
@@ -13,7 +14,7 @@ export async function GET(req) {
             return Response.json({ error: 'companyProfileId, period y libro requeridos' }, { status: 400 });
         }
 
-        const configDoc = await getTenantCollection((empresaId), 'accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) {
             return Response.json({ error: 'Configuración no encontrada' }, { status: 404 });
         }
@@ -22,13 +23,13 @@ export async function GET(req) {
 
         let payload;
         if (libro === '14.1') {
-            const snap = await getTenantCollection((empresaId), 'sales_ledger')
+            const snap = await getTenantCollection(empresaId, 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
             payload = buildSire141({ ruc, period, sales });
         } else if (libro === '8.1') {
-            const snap = await getTenantCollection((empresaId), 'purchases_ledger')
+            const snap = await getTenantCollection(empresaId, 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));

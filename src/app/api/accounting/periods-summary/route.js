@@ -5,13 +5,14 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 // para que la UI pueda navegar al periodo correcto y resaltar los que tienen datos.
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            getTenantCollection((empresaId), 'sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
-            getTenantCollection((empresaId), 'purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(empresaId, 'sales_ledger').where('companyProfileId', '==', companyProfileId).get(),
+            getTenantCollection(empresaId, 'purchases_ledger').where('companyProfileId', '==', companyProfileId).get(),
         ]);
 
         const periods = {};

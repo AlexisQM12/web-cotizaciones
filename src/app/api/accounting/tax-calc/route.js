@@ -6,7 +6,8 @@ import { buildSalesEntry, buildPurchaseEntry, buildLibroDiario, buildLibroMayor,
 // Calcula impuestos del mes y devuelve también asientos contables y libros derivados.
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
         const period           = searchParams.get('period');
         if (!companyProfileId || !period) {
@@ -14,7 +15,7 @@ export async function GET(req) {
         }
 
         // 1) Cargar configuración
-        const configDoc = await getTenantCollection((empresaId), 'accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) {
             return Response.json({ error: 'Configuración contable no encontrada. Completa el setup.' }, { status: 404 });
         }
@@ -22,9 +23,9 @@ export async function GET(req) {
 
         // 2) Cargar ventas y compras del periodo
         const [salesSnap, purchasesSnap] = await Promise.all([
-            getTenantCollection((empresaId), 'sales_ledger')
+            getTenantCollection(empresaId, 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get(),
-            getTenantCollection((empresaId), 'purchases_ledger')
+            getTenantCollection(empresaId, 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get(),
         ]);
         const sales     = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -32,7 +33,7 @@ export async function GET(req) {
 
         // 3) Calcular ingresos acumulados del año (para tasa RMT 1% vs 1.5%)
         const year = period.split('-')[0];
-        const yearSnap = await getTenantCollection((empresaId), 'sales_ledger')
+        const yearSnap = await getTenantCollection(empresaId, 'sales_ledger')
             .where('companyProfileId', '==', companyProfileId).get();
         const ingresosAnualesAcumulados = yearSnap.docs
             .filter(d => (d.data().period || '').startsWith(year))

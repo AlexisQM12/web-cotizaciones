@@ -4,12 +4,13 @@ import { getUpcomingObligations, getDueDate, getCurrentDeclarationPeriod, listAv
 // GET /api/accounting/calendar?companyProfileId=xxx&monthsAhead=6
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
         const monthsAhead      = parseInt(searchParams.get('monthsAhead') || '6', 10);
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
-        const configDoc = await getTenantCollection((empresaId), 'accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) return Response.json({ error: 'Sin configuración contable' }, { status: 404 });
         const { ruc, esBuenContribuyente } = configDoc.data();
         if (!ruc) return Response.json({ error: 'RUC no configurado' }, { status: 400 });

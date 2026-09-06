@@ -3,7 +3,8 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 // GET /api/accounting/purchases?companyProfileId=xxx&period=YYYY-MM
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId') || searchParams.get('empresaId');
         const period           = searchParams.get('period');
 
@@ -105,7 +106,7 @@ export async function POST(req) {
             uploadedBy: uploadedBy || null,
         };
 
-        const ref = await getTenantCollection((empresaId), 'purchases_ledger').add(data);
+        const ref = await getTenantCollection(empresaId, 'purchases_ledger').add(data);
 
         // Mantenemos directorio de proveedores
         if (numeroDocProveedor) {
@@ -197,7 +198,8 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const id = searchParams.get('id');
         const companyProfileId = searchParams.get('companyProfileId');
         if (!id || !companyProfileId) return Response.json({ error: 'id y companyProfileId requeridos' }, { status: 400 });

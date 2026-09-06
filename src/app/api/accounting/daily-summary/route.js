@@ -5,7 +5,8 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 // Se usa para graficar la tendencia diaria dentro del periodo activo.
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
         const period           = searchParams.get('period');
 
@@ -15,10 +16,10 @@ export async function GET(req) {
         }
 
         const [salesSnap, purchasesSnap] = await Promise.all([
-            getTenantCollection((empresaId), 'sales_ledger')
+            getTenantCollection(empresaId, 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
-            getTenantCollection((empresaId), 'purchases_ledger')
+            getTenantCollection(empresaId, 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId)
                 .where('period', '==', period).get(),
         ]);
