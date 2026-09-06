@@ -45,6 +45,7 @@ export async function fetchSireProposal({ token, type, period, page = 1, perPage
     const url = new URL(
         `${SIRE_API_BASE}/v1/contribuyente/migeigv/libros/${modulePath}/propuesta/web/propuesta/${perTributario}/comprobantes`
     );
+    url.searchParams.append('codTipoOpe', '1');
     url.searchParams.append('page', String(page));
     url.searchParams.append('perPage', String(perPage));
 
