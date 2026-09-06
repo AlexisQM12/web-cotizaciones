@@ -19,6 +19,21 @@ export default function SirePage() {
     const [modo, setModo] = useState(null);
     const [esperaHasta, setEsperaHasta] = useState(0); // corte por rate limit (429)
 
+    // La pausa por rate limit se guarda en sessionStorage: la cuota es de SUNAT,
+    // no del componente, así que recargar la página no debe saltarse la espera.
+    const CLAVE_ESPERA = 'sire:esperaHasta';
+    useEffect(() => {
+        try {
+            const guardado = Number(sessionStorage.getItem(CLAVE_ESPERA) || 0);
+            if (guardado > Date.now()) setEsperaHasta(guardado);
+        } catch { /* modo privado o storage bloqueado */ }
+    }, []);
+
+    const pausarPorRateLimit = (hasta) => {
+        setEsperaHasta(hasta);
+        try { sessionStorage.setItem(CLAVE_ESPERA, String(hasta)); } catch { /* ignorar */ }
+    };
+
     // Cada consulta le pide a SUNAT que GENERE un archivo (consume cuota). Por eso
     // cacheamos por periodo+libro: cambiar de pestaña y volver no debe re-consultar.
     const cache = useRef(new Map());
@@ -68,12 +83,17 @@ export default function SirePage() {
             if (data.modo) setModo(data.modo);
 
             if (!res.ok) {
-                const detalle = (data.errores || []).map(e => `[${e.cod}] ${e.msg}`).join('\n');
-                setError([data.error, detalle].filter(Boolean).join('\n'));
+                // `data.error` ya viene con el detalle de SUNAT incorporado; sólo
+                // añadimos los códigos que no estén ya en el mensaje, para no
+                // repetirlos como pasaba antes.
+                const extra = (data.errores || [])
+                    .map(e => `[${e.cod}] ${e.msg}`)
+                    .filter(d => !String(data.error || '').includes(d));
+                setError([data.error, ...extra].filter(Boolean).join('\n'));
                 setSireData(null);
                 // Ante un 429 dejamos de insistir: reintentar de inmediato sólo
                 // alarga el bloqueo de SUNAT.
-                if (data.rateLimited || res.status === 429) setEsperaHasta(Date.now() + 3 * 60 * 1000);
+                if (data.rateLimited || res.status === 429) pausarPorRateLimit(Date.now() + 3 * 60 * 1000);
                 return;
             }
             setSireData(data);
@@ -186,7 +206,7 @@ export default function SirePage() {
                         )}
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button className="btn btn-secondary" onClick={() => { cache.current.delete(`${activeTab}:${period}`); setEsperaHasta(0); fetchSireData(); }} disabled={loading}>
+                        <button className="btn btn-secondary" onClick={() => { cache.current.delete(`${activeTab}:${period}`); pausarPorRateLimit(0); fetchSireData(); }} disabled={loading}>
                             <Icon name="refresh" size={16} /> Actualizar
                         </button>
                         <button className="btn btn-primary" onClick={handleAceptarPropuesta} disabled={accepting || loading || !sireData?.comprobantes?.length}>
