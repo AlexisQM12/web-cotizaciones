@@ -1,158 +1,211 @@
 import { NextResponse } from 'next/server';
 import { getTenantCollection } from '@/lib/firebase-admin';
-import { getSireToken, fetchSireProposal } from '@/lib/accounting/sunatApi';
+import {
+    obtenerPropuesta, recuperarTicket, aceptarPropuesta, SunatApiError,
+} from '@/lib/accounting/sunatApi';
 
+// La descarga de la propuesta es un proceso por ticket: puede tardar. Damos
+// margen a la función y, si aun así no termina, devolvemos el ticket para que el
+// cliente siga consultando (ver respuesta 202 más abajo).
+export const maxDuration = 60;
+
+// Presupuesto de espera dentro de una sola petición HTTP. Si el ticket no está
+// listo en ese lapso no es un error: se devuelve el numTicket y se reintenta.
+const INTENTOS_POR_PETICION = 7;
+const ESPERA_MS             = 3000;
+
+async function cargarCredenciales(empresaId, companyProfileId) {
+    if (!empresaId) return null;
+    const snap = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
+    if (!snap.exists) return null;
+
+    const c = snap.data();
+    const completo = c.clientId && c.clientSecret && c.solUser && c.solPass && c.ruc;
+    if (!completo) return null;
+
+    return {
+        clientId:     c.clientId,
+        clientSecret: c.clientSecret,
+        ruc:          c.ruc,
+        solUser:      c.solUser,
+        solPassword:  c.solPass,
+    };
+}
+
+function resumir(comprobantes) {
+    const usable = comprobantes.filter(c => !c.parcial);
+    return {
+        totalDocumentos:    comprobantes.length,
+        totalBaseImponible: usable.reduce((s, c) => s + (c.baseImponible || 0), 0),
+        totalIGV:           usable.reduce((s, c) => s + (c.igv || 0), 0),
+        totalMonto:         usable.reduce((s, c) => s + (c.total || 0), 0),
+        filasNoParseadas:   comprobantes.length - usable.length,
+    };
+}
+
+// `modo` viaja también en los errores: si no, la UI no puede decir si está
+// conectada a SUNAT o en pruebas justo cuando falla, que es cuando más importa.
+function manejarError(err, contexto, modo = null) {
+    console.error(`[sunat/sire] ${contexto}:`, err);
+    if (err instanceof SunatApiError) {
+        return NextResponse.json({
+            error:      err.message,
+            cod:        err.cod || null,
+            errores:    err.errors || [],
+            fuente:     'SUNAT',
+            modo,
+            // 429: la UI debe esperar antes de reintentar, no insistir.
+            rateLimited: err.status === 429,
+        }, { status: err.status && err.status >= 400 && err.status < 500 ? err.status : 502 });
+    }
+    return NextResponse.json({ error: err.message, fuente: 'CGO', modo }, { status: 500 });
+}
+
+// GET /api/sunat/sire?empresaId=&companyProfileId=&period=YYYY-MM&type=RVIE|RCE
+//   &numTicket=...  (opcional: retoma un ticket ya solicitado en vez de pedir otro)
 export async function GET(request) {
+    let modo = null;
     try {
         const { searchParams } = new URL(request.url);
-        const empresaId = searchParams.get('empresaId');
+        const empresaId        = searchParams.get('empresaId');
         const companyProfileId = searchParams.get('companyProfileId');
-        const period = searchParams.get('period'); // e.g. "2023-10"
-        const type = searchParams.get('type'); // "RCE" (Compras) or "RVIE" (Ventas)
+        const period           = searchParams.get('period');
+        const type             = searchParams.get('type');
+        const numTicket        = searchParams.get('numTicket');
 
         if (!companyProfileId || !period || !type) {
             return NextResponse.json({ error: 'Faltan parámetros requeridos (companyProfileId, period, type).' }, { status: 400 });
         }
-
-        // Fetch credentials
-        let hasRealCredentials = false;
-        let configData = null;
-        if (empresaId) {
-            const configDoc = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
-            if (configDoc.exists) {
-                configData = configDoc.data();
-                if (configData.clientId && configData.clientSecret && configData.solUser && configData.solPass && configData.ruc) {
-                    hasRealCredentials = true;
-                }
-            }
+        if (!['RVIE', 'RCE'].includes(String(type).toUpperCase())) {
+            return NextResponse.json({ error: 'type debe ser RVIE o RCE.' }, { status: 400 });
         }
 
-        if (hasRealCredentials) {
-            try {
-                // 1. Get Token
-                const token = await getSireToken({
-                    clientId: configData.clientId,
-                    clientSecret: configData.clientSecret,
-                    ruc: configData.ruc,
-                    solUser: configData.solUser,
-                    solPassword: configData.solPass
-                });
+        const credenciales = await cargarCredenciales(empresaId, companyProfileId);
+        modo = credenciales ? 'REAL' : 'PRUEBAS';
 
-                // 2. Fetch Proposal
-                const data = await fetchSireProposal({
-                    token,
-                    type,
-                    period,
-                    page: 1,
-                    perPage: 100
-                });
+        // ── Sin credenciales: modo pruebas con datos simulados ───────────────
+        if (!credenciales) return NextResponse.json(respuestaSimulada(period, type, companyProfileId));
 
-                // 3. Map to UI format
-                // API SIRE returns an array of objects inside some property, usually `comprobantes` or `registros`.
-                // For simplicity, we assume `data` contains the raw JSON from SUNAT.
-                // We'll extract `registros` or fallback to mapping the structure safely.
-                const records = (data.comprobantes || data.registros || []).map((r, i) => ({
-                    id: r.numId || r.codigo || `SUNAT-${i}`,
-                    tipoComprobante: r.codTipoCDP || r.codComp || '01',
-                    serie: r.numSerieCDP || r.numSerie || '-',
-                    numero: r.numCDP || r.numComp || '-',
-                    fechaEmision: r.fecEmision || '-',
-                    ruc: r.numDocIdentidad || r.numDoc || '-',
-                    razonSocial: r.nomRazonSocial || r.nombre || 'Desconocido',
-                    baseImponible: parseFloat(r.mtoBIPIGV || r.mtoBase || 0),
-                    igv: parseFloat(r.mtoIGV || 0),
-                    total: parseFloat(r.mtoTotalCP || r.mtoTotal || 0),
-                    estadoPropuesta: r.estado || 'Aceptado'
-                }));
-
+        // ── Retomar un ticket ya solicitado ──────────────────────────────────
+        if (numTicket) {
+            const r = await recuperarTicket({ credenciales, numTicket, period, type });
+            if (!r.listo) {
                 return NextResponse.json({
-                    period,
-                    type,
-                    companyProfileId,
-                    estadoPropuesta: data.estadoPropuesta || 'Propuesta Generada',
-                    resumen: {
-                        totalDocumentos: records.length,
-                        totalBaseImponible: records.reduce((sum, r) => sum + (r.baseImponible || 0), 0),
-                        totalIGV: records.reduce((sum, r) => sum + (r.igv || 0), 0),
-                        totalMonto: records.reduce((sum, r) => sum + (r.total || 0), 0),
-                    },
-                    comprobantes: records,
-                    rawSunat: data // Para debugging en el cliente
-                });
-
-            } catch (err) {
-                console.error('[sunat/sire] Real API Error:', err);
-                return NextResponse.json({ error: `Error conectando con SUNAT SIRE: ${err.message}` }, { status: 502 });
+                    modo: 'REAL', enProceso: true, numTicket: r.numTicket, estadoTicket: r.estado,
+                    mensaje: `SUNAT sigue generando el archivo (estado: ${r.estado}).`,
+                }, { status: 202 });
             }
+            return NextResponse.json({
+                modo: 'REAL', enProceso: false, period, type, companyProfileId,
+                numTicket: r.numTicket, estadoPropuesta: 'Propuesta descargada',
+                resumen: resumir(r.comprobantes), comprobantes: r.comprobantes,
+            });
         }
 
-        // --- FALLBACK MODO PRUEBAS ---
-        // Simular un pequeño retardo de red
-        await new Promise(r => setTimeout(r, 800));
-
-        // Generar data simulada
-        const generateInvoices = (isVentas) => {
-            const count = isVentas ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 8) + 5;
-            const list = [];
-            for (let i = 0; i < count; i++) {
-                const num = 1000 + i;
-                const subtotal = Math.floor(Math.random() * 5000) + 100;
-                const igv = subtotal * 0.18;
-                const total = subtotal + igv;
-                list.push({
-                    id: `F001-${num}`,
-                    tipoComprobante: '01',
-                    serie: 'F001',
-                    numero: num.toString(),
-                    fechaEmision: `${period}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-                    ruc: isVentas ? `20${Math.floor(Math.random() * 90000000) + 10000000}` : `201000${Math.floor(Math.random() * 90000) + 10000}`,
-                    razonSocial: isVentas ? `CLIENTE SIMULADO ${i}` : `PROVEEDOR SIMULADO ${i}`,
-                    baseImponible: subtotal,
-                    igv: igv,
-                    total: total,
-                    estadoPropuesta: Math.random() > 0.8 ? 'Observado' : 'Aceptado'
-                });
+        // ── Flujo completo: solicitar → esperar ticket → descargar ───────────
+        try {
+            const r = await obtenerPropuesta({
+                credenciales, type, period,
+                intentosMax: INTENTOS_POR_PETICION, esperaMs: ESPERA_MS,
+            });
+            return NextResponse.json({
+                modo: 'REAL', enProceso: false, period, type, companyProfileId,
+                numTicket: r.numTicket, archivos: r.archivos,
+                estadoPropuesta: 'Propuesta descargada',
+                resumen: resumir(r.comprobantes), comprobantes: r.comprobantes,
+            });
+        } catch (err) {
+            // Si sólo se agotó la espera, el ticket sigue vivo: lo devolvemos para
+            // que el cliente reintente sin volver a solicitar la generación.
+            const ticketPendiente = err instanceof SunatApiError && /sigue en proceso/.test(err.message) ? err.raw : null;
+            if (ticketPendiente) {
+                return NextResponse.json({
+                    modo: 'REAL', enProceso: true, numTicket: ticketPendiente,
+                    mensaje: 'SUNAT está generando el archivo. Reintenta en unos segundos con este numTicket.',
+                }, { status: 202 });
             }
-            return list;
-        };
-
-        const records = generateInvoices(type === 'RVIE');
-
-        return NextResponse.json({
-            period,
-            type,
-            companyProfileId,
-            estadoPropuesta: 'Propuesta Generada (MODO PRUEBAS)',
-            resumen: {
-                totalDocumentos: records.length,
-                totalBaseImponible: records.reduce((sum, r) => sum + r.baseImponible, 0),
-                totalIGV: records.reduce((sum, r) => sum + r.igv, 0),
-                totalMonto: records.reduce((sum, r) => sum + r.total, 0),
-            },
-            comprobantes: records
-        });
+            throw err;
+        }
     } catch (err) {
-        console.error('[sunat/sire] Route Error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return manejarError(err, 'GET', modo);
     }
 }
 
+// POST /api/sunat/sire?empresaId=&companyProfileId=&period=&type=&confirmar=SI
+//
+// ACEPTA LA PROPUESTA EN SUNAT. Es una acción fiscal real e irreversible, por eso
+// exige `confirmar=SI` explícito: ninguna llamada accidental puede dispararla.
 export async function POST(request) {
-    // Endpoint para "Aceptar" la propuesta del SIRE
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const period = searchParams.get('period');
+    let modo = null;
+    try {
+        const { searchParams } = new URL(request.url);
+        const empresaId        = searchParams.get('empresaId');
+        const companyProfileId = searchParams.get('companyProfileId');
+        const period           = searchParams.get('period');
+        const type             = searchParams.get('type');
+        const confirmar        = searchParams.get('confirmar');
 
-    // Aquí iría la lógica real de SUNAT para aceptar propuesta.
-    // Por ahora, simulamos el éxito incluso si hay credenciales reales,
-    // para evitar aceptar propuestas reales accidentalmente.
+        if (!companyProfileId || !period || !type) {
+            return NextResponse.json({ error: 'Faltan parámetros requeridos (companyProfileId, period, type).' }, { status: 400 });
+        }
+        if (confirmar !== 'SI') {
+            return NextResponse.json({
+                error: 'Aceptar la propuesta es una acción irreversible ante SUNAT. Falta el parámetro confirmar=SI.',
+            }, { status: 400 });
+        }
 
-    // Simular un pequeño retardo de red
-    await new Promise(r => setTimeout(r, 1500));
+        const credenciales = await cargarCredenciales(empresaId, companyProfileId);
+        modo = credenciales ? 'REAL' : 'PRUEBAS';
+        if (!credenciales) {
+            // Antes esto devolvía "aceptada exitosamente" sin llamar a SUNAT.
+            return NextResponse.json({
+                error: 'No hay credenciales SUNAT configuradas. En modo pruebas no se puede aceptar una propuesta: ' +
+                       'sería una confirmación falsa de una obligación tributaria real.',
+            }, { status: 409 });
+        }
 
-    return NextResponse.json({
-        success: true,
-        message: `La propuesta de ${type === 'RVIE' ? 'Ventas' : 'Compras'} para el periodo ${period} ha sido aceptada exitosamente en SUNAT (Modo Pruebas / Sandbox).`,
-        ticket: `TICKET-${Math.floor(Math.random() * 1000000)}`
+        const r = await aceptarPropuesta({ credenciales, type, period });
+        return NextResponse.json({
+            success: true,
+            numTicket: r.numTicket,
+            mensaje: `Solicitud de aceptación enviada a SUNAT para ${type === 'RVIE' ? 'Ventas' : 'Compras'} del periodo ${period}.` +
+                     (r.numTicket ? ` Ticket ${r.numTicket}: verifica su estado antes de darla por concluida.` : ''),
+            respuesta: r.respuesta,
+        });
+    } catch (err) {
+        return manejarError(err, 'POST aceptar propuesta', modo);
+    }
+}
+
+// ── Modo pruebas ─────────────────────────────────────────────────────────────
+function respuestaSimulada(period, type, companyProfileId) {
+    const esVentas = String(type).toUpperCase() === 'RVIE';
+    const cantidad = esVentas ? 4 : 6;
+    const comprobantes = Array.from({ length: cantidad }, (_, i) => {
+        const base  = 500 + i * 137;
+        const igv   = Math.round(base * 0.18 * 100) / 100;
+        return {
+            id: `F001-${1000 + i}`,
+            tipoComprobante: '01',
+            serie: 'F001',
+            numero: String(1000 + i),
+            fechaEmision: `${String(i + 1).padStart(2, '0')}/${period.split('-')[1]}/${period.split('-')[0]}`,
+            ruc: `20${100000000 + i}`,
+            razonSocial: esVentas ? `CLIENTE SIMULADO ${i + 1}` : `PROVEEDOR SIMULADO ${i + 1}`,
+            baseImponible: base,
+            igv,
+            total: Math.round((base + igv) * 100) / 100,
+            moneda: 'PEN',
+            parcial: false,
+        };
     });
+
+    return {
+        modo: 'PRUEBAS',
+        enProceso: false,
+        period, type, companyProfileId,
+        estadoPropuesta: 'Datos simulados — sin credenciales SUNAT configuradas',
+        resumen: resumir(comprobantes),
+        comprobantes,
+    };
 }
