@@ -21,10 +21,14 @@ export default function SirePage() {
     const fetchSireData = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/sunat/sire?companyProfileId=${companyProfileId}&period=${period}&type=${activeTab}`);
+            const res = await fetch(`/api/sunat/sire?companyProfileId=${companyProfileId}&period=${period}&type=${activeTab}&empresaId=${companyProfileId}`);
             if (res.ok) {
                 const data = await res.json();
                 setSireData(data);
+            } else {
+                const errData = await res.json();
+                alert('Error de SUNAT SIRE: ' + errData.error);
+                setSireData(null);
             }
         } catch (error) {
             console.error(error);
