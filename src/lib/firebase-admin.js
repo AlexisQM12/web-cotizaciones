@@ -9,9 +9,17 @@ const defaultApp = admin.apps.find(app => app.name === '[DEFAULT]') || getApps()
 
 if (!defaultApp) {
     try {
-        const projectId  = (process.env.DB_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID).trim().replace(/^["']|["']$/g, '');
+        // Sin paréntesis defensivo, si las tres variables faltan esto lanzaba
+        // TypeError sobre undefined; el catch lo silenciaba y el fallo reaparecía
+        // más tarde como un críptico "Failed to collect page data".
+        const limpiar = (v) => (v || '').trim().replace(/^["']|["']$/g, '');
+        const projectId  = limpiar(process.env.DB_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
         const clientEmail = (process.env.DB_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL)?.trim().replace(/^["']|["']$/g, '');
         let privateKey   = (process.env.DB_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+
+        if (!projectId) {
+            console.error('[Firebase] Falta el ID de proyecto: define DB_PROJECT_ID (o FIREBASE_PROJECT_ID). Sin él, todas las rutas de API fallarán.');
+        }
 
         if (clientEmail && privateKey) {
             admin.initializeApp({
@@ -33,8 +41,15 @@ if (!defaultApp) {
 }
 
 if (admin.apps.find(app => app.name === '[DEFAULT]') || getApps().find(app => app.name === '[DEFAULT]')) {
-    firestore = admin.firestore();
-    storage   = admin.storage();
+    // Esto corre al importar el módulo. Si lanza, Next aborta la compilación con
+    // "Failed to collect page data for <ruta>", señalando la ruta que estuviera
+    // recolectando en ese momento en vez de la causa real. Lo hacemos explícito.
+    try {
+        firestore = admin.firestore();
+        storage   = admin.storage();
+    } catch (error) {
+        console.error('[Firebase] No se pudo obtener Firestore/Storage:', error.message);
+    }
 }
 
 export { firestore, storage, admin };
