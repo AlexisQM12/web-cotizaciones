@@ -3,6 +3,7 @@ import { getTenantCollection } from '@/lib/firebase-admin';
 import {
     obtenerPropuesta, recuperarTicket, aceptarPropuesta, SunatApiError,
 } from '@/lib/accounting/sunatApi';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // La descarga de la propuesta es un proceso por ticket: puede tardar. Damos
 // margen a la función y, si aun así no termina, devolvemos el ticket para que el
@@ -46,6 +47,8 @@ function resumir(comprobantes) {
 // `modo` viaja también en los errores: si no, la UI no puede decir si está
 // conectada a SUNAT o en pruebas justo cuando falla, que es cuando más importa.
 function manejarError(err, contexto, modo = null) {
+    const authRes = respuestaDeAuthError(err);
+    if (authRes) return authRes;
     console.error(`[sunat/sire] ${contexto}:`, err);
     if (err instanceof SunatApiError) {
         return NextResponse.json({
@@ -79,6 +82,8 @@ export async function GET(request) {
         if (!['RVIE', 'RCE'].includes(String(type).toUpperCase())) {
             return NextResponse.json({ error: 'type debe ser RVIE o RCE.' }, { status: 400 });
         }
+
+        await autorizarTenant(request, empresaId || companyProfileId);
 
         const credenciales = await cargarCredenciales(empresaId, companyProfileId);
         modo = credenciales ? 'REAL' : 'PRUEBAS';
@@ -153,6 +158,8 @@ export async function POST(request) {
                 error: 'Aceptar la propuesta es una acción irreversible ante SUNAT. Falta el parámetro confirmar=SI.',
             }, { status: 400 });
         }
+
+        await autorizarTenant(request, empresaId || companyProfileId);
 
         const credenciales = await cargarCredenciales(empresaId, companyProfileId);
         modo = credenciales ? 'REAL' : 'PRUEBAS';

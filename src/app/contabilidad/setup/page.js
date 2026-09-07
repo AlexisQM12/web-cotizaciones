@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AccountingShell from '@/components/AccountingShell';
+import { authFetch } from '@/lib/authFetch';
 import Icon from '@/components/icons/Icon';
 import { COMPANY_TYPES, TAX_REGIMES, getAllowedRegimes, getRequiredBooks } from '@/lib/accounting/sunatRules';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
@@ -59,10 +60,12 @@ export default function SetupPage() {
                 tieneTrabajadores: !!config.tieneTrabajadores,
                 ingresosAnualesProyectados: config.ingresosAnualesProyectados || '',
                 coeficienteRenta: config.coeficienteRenta || '0.015',
-                clientId: config.clientId || '',
-                clientSecret: config.clientSecret || '',
-                solUser: config.solUser || '',
-                solPass: config.solPass || ''
+                // El servidor ya no devuelve las credenciales. Vacío = conservar
+                // las que ya están guardadas (ver PUT en api/accounting/config).
+                clientId: '',
+                clientSecret: '',
+                solUser: '',
+                solPass: ''
             });
         } else if (companyProfileId) {
             const profile = profiles.find(p => p.id === companyProfileId);
@@ -153,7 +156,7 @@ export default function SetupPage() {
         setSaving(true);
         try {
             const resolvedId = companyProfileId || user?.empresaId;
-            const r = await fetch('/api/accounting/config', {
+            const r = await authFetch('/api/accounting/config', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, companyProfileId: resolvedId, empresaId: resolvedId }),
@@ -374,18 +377,28 @@ export default function SetupPage() {
                         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                             Para conectar la contabilidad directamente con SUNAT y extraer las propuestas del SIRE, necesitas generar tus credenciales OAuth en el portal SOL. Si no las tienes ahora, puedes dejarlas en blanco y el sistema usará el simulador.
                         </p>
+                        {config?.tieneCredencialesSunat && (
+                            <div className="acc-alert acc-alert-info" style={{ marginBottom: '1.5rem' }}>
+                                <Icon name="shield-check" size={16} />
+                                <span>
+                                    Ya hay credenciales SUNAT guardadas. Por seguridad no se muestran:
+                                    el servidor nunca las devuelve al navegador. <strong>Deja los campos en
+                                    blanco para conservarlas</strong> y complétalos sólo si quieres reemplazarlas.
+                                </span>
+                            </div>
+                        )}
                         <div className="form-grid">
                             <Field label="Usuario SOL">
-                                <input className="acc-input" value={form.solUser} onChange={(e) => update('solUser', e.target.value)} placeholder="Ej. JPEREZ12" />
+                                <input className="acc-input" value={form.solUser} onChange={(e) => update('solUser', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "Ej. JPEREZ12"} />
                             </Field>
                             <Field label="Clave SOL">
-                                <input type="password" className="acc-input" value={form.solPass} onChange={(e) => update('solPass', e.target.value)} placeholder="••••••••" />
+                                <input type="password" className="acc-input" value={form.solPass} onChange={(e) => update('solPass', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardada — escribe para reemplazar)" : "••••••••"} />
                             </Field>
                             <Field label="Client ID (ID de Cliente SUNAT)">
-                                <input className="acc-input" value={form.clientId} onChange={(e) => update('clientId', e.target.value)} placeholder="00000000-0000-0000-0000-000000000000" />
+                                <input className="acc-input" value={form.clientId} onChange={(e) => update('clientId', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "00000000-0000-0000-0000-000000000000"} />
                             </Field>
                             <Field label="Client Secret (Clave Secreta SUNAT)">
-                                <input type="password" className="acc-input" value={form.clientSecret} onChange={(e) => update('clientSecret', e.target.value)} placeholder="••••••••" />
+                                <input type="password" className="acc-input" value={form.clientSecret} onChange={(e) => update('clientSecret', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "••••••••"} />
                             </Field>
                         </div>
 

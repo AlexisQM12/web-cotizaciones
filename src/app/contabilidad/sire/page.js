@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
+import { authFetch } from '@/lib/authFetch';
 import { getCurrentDeclarationPeriod, listAvailablePeriods, formatPeriod } from '@/lib/accounting/taxCalendar';
 
 export default function SirePage() {
@@ -64,7 +65,7 @@ export default function SirePage() {
             });
             if (numTicket) params.set('numTicket', numTicket);
 
-            const res = await fetch(`/api/sunat/sire?${params}`);
+            const res = await authFetch(`/api/sunat/sire?${params}`);
             const data = await res.json();
 
             if (res.status === 202 && data.numTicket) {
@@ -129,7 +130,7 @@ export default function SirePage() {
             const params = new URLSearchParams({
                 companyProfileId, empresaId: companyProfileId, period, type: activeTab, confirmar: 'SI',
             });
-            const res  = await fetch(`/api/sunat/sire?${params}`, { method: 'POST' });
+            const res  = await authFetch(`/api/sunat/sire?${params}`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
                 alert(data.mensaje);
