@@ -51,7 +51,7 @@ export default function PendingsDashboard() {
 
     const handleSaveOperations = async (id, operationsData) => {
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ operationsData, empresaId: user?.empresaId || 'ayatech' })
@@ -96,7 +96,7 @@ export default function PendingsDashboard() {
 
     const handleUpdatePriority = async (id, newPriority) => {
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ priority: newPriority })
@@ -121,7 +121,7 @@ export default function PendingsDashboard() {
 
     const handleSendToPendings = async (id) => {
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quotationStatus: 'pendiente_oc' })
@@ -152,7 +152,7 @@ export default function PendingsDashboard() {
         }
         
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quotationStatus: 'pendiente_factura' })

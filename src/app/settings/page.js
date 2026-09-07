@@ -209,7 +209,7 @@ export default function Settings() {
     const handleClientSubmit = async (e) => {
         e.preventDefault();
         try {
-            const url = editingClientId ? `/api/client-profiles/${editingClientId}` : '/api/client-profiles';
+            const url = editingClientId ? `/api/client-profiles/${editingClientId}?empresaId=${encodeURIComponent(user.empresaId)}` : '/api/client-profiles';
             const method = editingClientId ? 'PUT' : 'POST';
             const res = await fetch(url, {
                 method,
@@ -267,7 +267,7 @@ export default function Settings() {
     const handleClientDelete = async (id) => {
         if (confirm('¿Estás seguro de que quieres eliminar este perfil de cliente?')) {
             try {
-                await fetch(`/api/client-profiles/${id}`, { method: 'DELETE' });
+                await fetch(`/api/client-profiles/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, { method: 'DELETE' });
                 fetchClientProfiles();
             } catch (err) {
                 console.error(err);

@@ -1,11 +1,14 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { resolverEmpresaId, faltaEmpresaId } from '@/lib/tenant';
 
 export async function PUT(req, { params }) {
     try {
         const id = await params.id;
         const body = await req.json();
+        const empresaId = resolverEmpresaId(req, body);
+        if (!empresaId) return faltaEmpresaId();
         
-        const docRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies').doc(id);
+        const docRef = getTenantCollection(empresaId, 'portfolio_companies').doc(id);
         
         // Remove id from body to prevent overwriting document ID logic
         const { id: _, ...updateData } = body;
@@ -25,7 +28,9 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const id = await params.id;
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies').doc(id).delete();
+        const empresaId = resolverEmpresaId(req);
+        if (!empresaId) return faltaEmpresaId();
+        await getTenantCollection(empresaId, 'portfolio_companies').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error('API Error (companies DELETE):', error);

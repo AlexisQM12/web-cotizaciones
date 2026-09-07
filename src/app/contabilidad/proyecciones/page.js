@@ -39,7 +39,7 @@ export default function ProyeccionesPage() {
             // Optimistic update
             setData(prev => prev.map(p => p.id === projectId ? { ...p, isExcludedFromProjections: !currentState } : p));
             
-            const res = await fetch(`/api/quotations/${projectId}`, {
+            const res = await fetch(`/api/quotations/${projectId}?empresaId=${encodeURIComponent(companyProfileId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isExcludedFromProjections: !currentState })

@@ -4,11 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
+import { useAuth } from '@/contexts/AuthContext'
 import { storage } from '@/lib/firebaseConfig'
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'
 
 export default function ProjectDocumentation({ params }) {
     const router = useRouter();
+    const { user } = useAuth();
     const [id, setId] = useState(null);
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ export default function ProjectDocumentation({ params }) {
 
     const fetchProject = async () => {
         try {
-            const res = await fetch(`/api/quotations/${id}`);
+            const res = await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`);
             if (!res.ok) throw new Error('Project not found');
             const data = await res.json();
             setProject(data);
@@ -86,7 +88,7 @@ export default function ProjectDocumentation({ params }) {
             const currentDocs = project.projectDocuments || [];
             const updatedDocs = [...currentDocs, ...newDocs];
 
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ projectDocuments: updatedDocs })
@@ -116,7 +118,7 @@ export default function ProjectDocumentation({ params }) {
             const updatedDocs = [...project.projectDocuments];
             updatedDocs.splice(docIndex, 1);
 
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ projectDocuments: updatedDocs })
@@ -137,7 +139,7 @@ export default function ProjectDocumentation({ params }) {
                 isExcludedFromProjections: project.isExcludedFromProjections || false,
             };
             
-            const res = await fetch(`/api/quotations/${id}`, {
+            const res = await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedFields)

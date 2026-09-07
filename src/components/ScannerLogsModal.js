@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PHASE_CONFIG = {
   idle:       { color: '#64748b', bg: '#f1f5f9', icon: '🕐', label: 'En espera' },
@@ -9,6 +10,7 @@ const PHASE_CONFIG = {
 };
 
 export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState({ phase: 'idle', message: 'Conectando al servidor...', current: 0, total: 0, currentFile: null, nextScanAt: null });
   const [countdown, setCountdown] = useState(null);
@@ -73,7 +75,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const assignManually = async (logId, docId) => {
     if (!docId) return;
     try {
-      await fetch(`/api/quotations/${docId}`, {
+      await fetch(`/api/quotations/${docId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quotationStatus: 'aprobada' })
@@ -101,7 +103,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const assignInvoiceManually = async (logId, newDocId) => {
     if (!newDocId) return;
     try {
-      await fetch(`/api/quotations/${newDocId}`, {
+      await fetch(`/api/quotations/${newDocId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quotationStatus: 'completado' }),

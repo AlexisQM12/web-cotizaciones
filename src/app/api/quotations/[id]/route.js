@@ -1,14 +1,17 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { resolverEmpresaId, faltaEmpresaId } from '@/lib/tenant';
 export const dynamic = 'force-dynamic';
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
+        const empresaId = resolverEmpresaId(req);
+        if (!empresaId) return faltaEmpresaId();
 
         // Fetch everything in parallel without server-side sorting
         const [quoteDoc, companySnap, clientSnap, settingsSnap] = await Promise.all([
-            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'quotations').doc(id).get(),
+            getTenantCollection(empresaId, 'quotations').doc(id).get(),
             firestore.collection('company_profiles').get(),
-            getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'client_profiles').get(),
+            getTenantCollection(empresaId, 'client_profiles').get(),
             firestore.collection('settings').doc('general_conditions').get()
         ]);
 
@@ -121,7 +124,9 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'quotations').doc(id).delete();
+        const empresaId = resolverEmpresaId(req);
+        if (!empresaId) return faltaEmpresaId();
+        await getTenantCollection(empresaId, 'quotations').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

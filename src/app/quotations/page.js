@@ -34,7 +34,7 @@ export default function Dashboard() {
         e.stopPropagation(); // Prevent navigating to edit
         if (confirm('¿Estás seguro de que quieres eliminar esta cotización?')) {
             try {
-                await fetch(`/api/quotations/${id}`, { method: 'DELETE' });
+                await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, { method: 'DELETE' });
                 setQuotations(quotations.filter(q => q.id !== id));
             } catch (err) {
                 console.error(err);
@@ -45,7 +45,7 @@ export default function Dashboard() {
     const updateStatus = async (id, newStatus, e) => {
         e.stopPropagation();
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quotationStatus: newStatus })
@@ -62,7 +62,7 @@ export default function Dashboard() {
         e.stopPropagation();
         const isSent = !current;
         try {
-            await fetch(`/api/quotations/${id}`, {
+            await fetch(`/api/quotations/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isSent })
@@ -79,7 +79,7 @@ export default function Dashboard() {
         setDownloadingId(q.id);
         try {
             // Fetch full quotation data (includes company/client profiles)
-            const res = await fetch(`/api/quotations/${q.id}`);
+            const res = await fetch(`/api/quotations/${q.id}?empresaId=${encodeURIComponent(user.empresaId)}`);
             const fullData = await res.json();
 
             // Build dataForPdf same as the editor does
@@ -113,7 +113,7 @@ export default function Dashboard() {
             const downloadUrl = await getDownloadURL(fileRef);
 
             // Update in Firestore
-            await fetch(`/api/quotations/${q.id}`, {
+            await fetch(`/api/quotations/${q.id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pdfUrl: downloadUrl })

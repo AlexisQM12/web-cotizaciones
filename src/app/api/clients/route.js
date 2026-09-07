@@ -1,14 +1,16 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { resolverEmpresaId, faltaEmpresaId } from '@/lib/tenant';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
+        if (!empresaId) return faltaEmpresaId();
 
-        let query = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies');
-        if (empresaId) {
-            query = query.where('empresaId', '==', empresaId);
-        }
+        // El filtro por empresaId es redundante (la colección ya es del tenant),
+        // pero se conserva porque hay documentos antiguos migrados que lo traen.
+        const query = getTenantCollection(empresaId, 'portfolio_companies')
+            .where('empresaId', '==', empresaId);
 
         const snapshot = await query.get();
 
@@ -39,7 +41,7 @@ export async function POST(req) {
             return Response.json({ error: 'empresaId and companyName are required' }, { status: 400 });
         }
 
-        const newCompanyRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'portfolio_companies').doc();
+        const newCompanyRef = getTenantCollection(empresaId, 'portfolio_companies').doc();
         await newCompanyRef.set({
             empresaId,
             companyName: companyName || '',

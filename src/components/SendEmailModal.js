@@ -92,7 +92,7 @@ export function SendEmailModal({ isOpen, onClose, quotation, onSent }) {
 
         try {
             // Generar PDF en el cliente (igual que en descarga)
-            const resData = await fetch(`/api/quotations/${quotation.id}`);
+            const resData = await fetch(`/api/quotations/${quotation.id}?empresaId=${encodeURIComponent(user.empresaId)}`);
             const fullData = await resData.json();
 
             const company = fullData.companyProfiles?.find(p => String(p.id) === String(fullData.companyProfileId))

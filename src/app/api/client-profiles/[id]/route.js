@@ -1,9 +1,12 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { resolverEmpresaId, faltaEmpresaId } from '@/lib/tenant';
 
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
-        const doc = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'client_profiles').doc(id).get();
+        const empresaId = resolverEmpresaId(req);
+        if (!empresaId) return faltaEmpresaId();
+        const doc = await getTenantCollection(empresaId, 'client_profiles').doc(id).get();
 
         if (!doc.exists) return Response.json({ error: 'Not found' }, { status: 404 });
 
@@ -18,13 +21,15 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
+        const empresaId = resolverEmpresaId(req, body);
+        if (!empresaId) return faltaEmpresaId();
         const { name, ruc, address, isDefault } = body;
 
         const batch = firestore.batch();
 
         // If this is set as default, unset others
         if (isDefault) {
-            const defaultQuery = await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'client_profiles').where('isDefault', '==', true).get();
+            const defaultQuery = await getTenantCollection(empresaId, 'client_profiles').where('isDefault', '==', true).get();
             defaultQuery.forEach(doc => {
                 if (doc.id !== id) {
                     batch.update(doc.ref, { isDefault: false });
@@ -32,7 +37,7 @@ export async function PUT(req, { params }) {
             });
         }
 
-        const docRef = getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'client_profiles').doc(id);
+        const docRef = getTenantCollection(empresaId, 'client_profiles').doc(id);
         batch.update(docRef, {
             name,
             ruc,
@@ -53,7 +58,9 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         const { id } = await params;
-        await getTenantCollection(typeof empresaId !== 'undefined' ? empresaId : (typeof body !== 'undefined' ? body.empresaId : 'ayatech'), 'client_profiles').doc(id).delete();
+        const empresaId = resolverEmpresaId(req);
+        if (!empresaId) return faltaEmpresaId();
+        await getTenantCollection(empresaId, 'client_profiles').doc(id).delete();
         return Response.json({ success: true });
     } catch (error) {
         console.error(error);

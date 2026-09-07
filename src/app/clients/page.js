@@ -150,7 +150,7 @@ export default function ClientsDashboard() {
         e.preventDefault()
         try {
             if (editingCompany) {
-                await fetch(`/api/clients/${editingCompany.id}`, {
+                await fetch(`/api/clients/${editingCompany.id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(companyForm)
@@ -173,7 +173,7 @@ export default function ClientsDashboard() {
     const deleteCompany = async (id) => {
         if (!confirm('¿Estás seguro de eliminar esta empresa y todos sus contactos?')) return
         try {
-            await fetch(`/api/clients/${id}`, { method: 'DELETE' })
+            await fetch(`/api/clients/${id}?empresaId=${encodeURIComponent(user.empresaId)}`, { method: 'DELETE' })
             fetchCompanies()
         } catch (error) {
             console.error('Error deleting company:', error)
@@ -214,7 +214,7 @@ export default function ClientsDashboard() {
                 newContacts.push({ ...contactForm, id: Date.now().toString() }) // Simple ID generation
             }
 
-            await fetch(`/api/clients/${activeCompanyIdForContact}`, {
+            await fetch(`/api/clients/${activeCompanyIdForContact}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contacts: newContacts })
@@ -234,7 +234,7 @@ export default function ClientsDashboard() {
             const company = companies.find(c => c.id === companyId)
             const newContacts = (company.contacts || []).filter(c => c.id !== contactId)
             
-            await fetch(`/api/clients/${companyId}`, {
+            await fetch(`/api/clients/${companyId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contacts: newContacts })
