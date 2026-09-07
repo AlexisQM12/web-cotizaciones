@@ -102,7 +102,9 @@ export async function GET(request) {
             }
             return NextResponse.json({
                 modo: 'REAL', enProceso: false, period, type, companyProfileId,
-                numTicket: r.numTicket, estadoPropuesta: 'Propuesta descargada',
+                numTicket: r.numTicket, vacia: !!r.vacia,
+                estadoPropuesta: r.vacia ? 'Propuesta sin comprobantes' : 'Propuesta descargada',
+                mensaje: r.mensaje || null,
                 resumen: resumir(r.comprobantes), comprobantes: r.comprobantes,
             });
         }
@@ -115,8 +117,9 @@ export async function GET(request) {
             });
             return NextResponse.json({
                 modo: 'REAL', enProceso: false, period, type, companyProfileId,
-                numTicket: r.numTicket, archivos: r.archivos,
-                estadoPropuesta: 'Propuesta descargada',
+                numTicket: r.numTicket, archivos: r.archivos, vacia: !!r.vacia,
+                estadoPropuesta: r.vacia ? 'Propuesta sin comprobantes' : 'Propuesta descargada',
+                mensaje: r.mensaje || null,
                 resumen: resumir(r.comprobantes), comprobantes: r.comprobantes,
             });
         } catch (err) {

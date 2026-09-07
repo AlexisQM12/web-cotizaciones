@@ -17,12 +17,18 @@ export default function Home() {
     const [draggedItemIndex, setDraggedItemIndex] = useState(null)
     const [dragOverItemIndex, setDragOverItemIndex] = useState(null)
 
+    // Los leads se piden en su propio efecto: dependen de empresaId, que llega
+    // después del login. Mezclarlo con el montaje de sockets obligaría a
+    // re-suscribirlos cada vez que cambia el usuario.
     useEffect(() => {
-        fetch('/api/quote-leads?status=pending')
+        if (!user?.empresaId) return;
+        fetch(`/api/quote-leads?status=pending&empresaId=${encodeURIComponent(user.empresaId)}`)
             .then(r => r.json())
             .then(d => setPendingLeads(d.leads?.length || 0))
             .catch(() => {});
+    }, [user?.empresaId])
 
+    useEffect(() => {
         const socket = getSocket()
         socket.on('quote_lead_detected', () => setPendingLeads(n => n + 1))
         socket.on('quote_lead_dismissed', () => setPendingLeads(n => Math.max(0, n - 1)))

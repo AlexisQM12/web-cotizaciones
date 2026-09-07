@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { faltaEmpresaId } from '@/lib/tenant';
 
 // PATCH /api/quote-leads/[id]  { status: 'dismissed' | 'converted' }
 export async function PATCH(req, { params }) {
@@ -12,6 +13,7 @@ export async function PATCH(req, { params }) {
 
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
+        if (!empresaId) return faltaEmpresaId();
 
         await getTenantCollection(empresaId, 'quote_leads').doc(id).update({
             status,

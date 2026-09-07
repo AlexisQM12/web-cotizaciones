@@ -241,39 +241,60 @@ export async function consultarEstadoTicket({ token, numTicket, period }) {
     const registro = (data?.registros || []).find(r => r.numTicket === numTicket) || data?.registros?.[0];
     if (!registro) return { encontrado: false, terminado: false, archivos: [] };
 
-    // El manual documenta el estado como texto ("Terminado"). Nos apoyamos en la
-    // descripción y, sobre todo, en la presencia del archivo generado, que es la
-    // señal inequívoca de que el proceso acabó.
+    // SUNAT reporta el estado en desEstadoProceso ("Terminado") y en
+    // codEstadoProceso ("06"). Exigimos ese estado Y que haya archivo: dar por
+    // bueno sólo lo segundo arriesga descargar antes de que el archivo exista.
     const desc     = String(registro.desEstadoProceso || registro.desEstadoEnvio || '').toUpperCase();
+    const codigo   = String(registro.codEstadoProceso || registro.codEstadoEnvio || '');
     const archivos = extraerArchivosReporte(registro);
     const fallido  = desc.includes('ERROR') || desc.includes('RECHAZ') || desc.includes('ANULAD');
+    const acabado  = desc.includes('TERMINADO') || codigo === '06';
+
+    // Cuántos comprobantes trae la propuesta. Si es 0, SUNAT da el ticket por
+    // "Terminado" y hasta anuncia un nomArchivoReporte, pero NUNCA materializa el
+    // archivo: pedirlo devuelve 422 "El archivo solicitado no existe". Hay que
+    // detectarlo aquí para no presentar un periodo vacío como si fuera un error.
+    const detalle = Array.isArray(registro.detalleTicket) ? registro.detalleTicket[0] : registro.detalleTicket;
+    const informados = Number(detalle?.cntCPInformados ?? NaN);
+    const filas      = Number(detalle?.cntFilasvalidada ?? NaN);
+    const vacio      = acabado && informados === 0 && filas === 0;
 
     return {
         encontrado: true,
-        terminado:  archivos.length > 0 || desc.includes('TERMINADO'),
+        terminado:  acabado && archivos.length > 0,
         fallido,
+        vacio,
+        informados: Number.isNaN(informados) ? null : informados,
         estado:     registro.desEstadoProceso || registro.desEstadoEnvio || registro.codEstadoProceso || 'desconocido',
         archivos,
         registro,
     };
 }
 
-// archivoReporte puede venir a nivel del registro o dentro de detalleTicket.
+// archivoReporte puede venir a nivel del registro o dentro de detalleTicket
+// (que unas veces es objeto y otras array, según el proceso).
 function extraerArchivosReporte(registro) {
-    const listas = [
-        registro.archivoReporte,
-        ...(Array.isArray(registro.detalleTicket) ? registro.detalleTicket.map(d => d.archivoReporte) : []),
-    ];
+    const detalle = registro.detalleTicket;
+    const desdeDetalle = Array.isArray(detalle) ? detalle.map(d => d?.archivoReporte)
+                       : detalle                ? [detalle.archivoReporte]
+                       : [];
+
     const salida = [];
-    for (const lista of listas) {
+    for (const lista of [registro.archivoReporte, ...desdeDetalle]) {
         if (!Array.isArray(lista)) continue;
         for (const a of lista) {
-            if (a?.nomArchivoReporte) {
-                salida.push({
-                    nomArchivoReporte:     a.nomArchivoReporte,
-                    codTipoArchivoReporte: a.codTipoArchivoReporte ?? null,
-                });
-            }
+            if (!a?.nomArchivoReporte) continue;
+            salida.push({
+                nomArchivoReporte: a.nomArchivoReporte,
+                // OJO: SUNAT DEVUELVE este campo con una errata —
+                // "codTipoAchivoReporte", sin la 'r' de "Archivo"— aunque el
+                // manual documenta el parámetro de entrada como
+                // "codTipoArchivoReporte". Leer sólo el nombre correcto daba
+                // undefined y se terminaba pidiendo el archivo con el tipo en
+                // "null", a lo que SUNAT responde "El archivo solicitado no
+                // existe". Aceptamos ambas grafías.
+                codTipoArchivoReporte: a.codTipoAchivoReporte ?? a.codTipoArchivoReporte ?? null,
+            });
         }
     }
     return salida;
@@ -328,6 +349,15 @@ export async function obtenerPropuesta({
         if (estado.fallido) {
             throw new SunatApiError(`SUNAT marcó el ticket ${numTicket} como fallido (estado: ${estado.estado}).`);
         }
+        // Propuesta sin comprobantes: no hay archivo que bajar, y no es un error.
+        if (estado.vacio) {
+            avisar('vacia', { numTicket });
+            return {
+                numTicket, archivos: [], texto: '', comprobantes: [],
+                vacia: true,
+                mensaje: 'SUNAT generó la propuesta pero no contiene comprobantes para este periodo.',
+            };
+        }
         if (estado.terminado && estado.archivos.length) break;
     }
 
@@ -359,6 +389,12 @@ export async function obtenerPropuesta({
 export async function recuperarTicket({ credenciales, numTicket, period, type }) {
     const token  = await getSireToken(credenciales);
     const estado = await consultarEstadoTicket({ token, numTicket, period });
+    if (estado.vacio) {
+        return {
+            listo: true, numTicket, texto: '', comprobantes: [], vacia: true,
+            mensaje: 'SUNAT generó la propuesta pero no contiene comprobantes para este periodo.',
+        };
+    }
     if (!estado.terminado || !estado.archivos.length) {
         return { listo: false, estado: estado.estado, numTicket };
     }

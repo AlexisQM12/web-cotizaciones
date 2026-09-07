@@ -272,7 +272,7 @@ export default function Dashboard() {
                 body: JSON.stringify({ clientName, empresaId: user.empresaId }),
             });
             const quote = await res.json();
-            await fetch(`/api/quote-leads/${lead.id}`, {
+            await fetch(`/api/quote-leads/${lead.id}?empresaId=${encodeURIComponent(user.empresaId)}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'converted' }),
@@ -286,7 +286,7 @@ export default function Dashboard() {
 
     const dismissLead = async (leadId) => {
         setLeads(prev => prev.filter(l => l.id !== leadId));
-        await fetch(`/api/quote-leads/${leadId}`, {
+        await fetch(`/api/quote-leads/${leadId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'dismissed' }),

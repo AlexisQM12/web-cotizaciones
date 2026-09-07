@@ -291,7 +291,11 @@ export default function SirePage() {
                                     ))}
                                     {sireData.comprobantes.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem 0' }}>No hay comprobantes propuestos para este periodo.</td>
+                                            <td colSpan="8" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem 0' }}>
+                                                {sireData.vacia
+                                                    ? 'SUNAT generó la propuesta, pero no tiene comprobantes registrados para este periodo.'
+                                                    : 'No hay comprobantes propuestos para este periodo.'}
+                                            </td>
                                         </tr>
                                     )}
                                 </tbody>

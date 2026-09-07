@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { faltaEmpresaId } from '@/lib/tenant';
 
 // GET /api/quote-leads?status=pending
 export async function GET(req) {
@@ -6,6 +7,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get('status') || 'pending';
         const empresaId = searchParams.get('empresaId');
+        if (!empresaId) return faltaEmpresaId();
 
         const snap = await getTenantCollection(empresaId, 'quote_leads')
             .where('status', '==', status)
