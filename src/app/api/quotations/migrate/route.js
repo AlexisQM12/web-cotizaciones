@@ -1,11 +1,11 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 // Allow GET request so user can just open this URL in browser
 export async function GET(req) {
     try {
         console.log('🔄 Starting migration of quotations...');
 
-        const quotationsRef = firestore.collection('quotations');
+        const quotationsRef = getTenantCollection(empresaId, 'quotations');
         const snapshot = await quotationsRef.get();
 
         console.log(`📊 Found ${snapshot.size} quotations`);

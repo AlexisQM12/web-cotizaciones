@@ -1,19 +1,22 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 import { buildSire141, buildSire81 } from '@/lib/accounting/sireExporter';
 
 // GET /api/accounting/sire-export?companyProfileId=xxx&period=YYYY-MM&libro=14.1|8.1
 // Devuelve el archivo plano como texto descargable.
 export async function GET(req) {
     try {
-        const { searchParams } = new URL(req.url);
+        const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const period           = searchParams.get('period');
         const libro            = searchParams.get('libro');
         if (!companyProfileId || !period || !libro) {
             return Response.json({ error: 'companyProfileId, period y libro requeridos' }, { status: 400 });
         }
 
-        const configDoc = await firestore.collection('accounting_config').doc(companyProfileId).get();
+        const configDoc = await getTenantCollection(empresaId, 'accounting_config').doc(companyProfileId).get();
         if (!configDoc.exists) {
             return Response.json({ error: 'Configuración no encontrada' }, { status: 404 });
         }
@@ -22,13 +25,13 @@ export async function GET(req) {
 
         let payload;
         if (libro === '14.1') {
-            const snap = await firestore.collection('sales_ledger')
+            const snap = await getTenantCollection(empresaId, 'sales_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
             payload = buildSire141({ ruc, period, sales });
         } else if (libro === '8.1') {
-            const snap = await firestore.collection('purchases_ledger')
+            const snap = await getTenantCollection(empresaId, 'purchases_ledger')
                 .where('companyProfileId', '==', companyProfileId).where('period', '==', period).get();
             const purchases = snap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
@@ -45,6 +48,8 @@ export async function GET(req) {
             },
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sire-export] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

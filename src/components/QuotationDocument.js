@@ -84,6 +84,34 @@ const renderFormattedText = (text, baseStyle = {}) => {
     return elements;
 };
 
+const getProxiedImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('data:') || url.startsWith('blob:') || !url.startsWith('http')) {
+        return url;
+    }
+    
+    let ext = 'jpg';
+    try {
+        const urlObj = new URL(url);
+        const match = urlObj.pathname.match(/\.([a-zA-Z0-9]+)$/);
+        if (match) {
+            ext = match[1].toLowerCase();
+            // @react-pdf/renderer supports mainly jpg and png
+            if (ext !== 'jpg' && ext !== 'jpeg' && ext !== 'png') {
+                ext = 'jpg'; // fallback
+            }
+        }
+    } catch (e) {
+        console.error('Error parsing image url:', e);
+    }
+    
+    const proxyUrl = `/api/proxy-image/image.${ext}?url=${encodeURIComponent(url)}`;
+    if (typeof window !== 'undefined') {
+        return `${window.location.origin}${proxyUrl}`;
+    }
+    return proxyUrl;
+};
+
 // Register fonts if needed (we'll stick to standard ones for now to ensure speed)
 // Ideally, we would register a bold font, but Helvetica-Bold is standard.
 
@@ -363,7 +391,7 @@ export const QuotationDocument = ({ data }) => {
                 <View style={styles.headerContainer}>
                     <View style={styles.companyColumn}>
                         {company.logoUrl && (
-                            <Image src={company.logoUrl} style={styles.logo} />
+                            <Image src={getProxiedImageUrl(company.logoUrl)} style={styles.logo} />
                         )}
                         <Text style={styles.companyName}>{company.name || 'MI EMPRESA S.A.C.'}</Text>
                         <View style={{ height: 5 }} />
@@ -456,9 +484,8 @@ export const QuotationDocument = ({ data }) => {
 
                                 <View style={styles.colDesc}>
                                     <View style={styles.descContainer}>
-                                        {/* Placeholder for item image if we ever implement it in data */}
                                         {item.imageUrl && (
-                                            <Image src={item.imageUrl} style={styles.itemImage} />
+                                            <Image src={getProxiedImageUrl(item.imageUrl)} style={styles.itemImage} />
                                         )}
                                         <View style={styles.itemTextContainer}>
                                             <Text style={styles.itemTitle}>{item.name || item.description}</Text>

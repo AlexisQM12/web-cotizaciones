@@ -1,4 +1,4 @@
-import { firestore, storage } from '@/lib/firebase-admin';
+import { firestore, storage, getTenantDoc, getTenantCollection } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
@@ -8,22 +8,26 @@ export async function GET(req) {
         let snapshot;
         if (empresaId) {
             // Return only the company profile matching the user's empresaId
-            const docRef = await firestore.collection('company_profiles').doc(empresaId).get();
+            const docRef = await getTenantDoc(empresaId).get();
             snapshot = { docs: docRef.exists ? [docRef] : [] };
         } else {
             // Fallback (only for admins or legacy)
             snapshot = await firestore.collection('company_profiles').get();
         }
 
-        let profiles = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        let profiles = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                name: data.name || data.businessName || data.razonSocial || 'Empresa sin nombre'
+            };
+        });
 
         // Sort: isDefault first, then name
         profiles.sort((a, b) => {
             if (a.isDefault !== b.isDefault) return b.isDefault ? 1 : -1;
-            return a.name.localeCompare(b.name);
+            return (a.name || '').localeCompare(b.name || '');
         });
 
         return Response.json(profiles);
@@ -84,7 +88,7 @@ export async function POST(req) {
             });
         }
 
-        const newProfileRef = firestore.collection('company_profiles').doc();
+        const newProfileRef = getTenantDoc();
         batch.set(newProfileRef, {
             name,
             address,

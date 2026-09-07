@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AccountingShell from '@/components/AccountingShell';
+import { authFetch } from '@/lib/authFetch';
 import Icon from '@/components/icons/Icon';
 import { COMPANY_TYPES, TAX_REGIMES, getAllowedRegimes, getRequiredBooks } from '@/lib/accounting/sunatRules';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
@@ -26,6 +27,10 @@ export default function SetupPage() {
         tieneTrabajadores: false,
         ingresosAnualesProyectados: '',
         coeficienteRenta: '0.015',
+        clientId: '',
+        clientSecret: '',
+        solUser: '',
+        solPass: ''
     });
     const [saving, setSaving] = useState(false);
     const [savedOk, setSavedOk] = useState(false);
@@ -55,6 +60,12 @@ export default function SetupPage() {
                 tieneTrabajadores: !!config.tieneTrabajadores,
                 ingresosAnualesProyectados: config.ingresosAnualesProyectados || '',
                 coeficienteRenta: config.coeficienteRenta || '0.015',
+                // El servidor ya no devuelve las credenciales. Vacío = conservar
+                // las que ya están guardadas (ver PUT en api/accounting/config).
+                clientId: '',
+                clientSecret: '',
+                solUser: '',
+                solPass: ''
             });
         } else if (companyProfileId) {
             const profile = profiles.find(p => p.id === companyProfileId);
@@ -90,12 +101,62 @@ export default function SetupPage() {
         && /^\d{11}$/.test(form.ruc)
         && form.razonSocial.trim().length > 0;
 
+    const [searchingRuc, setSearchingRuc] = useState(false);
+    const [sunatStatus, setSunatStatus] = useState(null);
+
+    const searchRuc = async () => {
+        if (!/^\d{11}$/.test(form.ruc)) {
+            alert('Por favor, ingresa un RUC válido de 11 dígitos.');
+            return;
+        }
+        setSearchingRuc(true);
+        setSunatStatus(null);
+        try {
+            const res = await fetch(`/api/sunat/ruc?ruc=${form.ruc}`);
+            if (res.ok) {
+                const data = await res.json();
+                const rs = data.razonSocial || data.nombre || '';
+                
+                let detectedType = form.companyType;
+                if (form.ruc.startsWith('10')) detectedType = 'NATURAL';
+                else if (/\bS\.?A\.?C\.?\b/i.test(rs)) detectedType = 'SAC';
+                else if (/\bE\.?I\.?R\.?L\.?\b/i.test(rs)) detectedType = 'EIRL';
+                else if (/\bS\.?R\.?L\.?\b/i.test(rs)) detectedType = 'SRL';
+                else if (/\bS\.?A\.?\b/i.test(rs)) detectedType = 'SA';
+
+                setForm(f => ({
+                    ...f,
+                    razonSocial: rs || f.razonSocial,
+                    direccionFiscal: data.direccion || f.direccionFiscal,
+                    companyType: detectedType || f.companyType
+                }));
+
+                if (data.estado || data.condicion) {
+                    setSunatStatus({
+                        estado: data.estado,
+                        condicion: data.condicion
+                    });
+                    if (data.estado !== 'ACTIVO' || data.condicion !== 'HABIDO') {
+                        alert(`¡Atención! Según SUNAT, el estado es ${data.estado} y la condición es ${data.condicion}.`);
+                    }
+                }
+            } else {
+                alert('No se pudo encontrar el RUC en SUNAT o hay un error de conexión.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error interno al conectar con SUNAT.');
+        } finally {
+            setSearchingRuc(false);
+        }
+    };
+
     const handleSave = async () => {
         if (!canSave) return;
         setSaving(true);
         try {
             const resolvedId = companyProfileId || user?.empresaId;
-            const r = await fetch('/api/accounting/config', {
+            const r = await authFetch('/api/accounting/config', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, companyProfileId: resolvedId, empresaId: resolvedId }),
@@ -245,9 +306,32 @@ export default function SetupPage() {
                         <h2 className="acc-section-title">Datos fiscales</h2>
                         <div className="form-grid">
                             <Field label="RUC (11 dígitos)" required>
-                                <input className="acc-input" value={form.ruc}
-                                    onChange={(e) => update('ruc', e.target.value.replace(/\D/g, '').slice(0, 11))}
-                                    placeholder="20XXXXXXXXX" />
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input className="acc-input" value={form.ruc}
+                                        style={{ flex: 1 }}
+                                        onChange={(e) => update('ruc', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                                        placeholder="20XXXXXXXXX" />
+                                    <button 
+                                        onClick={searchRuc}
+                                        disabled={searchingRuc || form.ruc.length !== 11}
+                                        className="btn btn-secondary" 
+                                        style={{ padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #cbd5e1' }}
+                                        title="Buscar en SUNAT"
+                                    >
+                                        <Icon name="search" size={16} />
+                                        <span>{searchingRuc ? 'Buscando...' : 'SUNAT'}</span>
+                                    </button>
+                                </div>
+                                {sunatStatus && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', display: 'flex', gap: '1rem' }}>
+                                        <span style={{ color: sunatStatus.estado === 'ACTIVO' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                            Estado: {sunatStatus.estado}
+                                        </span>
+                                        <span style={{ color: sunatStatus.condicion === 'HABIDO' ? '#16a34a' : '#eab308', fontWeight: 600 }}>
+                                            Condición: {sunatStatus.condicion}
+                                        </span>
+                                    </div>
+                                )}
                             </Field>
                             <Field label="Razón social" required>
                                 <input className="acc-input" value={form.razonSocial}
@@ -284,6 +368,40 @@ export default function SetupPage() {
                                 </label>
                             </div>
                         </div>
+
+                        <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
+                        <h3 style={{ fontSize: '1.1rem', color: '#0f172a', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Icon name="shield-check" size={20} />
+                            Credenciales Oficiales SUNAT (SIRE / Facturación)
+                        </h3>
+                        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                            Para conectar la contabilidad directamente con SUNAT y extraer las propuestas del SIRE, necesitas generar tus credenciales OAuth en el portal SOL. Si no las tienes ahora, puedes dejarlas en blanco y el sistema usará el simulador.
+                        </p>
+                        {config?.tieneCredencialesSunat && (
+                            <div className="acc-alert acc-alert-info" style={{ marginBottom: '1.5rem' }}>
+                                <Icon name="shield-check" size={16} />
+                                <span>
+                                    Ya hay credenciales SUNAT guardadas. Por seguridad no se muestran:
+                                    el servidor nunca las devuelve al navegador. <strong>Deja los campos en
+                                    blanco para conservarlas</strong> y complétalos sólo si quieres reemplazarlas.
+                                </span>
+                            </div>
+                        )}
+                        <div className="form-grid">
+                            <Field label="Usuario SOL">
+                                <input className="acc-input" value={form.solUser} onChange={(e) => update('solUser', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "Ej. JPEREZ12"} />
+                            </Field>
+                            <Field label="Clave SOL">
+                                <input type="password" className="acc-input" value={form.solPass} onChange={(e) => update('solPass', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardada — escribe para reemplazar)" : "••••••••"} />
+                            </Field>
+                            <Field label="Client ID (ID de Cliente SUNAT)">
+                                <input className="acc-input" value={form.clientId} onChange={(e) => update('clientId', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "00000000-0000-0000-0000-000000000000"} />
+                            </Field>
+                            <Field label="Client Secret (Clave Secreta SUNAT)">
+                                <input type="password" className="acc-input" value={form.clientSecret} onChange={(e) => update('clientSecret', e.target.value)} placeholder={config?.tieneCredencialesSunat ? "(guardado — escribe para reemplazar)" : "••••••••"} />
+                            </Field>
+                        </div>
+
                         <WizardButtons onBack={() => setStep(2)} onNext={() => setStep(4)}
                             disabledNext={!/^\d{11}$/.test(form.ruc) || !form.razonSocial.trim()} />
                     </div>
