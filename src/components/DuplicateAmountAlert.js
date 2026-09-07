@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '@/lib/authFetch';
 
 export default function DuplicateAmountAlert({ amount, initialAmount, empresaId, excludeSourceKey, onDuplicateStatusChange }) {
     const [duplicates, setDuplicates] = useState([]);
@@ -29,7 +30,7 @@ export default function DuplicateAmountAlert({ amount, initialAmount, empresaId,
                 if (excludeSourceKey) {
                     url += `&excludeSourceKey=${encodeURIComponent(excludeSourceKey)}`;
                 }
-                const res = await fetch(url);
+                const res = await authFetch(url);
                 const data = await res.json();
                 if (data && data.length > 0) {
                     setDuplicates(data);

@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 import { getUpcomingObligations, getDueDate, getCurrentDeclarationPeriod, listAvailablePeriods, formatPeriod } from '@/lib/accounting/taxCalendar';
 
 // GET /api/accounting/calendar?companyProfileId=xxx&monthsAhead=6
@@ -7,6 +8,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const monthsAhead      = parseInt(searchParams.get('monthsAhead') || '6', 10);
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
@@ -29,6 +31,8 @@ export async function GET(req) {
             availablePeriods: listAvailablePeriods(),
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/calendar] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

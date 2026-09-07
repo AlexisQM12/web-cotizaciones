@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // POST /api/accounting/ingest-quotations
 // Importa al sales_ledger todas las cotizaciones con quotationStatus='completado'
@@ -10,6 +11,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 export async function POST(req) {
     try {
         const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
 
         const { companyProfileId, defaultSerie = 'F001', overwrite = false } = body;
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
@@ -124,6 +126,8 @@ export async function POST(req) {
             details:  { ingested, skipped },
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/ingest-quotations] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

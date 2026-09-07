@@ -1,9 +1,13 @@
 import { getTenantCollection } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
+import { faltaEmpresaId } from '@/lib/tenant';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const empresaId = searchParams.get('empresaId') || 'ayatech';
+        const empresaId = searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
+        if (!empresaId) return faltaEmpresaId();
         const amount = parseFloat(searchParams.get('amount') || 0);
         const excludeSourceKey = searchParams.get('excludeSourceKey');
 
@@ -49,6 +53,8 @@ export async function GET(req) {
 
         return Response.json(duplicates);
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[check-duplicate] GET error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

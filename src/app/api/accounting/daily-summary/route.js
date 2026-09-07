@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // GET /api/accounting/daily-summary?companyProfileId=xxx&period=YYYY-MM
 // Devuelve los totales de ventas y compras desglosados por día del mes.
@@ -8,6 +9,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const period           = searchParams.get('period');
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
@@ -80,6 +82,8 @@ export async function GET(req) {
             },
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/daily-summary] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

@@ -5,6 +5,7 @@ import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods, getDueDate } from '@/lib/accounting/taxCalendar';
+import { authFetch } from '@/lib/authFetch';
 
 export default function Page() {
     return <Suspense fallback={<AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>}><DeterminacionIGV /></Suspense>;
@@ -21,7 +22,7 @@ function DeterminacionIGV() {
         if (!companyProfileId) return;
         (async () => {
             setLoading(true);
-            const r = await fetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`);
+            const r = await authFetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`);
             setData(await r.json());
             setLoading(false);
         })();

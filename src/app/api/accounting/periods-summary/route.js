@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // GET /api/accounting/periods-summary?companyProfileId=xxx
 // Devuelve un resumen de qué periodos tienen movimientos (ventas/compras)
@@ -8,6 +9,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
         const [salesSnap, purchasesSnap] = await Promise.all([
@@ -54,6 +56,8 @@ export async function GET(req) {
             totalPurchases: purchasesSnap.size,
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/periods-summary] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

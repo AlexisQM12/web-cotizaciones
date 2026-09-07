@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // POST /api/accounting/purchases/from-pending
 // Crea una entrada en purchases_ledger a partir de un material escaneado en Pendings.
@@ -9,6 +10,7 @@ import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-adm
 export async function POST(req) {
     try {
         const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
 
         const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio, totalCost, pendienteFactura, uploadedBy } = body;
 
@@ -136,6 +138,8 @@ export async function POST(req) {
 
         return Response.json({ id: ref.id, ...data });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[purchases/from-pending] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

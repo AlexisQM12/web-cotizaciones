@@ -5,6 +5,7 @@ import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import ProjectionsChart from '@/components/accounting/ProjectionsChart';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
+import { authFetch } from '@/lib/authFetch';
 
 export default function ProyeccionesPage() {
     const { companyProfileId } = useAccountingConfig();
@@ -17,7 +18,7 @@ export default function ProyeccionesPage() {
         const load = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`/api/accounting/projections?empresaId=${companyProfileId}`);
+                const res = await authFetch(`/api/accounting/projections?empresaId=${companyProfileId}`);
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);

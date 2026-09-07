@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 import { calculateMonthlyTaxes } from '@/lib/accounting/taxCalculator';
 import { buildSalesEntry, buildPurchaseEntry, buildLibroDiario, buildLibroMayor, resetEntryNumber } from '@/lib/accounting/journalGenerator';
 
@@ -9,6 +10,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const period           = searchParams.get('period');
         if (!companyProfileId || !period) {
             return Response.json({ error: 'companyProfileId y period requeridos' }, { status: 400 });
@@ -75,6 +77,8 @@ export async function GET(req) {
             journal: { diario, mayor },
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/tax-calc] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

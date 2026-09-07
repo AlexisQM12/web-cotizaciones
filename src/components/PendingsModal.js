@@ -3,6 +3,7 @@ import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import DuplicateAmountAlert from './DuplicateAmountAlert';
+import { authFetch } from '@/lib/authFetch';
 
 const actionBtnStyle = {
     display: 'flex',
@@ -174,7 +175,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
                     setUploadingState(prev => ({ ...prev, [itemId]: 'Registrando en contabilidad...' }));
                     try {
                         const currentMaterial = materials.find(m => m.id === itemId) || {};
-                        await fetch('/api/accounting/purchases/from-pending', {
+                        await authFetch('/api/accounting/purchases/from-pending', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -318,7 +319,7 @@ export function PendingsModal({ quotation, onClose, onSave }) {
             const companyProfileId = user?.empresaId;
             if (!companyProfileId) return;
 
-            const res = await fetch('/api/accounting/purchases/from-pending', {
+            const res = await authFetch('/api/accounting/purchases/from-pending', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     companyProfileId,

@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 import { buildSire141, buildSire81 } from '@/lib/accounting/sireExporter';
 
 // GET /api/accounting/sire-export?companyProfileId=xxx&period=YYYY-MM&libro=14.1|8.1
@@ -8,6 +9,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const period           = searchParams.get('period');
         const libro            = searchParams.get('libro');
         if (!companyProfileId || !period || !libro) {
@@ -46,6 +48,8 @@ export async function GET(req) {
             },
         });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sire-export] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

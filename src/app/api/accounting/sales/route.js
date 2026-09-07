@@ -1,4 +1,5 @@
 import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // GET /api/accounting/sales?companyProfileId=xxx&period=YYYY-MM
 // Lista las ventas de un periodo
@@ -7,6 +8,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
 
         const companyProfileId = searchParams.get('companyProfileId');
+        await autorizarTenant(req, empresaId || companyProfileId);
         const period           = searchParams.get('period');
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
 
@@ -18,6 +20,8 @@ export async function GET(req) {
         sales.sort((a, b) => new Date(a.fechaEmision) - new Date(b.fechaEmision));
         return Response.json(sales);
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sales] GET error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }
@@ -27,6 +31,7 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
 
         const {
             companyProfileId, fechaEmision, fechaVencimiento, tipoComprobante,
@@ -70,6 +75,8 @@ export async function POST(req) {
         const ref = await getTenantCollection(empresaId, 'sales_ledger').add(data);
         return Response.json({ id: ref.id, ...data });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sales] POST error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }
@@ -79,6 +86,7 @@ export async function POST(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
 
         const { id, ...update } = body;
         if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
@@ -93,6 +101,8 @@ export async function PUT(req) {
         await getTenantCollection(empresaId, 'sales_ledger').doc(id).update(update);
         return Response.json({ success: true });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sales] PUT error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }
@@ -102,12 +112,15 @@ export async function PUT(req) {
 export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);        const empresaId = searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
 
         const id = searchParams.get('id');
         if (!id) return Response.json({ error: 'id requerido' }, { status: 400 });
         await getTenantCollection(empresaId, 'sales_ledger').doc(id).delete();
         return Response.json({ success: true });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[accounting/sales] DELETE error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

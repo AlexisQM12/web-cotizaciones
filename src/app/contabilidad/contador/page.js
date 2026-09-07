@@ -6,6 +6,7 @@ import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
 import { getRequiredBooks } from '@/lib/accounting/sunatRules';
+import { authFetch } from '@/lib/authFetch';
 
 export default function ContadorDashboard() {
     const router = useRouter();
@@ -21,7 +22,7 @@ export default function ContadorDashboard() {
     useEffect(() => {
         if (!companyProfileId || autoSelected) return;
         (async () => {
-            const r = await fetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
+            const r = await authFetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
             const data = await r.json();
             setSummary(data);
             if (data.latestWithData) {
@@ -36,7 +37,7 @@ export default function ContadorDashboard() {
         if (!companyProfileId) return;
         (async () => {
             setLoading(true);
-            const r = await fetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`);
+            const r = await authFetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`);
             setCalc(await r.json());
             setLoading(false);
         })();

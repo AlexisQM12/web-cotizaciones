@@ -1,9 +1,11 @@
 import { firestore, getTenantCollection } from '@/lib/firebase-admin';
+import { faltaEmpresaId } from '@/lib/tenant';
 
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const empresaId = searchParams.get('empresaId') || 'ayatech';
+        const empresaId = searchParams.get('empresaId');
+        if (!empresaId) return faltaEmpresaId();
 
         const snap = await getTenantCollection(empresaId, 'caja_chica').orderBy('createdAt', 'desc').get();
         const records = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -18,7 +20,8 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { empresaId = 'ayatech', ...data } = body;
+        const { empresaId, ...data } = body;
+        if (!empresaId) return faltaEmpresaId();
 
         data.createdAt = new Date().toISOString();
         data.updatedAt = new Date().toISOString();
@@ -134,7 +137,8 @@ export async function POST(req) {
 export async function DELETE(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const empresaId = searchParams.get('empresaId') || 'ayatech';
+        const empresaId = searchParams.get('empresaId');
+        if (!empresaId) return faltaEmpresaId();
         const id = searchParams.get('id');
 
         if (!id) {
@@ -169,7 +173,8 @@ export async function DELETE(req) {
 export async function PUT(req) {
     try {
         const body = await req.json();
-        const { id, empresaId = 'ayatech', ...data } = body;
+        const { id, empresaId, ...data } = body;
+        if (!empresaId) return faltaEmpresaId();
 
         if (!id) {
             return Response.json({ error: 'ID is required' }, { status: 400 });

@@ -5,6 +5,7 @@ import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
+import { authFetch } from '@/lib/authFetch';
 
 export default function EmpresarioDashboard() {
     const router = useRouter();
@@ -24,7 +25,7 @@ export default function EmpresarioDashboard() {
     useEffect(() => {
         if (!exists || !companyProfileId || autoSelected) return;
         (async () => {
-            const r = await fetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
+            const r = await authFetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
             const data = await r.json();
             setSummary(data);
             if (data.latestWithData) {
@@ -42,7 +43,7 @@ export default function EmpresarioDashboard() {
 
     const reloadSummary = async () => {
         if (!companyProfileId) return;
-        const r = await fetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
+        const r = await authFetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
         setSummary(await r.json());
     };
 
@@ -50,9 +51,9 @@ export default function EmpresarioDashboard() {
         setLoading(true); setError(null);
         try {
             const [calcR, calR, dailyR] = await Promise.all([
-                fetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`),
-                fetch(`/api/accounting/calendar?companyProfileId=${companyProfileId}`),
-                fetch(`/api/accounting/daily-summary?companyProfileId=${companyProfileId}&period=${period}`),
+                authFetch(`/api/accounting/tax-calc?companyProfileId=${companyProfileId}&period=${period}`),
+                authFetch(`/api/accounting/calendar?companyProfileId=${companyProfileId}`),
+                authFetch(`/api/accounting/daily-summary?companyProfileId=${companyProfileId}&period=${period}`),
             ]);
             const [calcData, calData, dailyData] = await Promise.all([calcR.json(), calR.json(), dailyR.json()]);
             if (!calcR.ok)  throw new Error(calcData.error  || 'Error calculando');
@@ -72,7 +73,7 @@ export default function EmpresarioDashboard() {
         if (!confirm('Esto ingresará todas las cotizaciones completadas al registro de ventas. ¿Continuar?')) return;
         setSyncing(true);
         try {
-            const r = await fetch('/api/accounting/ingest-quotations', {
+            const r = await authFetch('/api/accounting/ingest-quotations', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ companyProfileId }),
             });

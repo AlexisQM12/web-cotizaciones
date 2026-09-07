@@ -7,6 +7,7 @@ import { NavBar } from '@/components/NavBar'
 import { PendingsModal } from '@/components/PendingsModal'
 import { GlobalTimelineModal } from '@/components/GlobalTimelineModal'
 import { useAuth } from '@/contexts/AuthContext'
+import { authFetch } from '@/lib/authFetch';
 
 export default function PendingsDashboard() {
     const [allQuotations, setAllQuotations] = useState([])
@@ -62,7 +63,7 @@ export default function PendingsDashboard() {
                 for (const m of operationsData.materials) {
                     if (m.purchased) {
                         try {
-                            await fetch('/api/accounting/purchases/from-pending', {
+                            await authFetch('/api/accounting/purchases/from-pending', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({

@@ -7,6 +7,7 @@ import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
 import { VOUCHER_TYPES, DOC_ID_TYPES } from '@/lib/accounting/sunatRules';
+import { authFetch } from '@/lib/authFetch';
 
 export default function Page() {
     return <Suspense fallback={<AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>}><RegistroCompras /></Suspense>;
@@ -52,7 +53,7 @@ function RegistroCompras() {
         if (!companyProfileId) return;
         setLoading(true);
         try {
-            const r = await fetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
+            const r = await authFetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
             const data = await r.json();
             if (!r.ok) {
                 console.error('[compras] API error:', data.error);
@@ -72,7 +73,7 @@ function RegistroCompras() {
     const handleSave = async (entry) => {
         const method = entry.id ? 'PUT' : 'POST';
         const body   = entry.id ? entry : { ...entry, companyProfileId, uploadedBy: user?.email };
-        const r = await fetch('/api/accounting/purchases', {
+        const r = await authFetch('/api/accounting/purchases', {
             method, headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
@@ -88,7 +89,7 @@ function RegistroCompras() {
 
     const handleDelete = async (id) => {
         if (!confirm('⚠️ ¿Estás seguro de eliminar esta compra?\n\nEsta acción quitará la compra del registro y restituirá el dinero al saldo del fondo/préstamo de forma permanente.')) return;
-        const r = await fetch(`/api/accounting/purchases?id=${id}&companyProfileId=${companyProfileId}`, { method: 'DELETE' });
+        const r = await authFetch(`/api/accounting/purchases?id=${id}&companyProfileId=${companyProfileId}`, { method: 'DELETE' });
         if (!r.ok) {
             const d = await r.json().catch(() => ({}));
             alert(d.error || 'Error al eliminar');
@@ -163,7 +164,7 @@ function RegistroCompras() {
         if (selectedItems.length === 0) return;
         setBulkLoading(true);
         try {
-            const r = await fetch('/api/accounting/bulk-funding', {
+            const r = await authFetch('/api/accounting/bulk-funding', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

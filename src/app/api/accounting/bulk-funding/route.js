@@ -1,4 +1,5 @@
 import { getTenantCollection, firestore } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 export async function POST(req) {
     try {
@@ -7,6 +8,8 @@ export async function POST(req) {
         if (!companyProfileId || !Array.isArray(purchaseIds)) {
             return Response.json({ error: 'Faltan parámetros requeridos.' }, { status: 400 });
         }
+
+        await autorizarTenant(req, companyProfileId);
 
         const batch = firestore.batch();
         const purchasesRef = getTenantCollection(companyProfileId, 'purchases_ledger');
@@ -59,6 +62,8 @@ export async function POST(req) {
 
         return Response.json({ success: true, count: docs.length });
     } catch (error) {
+        const authRes = respuestaDeAuthError(error);
+        if (authRes) return authRes;
         console.error('[bulk-funding] POST error:', error);
         return Response.json({ error: error.message }, { status: 500 });
     }

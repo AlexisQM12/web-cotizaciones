@@ -1,4 +1,5 @@
 import { getTenantCollection } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,6 +7,7 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const empresaId = searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
         if (!empresaId) return Response.json({ error: 'Missing empresaId' }, { status: 400 });
 
         const query = getTenantCollection(empresaId, 'quotations')
@@ -74,6 +76,8 @@ export async function GET(req) {
 
         return Response.json(projections);
     } catch (error) {
+        const authRes = respuestaDeAuthError(error);
+        if (authRes) return authRes;
         console.error('Projections API Error:', error);
         return Response.json({ error: 'Failed to load projections' }, { status: 500 });
     }
