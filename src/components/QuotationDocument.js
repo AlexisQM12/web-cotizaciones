@@ -1,87 +1,39 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { numberToSpanishWords, formatAmount } from '@/lib/numberToWords';
+import { aBloques, aTextoPlano } from '@/lib/richText';
 
-// Helper function to parse and render formatted text
-// Supports: **bold**, • bullets, and newlines
-const renderFormattedText = (text, baseStyle = {}) => {
-    if (!text) return null;
-    
-    const lines = text.split('\n');
-    const elements = [];
-    
-    lines.forEach((line, lineIndex) => {
-        if (!line.trim()) {
-            // Empty line - add a small spacer
-            elements.push(
-                <Text key={`empty-${lineIndex}`} style={{ ...baseStyle, height: 4 }}> </Text>
-            );
-            return;
-        }
-        
-        // Check if line starts with bullet
-        const hasBullet = line.startsWith('•');
-        let lineContent = hasBullet ? line.substring(1) : line;
-        
-        // Check for bold text (**text**)
-        const boldRegex = /\*\*(.+?)\*\*/g;
-        const boldMatches = [];
-        let match;
-        while ((match = boldRegex.exec(lineContent)) !== null) {
-            boldMatches.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                text: match[1]
-            });
-        }
-        
-        if (boldMatches.length > 0) {
-            // Line has bold text - build array of parts
-            const parts = [];
-            let currentIndex = 0;
-            
-            boldMatches.forEach((bold) => {
-                // Add text before bold
-                if (bold.start > currentIndex) {
-                    const beforeText = lineContent.substring(currentIndex, bold.start);
-                    parts.push({ text: beforeText, bold: false });
-                }
-                // Add bold text
-                parts.push({ text: bold.text, bold: true });
-                currentIndex = bold.end;
-            });
-            
-            // Add remaining text after last bold
-            if (currentIndex < lineContent.length) {
-                parts.push({ text: lineContent.substring(currentIndex), bold: false });
-            }
-            
-            // Render the line with bullet prefix if applicable
-            elements.push(
-                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
-                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
-                    {parts.map((part, partIndex) => (
-                        <Text
-                            key={partIndex}
-                            style={part.bold ? { ...baseStyle, fontWeight: 'bold' } : baseStyle}
-                        >
-                            {part.text}
-                        </Text>
-                    ))}
+// Pinta el texto con formato de un ítem.
+//
+// Antes vivía aquí un parser de "**negrita**" que NUNCA se llamaba: el documento
+// imprimía item.details en crudo, así que los asteriscos salían literales en el
+// PDF. Ahora el formato se normaliza en src/lib/richText.js, que entiende tanto
+// el HTML del editor visual como el texto con marcadores de las cotizaciones
+// antiguas, y aquí sólo se dibujan los bloques resultantes.
+const renderTextoConFormato = (valor, baseStyle = {}) => {
+    const bloques = aBloques(valor);
+    if (!bloques.length) return null;
+
+    return bloques.map((bloque, i) => (
+        <Text key={`b-${i}`} style={{ ...baseStyle, marginBottom: 2 }}>
+            {bloque.tipo === 'vineta' && <Text>• </Text>}
+            {bloque.partes.map((parte, j) => (
+                <Text
+                    key={j}
+                    style={{
+                        ...baseStyle,
+                        // Helvetica es una de las fuentes estándar del PDF: trae
+                        // negrita y cursiva sin registrar nada.
+                        ...(parte.negrita   ? { fontWeight: 'bold' }        : {}),
+                        ...(parte.cursiva   ? { fontStyle: 'italic' }       : {}),
+                        ...(parte.subrayado ? { textDecoration: 'underline' } : {}),
+                    }}
+                >
+                    {parte.texto}
                 </Text>
-            );
-        } else {
-            // No bold text - render simply
-            elements.push(
-                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
-                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
-                    <Text style={{ ...baseStyle }}>{lineContent}</Text>
-                </Text>
-            );
-        }
-    });
-    
-    return elements;
+            ))}
+        </Text>
+    ));
 };
 
 const getProxiedImageUrl = (url) => {
@@ -489,10 +441,8 @@ export const QuotationDocument = ({ data }) => {
                                         )}
                                         <View style={styles.itemTextContainer}>
                                             <Text style={styles.itemTitle}>{item.name || item.description}</Text>
-                                            {item.details && item.details !== (item.name || item.description) && (
-                                                <Text style={styles.itemDescText}>
-                                                    {item.details}
-                                                </Text>
+                                            {item.details && aTextoPlano(item.details) !== (item.name || item.description) && (
+                                                <View>{renderTextoConFormato(item.details, styles.itemDescText)}</View>
                                             )}
                                         </View>
                                     </View>

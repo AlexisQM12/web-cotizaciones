@@ -8,6 +8,13 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
+import ItemsEditor from '@/components/ItemsEditor';
+
+const PASOS = [
+    { n: 1, titulo: 'Datos' },
+    { n: 2, titulo: 'Ítems' },
+    { n: 3, titulo: 'Cierre' },
+];
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -71,6 +78,8 @@ export default function QuotationEditor() {
     const [pdfData, setPdfData] = useState(null);
     const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
     const [subItemsModalData, setSubItemsModalData] = useState(null);
+    const [itemSeleccionado, setItemSeleccionado] = useState(0);
+    const [paso, setPaso] = useState(1);
     const [uploadingItem, setUploadingItem] = useState({}); // { [index]: true }
 
     const uploadItemImage = async (index, file) => {
@@ -550,6 +559,24 @@ export default function QuotationEditor() {
                         </div>
                     </div>
 
+
+                    {/* Los datos de empresa y cliente ya no compiten por espacio
+                        con los ítems: cada bloque vive en su propio paso. */}
+                    <nav className="pasos">
+                        {PASOS.map((p) => (
+                            <button
+                                key={p.n}
+                                type="button"
+                                onClick={() => setPaso(p.n)}
+                                className={`pasos__boton${paso === p.n ? ' pasos__boton--activo' : ''}`}
+                            >
+                                <span className="pasos__numero">{p.n}</span>
+                                {p.titulo}
+                            </button>
+                        ))}
+                    </nav>
+
+                    {paso === 1 && (<>
                     <div className="card-editor" style={{ marginBottom: '1rem' }}>
                         <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
@@ -736,258 +763,42 @@ export default function QuotationEditor() {
                         </p>
                     </div>
 
-                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Ítems</h3>
-                    {data.items && data.items.map((item, index) => (
-                        <div key={index} className="card-editor" style={{ marginBottom: '0.5rem', padding: '0.8rem' }}>
-                            {/* Item header with index and action buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: item.isExpanded === false ? '0' : '0.5rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Ítem #{index + 1}
-                                    </span>
-                                    {item.isExpanded === false && (
-                                        <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500', marginLeft: '0.5rem' }}>
-                                            - {item.description || 'Sin título'} <strong style={{ color: '#22c55e' }}>(S/ {Number(item.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</strong>
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    {/* Chevron Collapse/Expand */}
-                                    <button
-                                        onClick={() => toggleItemExpanded(index)}
-                                        title={item.isExpanded !== false ? "Contraer" : "Expandir"}
-                                        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        {item.isExpanded !== false ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                        )}
-                                    </button>
-                                    {/* Move Up button */}
-                                    <button
-                                        onClick={() => moveItemUp(index)}
-                                        title="Subir ítem"
-                                        disabled={index === 0}
-                                        style={{ background: index === 0 ? 'transparent' : '#f1f5f9', border: 'none', color: index === 0 ? '#cbd5e1' : '#475569', cursor: index === 0 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (index !== 0) e.currentTarget.style.background = '#e2e8f0'; }}
-                                        onMouseOut={(e) => { if (index !== 0) e.currentTarget.style.background = '#f1f5f9'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                                    </button>
-                                    {/* Move Down button */}
-                                    <button
-                                        onClick={() => moveItemDown(index)}
-                                        title="Bajar ítem"
-                                        disabled={index === data.items.length - 1}
-                                        style={{ background: index === data.items.length - 1 ? 'transparent' : '#f1f5f9', border: 'none', color: index === data.items.length - 1 ? '#cbd5e1' : '#475569', cursor: index === data.items.length - 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#e2e8f0'; }}
-                                        onMouseOut={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#f1f5f9'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-                                    </button>
-                                    {/* Sub-items button */}
-                                    <button
-                                        onClick={() => setSubItemsModalData({ index, subItems: item.subItems || [] })}
-                                        title="Sub-ítems (Cálculo interno)"
-                                        style={{ background: '#fef3c7', border: 'none', color: '#d97706', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#fde68a'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = '#fef3c7'}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                    </button>
-                                    {/* Duplicate button */}
-                                    <button
-                                        onClick={() => duplicateItem(index)}
-                                        title="Duplicar ítem"
-                                        style={{ background: '#e0f2fe', border: 'none', color: '#0369a1', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#bae6fd'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = '#e0f2fe'}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                    </button>
-                                    {/* Delete button */}
-                                    <button
-                                        onClick={() => removeItem(index)}
-                                        title="Eliminar ítem"
-                                        disabled={data.items.length <= 1}
-                                        style={{ background: data.items.length <= 1 ? '#f1f5f9' : '#fee2e2', border: 'none', color: data.items.length <= 1 ? '#cbd5e1' : '#dc2626', cursor: data.items.length <= 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fecaca'; }}
-                                        onMouseOut={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fee2e2'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            {item.isExpanded !== false && (
-                                <div className="item-grid-container">
-                                <div style={{ gridColumn: 'span 5', position: 'relative' }}>
-                                    {renderRemoteCursorLabel(`item_${index}_description`)}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <input
-                                            placeholder="Título del ítem"
-                                            style={getInputStyle(`item_${index}_description`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc', fontWeight: 'bold' })}
-                                            value={item.description}
-                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                            onFocus={() => handleFocus(`item_${index}_description`)}
-                                            onBlur={() => handleBlur(`item_${index}_description`)}
-                                        />
-                                        <textarea
-                                            placeholder="Descripción detallada (puedes usar: • para viñetas, **texto** para negrita, enters para nuevas líneas)"
-                                            style={{ ...getInputStyle(`item_${index}_details`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #94a3b8', minHeight: '50px' }), fontSize: '0.8rem', resize: 'vertical' }}
-                                            value={item.details || ''}
-                                            onChange={(e) => handleItemChange(index, 'details', e.target.value)}
-                                            onFocus={() => handleFocus(`item_${index}_details`)}
-                                            onBlur={() => handleBlur(`item_${index}_details`)}
-                                        />
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
-                                            <span>💡 Usa <b>•</b> para viñetas, <b>**texto**</b> para negrita, <b>Enter</b> para nuevas líneas</span>
-                                        </div>
 
-                                        {/* Image upload */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                                            {item.imageUrl ? (
-                                                <>
-                                                    <img
-                                                        src={item.imageUrl}
-                                                        alt="Imagen del ítem"
-                                                        style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
-                                                    />
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                        <label style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '600' }}>Imagen adjunta al ítem</label>
-                                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                            <label style={{ cursor: 'pointer', fontSize: '0.72rem', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: 5, padding: '0.25rem 0.6rem', fontWeight: '600' }}>
-                                                                Cambiar
-                                                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
-                                                            </label>
-                                                            <button onClick={() => removeItemImage(index, item.imageUrl)} style={{ fontSize: '0.72rem', color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 5, padding: '0.25rem 0.6rem', cursor: 'pointer', fontWeight: '600' }}>
-                                                                Quitar
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <label style={{
-                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                    cursor: uploadingItem[index] ? 'wait' : 'pointer',
-                                                    fontSize: '0.75rem', color: uploadingItem[index] ? '#94a3b8' : '#475569',
-                                                    background: '#f8fafc', border: '1.5px dashed #cbd5e1',
-                                                    borderRadius: 6, padding: '0.45rem 0.85rem', fontWeight: '600',
-                                                    transition: 'border-color 0.15s',
-                                                }}>
-                                                    {uploadingItem[index]
-                                                        ? <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Subiendo...</>
-                                                        : <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Añadir imagen</>
-                                                    }
-                                                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingItem[index]} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
-                                                </label>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__siguiente" onClick={() => setPaso(2)}>
+                            Continuar a Ítems →
+                        </button>
+                    </div>
+                    </>)}
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Cant.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_quantity`)}
-                                    <input
-                                        type="number"
-                                        style={getInputStyle(`item_${index}_quantity`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.quantity}
-                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                        onFocus={() => handleFocus(`item_${index}_quantity`)}
-                                        onBlur={() => handleBlur(`item_${index}_quantity`)}
-                                    />
-                                </div>
+                    {paso === 2 && (<>
+                    <ItemsEditor
+                        items={data.items || []}
+                        seleccionado={itemSeleccionado}
+                        onSeleccionar={setItemSeleccionado}
+                        onCambiar={handleItemChange}
+                        onAgregar={async () => { await addItem(); setItemSeleccionado((data.items || []).length); }}
+                        onEliminar={removeItem}
+                        onDuplicar={duplicateItem}
+                        onSubir={moveItemUp}
+                        onBajar={moveItemDown}
+                        onSubirImagen={uploadItemImage}
+                        onQuitarImagen={removeItemImage}
+                        onAbrirSubItems={(i) => setSubItemsModalData({ index: i, subItems: (data.items || [])[i]?.subItems || [] })}
+                        subiendoImagen={uploadingItem}
+                        getInputStyle={getInputStyle}
+                        onFocusCampo={handleFocus}
+                        onBlurCampo={handleBlur}
+                    />
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Costo Base</label>
-                                    {renderRemoteCursorLabel(`item_${index}_basePrice`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0.00"
-                                        style={getInputStyle(`item_${index}_basePrice`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.basePrice || ''}
-                                        onChange={(e) => {
-                                            const bp = parseFloat(e.target.value) || 0;
-                                            const profit = parseFloat(item.profitPercentage) || 0;
-                                            const others = parseFloat(item.otherCosts) || 0;
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
 
-                                            handleItemChange(index, 'basePrice', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_basePrice`)}
-                                        onBlur={() => handleBlur(`item_${index}_basePrice`)}
-                                    />
-                                </div>
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__anterior" onClick={() => setPaso(1)}>← Volver a Datos</button>
+                        <button type="button" className="pasos__siguiente" onClick={() => setPaso(3)}>Continuar a Cierre →</button>
+                    </div>
+                    </>)}
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>% Gan.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_profitPercentage`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        style={getInputStyle(`item_${index}_profitPercentage`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.profitPercentage || ''}
-                                        onChange={(e) => {
-                                            const profit = parseFloat(e.target.value) || 0;
-                                            const bp = parseFloat(item.basePrice || 0);
-                                            const others = parseFloat(item.otherCosts || 0);
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
-
-                                            handleItemChange(index, 'profitPercentage', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_profitPercentage`)}
-                                        onBlur={() => handleBlur(`item_${index}_profitPercentage`)}
-                                    />
-                                </div>
-
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>% Otros</label>
-                                    {renderRemoteCursorLabel(`item_${index}_otherCosts`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        style={getInputStyle(`item_${index}_otherCosts`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.otherCosts || ''}
-                                        onChange={(e) => {
-                                            const profit = parseFloat(item.profitPercentage || 0);
-                                            const bp = parseFloat(item.basePrice || 0);
-                                            const others = parseFloat(e.target.value) || 0;
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
-
-                                            handleItemChange(index, 'otherCosts', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_otherCosts`)}
-                                        onBlur={() => handleBlur(`item_${index}_otherCosts`)}
-                                    />
-                                </div>
-
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Precio U.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_price`)}
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        style={getInputStyle(`item_${index}_price`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #22c55e', backgroundColor: '#f0fdf4' })}
-                                        value={item.price}
-                                        onChange={(e) => handleItemChange(index, 'price', e.target.value)}
-                                        onFocus={() => handleFocus(`item_${index}_price`)}
-                                        onBlur={() => handleBlur(`item_${index}_price`)}
-                                    />
-                                </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                    <button onClick={addItem} className="btn" style={{ background: '#e5e7eb', color: '#374151', marginBottom: '1rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                        + Agregar Ítem
-                    </button>
-
+                    {paso === 3 && (<>
                     <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Notas / Condiciones</h3>
                     <div className="card-editor" style={{ position: 'relative' }}>
                         {renderRemoteCursorLabel('notes')}
@@ -1001,6 +812,12 @@ export default function QuotationEditor() {
                             placeholder="Notas adicionales para esta cotización..."
                         />
                     </div>
+
+
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__anterior" onClick={() => setPaso(2)}>← Volver a Ítems</button>
+                    </div>
+                    </>)}
 
                 </div>
 
