@@ -1119,23 +1119,33 @@ textarea:focus,
 }
 
 /* ── Secciones del Paso 1 como tarjetas ──────────────────────────────────── */
-/* La caja envuelve al GRUPO, no a cada campo: un recuadro por tipo de dato.
-   Cada sección lleva su propio color para distinguirlas de un vistazo. */
+/* Una tarjeta por tipo de dato, en dos columnas. El color es plano —sin
+   degradado— y no lleva filo lateral: la propia tarjeta es el color. */
+.paso1-tarjetas {
+  /* Columnas en vez de rejilla: con grid, una fila espera a su tarjeta más
+     alta y quedaba un hueco bajo las cortas. Así se empaquetan solas. */
+  column-count: 2;
+  column-gap: 1rem;
+}
+
 .seccion {
-  --acento: #64748b;
-  --tinte: #f8fafc;
-  background: #fff;
+  /* Una tarjeta no debe partirse entre columnas. */
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin-bottom: 1rem;
+  --acento: #475569;
+  --tinte: #f1f5f9;
+  background: var(--tinte);
   border: 1px solid #e2e8f0;
-  border-left: 4px solid var(--acento);
   border-radius: 12px;
   padding: 1rem 1.15rem 1.15rem;
-  margin-bottom: 1rem;
 }
 
 .seccion__titulo {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  flex-wrap: wrap;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.07em;
@@ -1143,17 +1153,36 @@ textarea:focus,
   color: var(--acento);
   margin: 0 0 0.9rem;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--tinte);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-.seccion--emisor  { --acento: #6366f1; --tinte: #eef2ff; }
-.seccion--cliente { --acento: #0284c7; --tinte: #e0f2fe; }
-.seccion--objeto  { --acento: #7c3aed; --tinte: #f3e8ff; }
-.seccion--precios { --acento: #059669; --tinte: #d1fae5; }
+.seccion--emisor  { --acento: #4f46e5; --tinte: #eef2ff; }
+.seccion--cliente { --acento: #0369a1; --tinte: #e0f2fe; }
+.seccion--objeto  { --acento: #6d28d9; --tinte: #f5f3ff; }
+.seccion--precios { --acento: #047857; --tinte: #ecfdf5; }
 
-/* El tinte del color también baña la tarjeta, muy suave, para que se reconozca
-   sin competir con el contenido. */
-.seccion { background: linear-gradient(180deg, var(--tinte) 0%, #fff 72px); }
+/* Dentro de media tarjeta no caben tres columnas de campos. */
+.seccion .grid-3-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+/* Los controles se ven sobre el tinte, así que van en blanco. */
+.seccion input,
+.seccion select,
+.seccion textarea {
+  width: 100%;
+  background: #fff;
+}
+
+/* El botón de aplicar porcentajes ocupa su propia fila completa. */
+.seccion--precios .grid-3-col > button {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .paso1-tarjetas { column-count: 1; }
+}
 
 .paso1__nota {
   font-size: 0.68rem;

@@ -581,6 +581,7 @@ export default function QuotationEditor() {
                     </nav>
 
                     {paso === 1 && (<>
+                    <div className="paso1-tarjetas">
                     <section className="seccion seccion--emisor">
                         <h3 className="seccion__titulo">Emisor</h3>
                         <div style={{ maxWidth: 420 }}>
@@ -771,6 +772,7 @@ export default function QuotationEditor() {
                             * Esto actualizará los porcentajes y recalculará el Precio U. de cada ítem basado en su Costo Base.
                         </p>
                     </section>
+                    </div>
 
 
                     <div className="pasos__pie">
