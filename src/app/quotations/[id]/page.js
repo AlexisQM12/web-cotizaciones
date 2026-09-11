@@ -581,9 +581,9 @@ export default function QuotationEditor() {
                     </nav>
 
                     {paso === 1 && (<>
-                    <h3 className="paso1__titulo">Emisor</h3>
-                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
-                        <div className="campos" style={{ maxWidth: 420 }}>
+                    <section className="seccion seccion--emisor">
+                        <h3 className="seccion__titulo">Emisor</h3>
+                        <div style={{ maxWidth: 420 }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -601,11 +601,11 @@ export default function QuotationEditor() {
                                 </select>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <h3 className="paso1__titulo">Cliente</h3>
-                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-3-col campos">
+                    <section className="seccion seccion--cliente">
+                        <h3 className="seccion__titulo">Cliente</h3>
+                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
                                     Empresa Cliente (CRM) 
@@ -697,11 +697,11 @@ export default function QuotationEditor() {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <h3 className="paso1__titulo">Objeto de la cotización</h3>
-                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
-                            <div className="campo" style={{ position: 'relative' }}>
+                    <section className="seccion seccion--objeto">
+                        <h3 className="seccion__titulo">Objeto de la cotización</h3>
+                            <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Descripción del servicio o producto</label>
                                 {renderRemoteCursorLabel('serviceDescription')}
                                 <textarea
@@ -713,12 +713,12 @@ export default function QuotationEditor() {
                                     placeholder="Describa brevemente el servicio o producto a cotizar..."
                                 />
                             </div>
-                    </div>
+                    </section>
 
 
-                    <h3 className="paso1__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
-                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
-                        <div className="grid-3-col campos" style={{ alignItems: 'flex-end' }}>
+                    <section className="seccion seccion--precios">
+                        <h3 className="seccion__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
+                        <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
@@ -770,7 +770,7 @@ export default function QuotationEditor() {
                         <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.75rem' }}>
                             * Esto actualizará los porcentajes y recalculará el Precio U. de cada ítem basado en su Costo Base.
                         </p>
-                    </div>
+                    </section>
 
 
                     <div className="pasos__pie">

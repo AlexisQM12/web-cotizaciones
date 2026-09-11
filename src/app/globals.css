@@ -1060,19 +1060,6 @@ textarea:focus,
 .pasos__anterior { background: #f1f5f9; color: #475569; }
 .pasos__anterior:hover { background: #e2e8f0; }
 
-/* ── Paso 1: títulos de sección ──────────────────────────────────────────── */
-.paso1__titulo {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #64748b;
-  margin: 1.4rem 0 0.5rem;
-}
-.paso1__titulo:first-of-type { margin-top: 0; }
 .paso1__nota {
   font-size: 0.68rem;
   font-weight: 600;
@@ -1131,38 +1118,55 @@ textarea:focus,
   border-color: #e2e8f0;
 }
 
-/* ── Campos como cuadros ─────────────────────────────────────────────────── */
-/* La sección deja de ser una tarjeta: la caja la dibuja ahora cada campo, así
-   el formulario se lee como una cuadrícula y no como una lista corrida. */
-.card-editor--plano {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-}
-
-.campos > div,
-.campo {
+/* ── Secciones del Paso 1 como tarjetas ──────────────────────────────────── */
+/* La caja envuelve al GRUPO, no a cada campo: un recuadro por tipo de dato.
+   Cada sección lleva su propio color para distinguirlas de un vistazo. */
+.seccion {
+  --acento: #64748b;
+  --tinte: #f8fafc;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.7rem 0.8rem;
+  border-left: 4px solid var(--acento);
+  border-radius: 12px;
+  padding: 1rem 1.15rem 1.15rem;
+  margin-bottom: 1rem;
 }
-.campos > div:focus-within,
-.campo:focus-within {
-  border-color: #bae6fd;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.08);
+
+.seccion__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--acento);
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--tinte);
 }
-/* Los controles ya no necesitan su propio borde dentro del cuadro. */
-.campos > div > input,
-.campos > div > select,
-.campos > div > textarea,
-.campo > input,
-.campo > select,
-.campo > textarea {
+
+.seccion--emisor  { --acento: #6366f1; --tinte: #eef2ff; }
+.seccion--cliente { --acento: #0284c7; --tinte: #e0f2fe; }
+.seccion--objeto  { --acento: #7c3aed; --tinte: #f3e8ff; }
+.seccion--precios { --acento: #059669; --tinte: #d1fae5; }
+
+/* El tinte del color también baña la tarjeta, muy suave, para que se reconozca
+   sin competir con el contenido. */
+.seccion { background: linear-gradient(180deg, var(--tinte) 0%, #fff 72px); }
+
+.paso1__nota {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+/* getInputStyle deja de enviar width:100% en línea mientras otro usuario tiene
+   el campo enfocado, y el control se encogía a media edición. Aquí se sostiene. */
+.seccion input,
+.seccion select,
+.seccion textarea {
   width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.88rem;
 }
