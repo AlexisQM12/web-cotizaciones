@@ -1080,3 +1080,89 @@ textarea:focus,
   text-transform: none;
   color: #94a3b8;
 }
+
+/* ── Cabecera del editor ─────────────────────────────────────────────────── */
+/* Sólo existía dentro del @media móvil, así que en escritorio la cabecera era
+   un bloque normal y los botones caían debajo del título, a la izquierda. */
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.acciones-cabecera {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 7px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.accion:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.accion:disabled { opacity: 0.6; cursor: default; }
+
+.accion--principal {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+.accion--principal:hover:not(:disabled) { background: #1e293b; border-color: #1e293b; }
+
+.accion--mini {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+/* ── Campos como cuadros ─────────────────────────────────────────────────── */
+/* La sección deja de ser una tarjeta: la caja la dibuja ahora cada campo, así
+   el formulario se lee como una cuadrícula y no como una lista corrida. */
+.card-editor--plano {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.campos > div,
+.campo {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+}
+.campos > div:focus-within,
+.campo:focus-within {
+  border-color: #bae6fd;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.08);
+}
+/* Los controles ya no necesitan su propio borde dentro del cuadro. */
+.campos > div > input,
+.campos > div > select,
+.campos > div > textarea,
+.campo > input,
+.campo > select,
+.campo > textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.88rem;
+}

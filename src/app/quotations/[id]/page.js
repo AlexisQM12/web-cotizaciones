@@ -9,6 +9,7 @@ import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
 import ItemsEditor from '@/components/ItemsEditor';
+import Icon from '@/components/icons/Icon';
 
 const PASOS = [
     { n: 1, titulo: 'Datos' },
@@ -543,18 +544,21 @@ export default function QuotationEditor() {
                             {data.code && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'bold' }}>{data.code}</span>
-                                    <button onClick={handleAssignLatestCode} disabled={assigningCode} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '2px 8px', fontSize: '0.75rem', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }} title="Asignar numeración más reciente (ej. si duplicaste la cotización)">
-                                        {assigningCode ? 'Actualizando...' : '🔄 Actualizar Nro.'}
+                                    <button onClick={handleAssignLatestCode} disabled={assigningCode} className="accion accion--mini" title="Asignar el siguiente número correlativo">
+                                        <Icon name="refresh" size={13} />
+                                        <span>{assigningCode ? 'Actualizando…' : 'Actualizar Nro.'}</span>
                                     </button>
                                 </div>
                             )}
                         </div>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/quotations')}>
-                                ← Menú Principal
+                        <div className="acciones-cabecera">
+                            <button className="accion accion--suave" onClick={() => router.push('/quotations')} title="Volver al listado de cotizaciones">
+                                <Icon name="arrow-left" size={15} />
+                                <span>Menú</span>
                             </button>
-                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={saveQuotation} disabled={saving}>
-                                {saving ? 'Guardando...' : 'Guardar Cambios'}
+                            <button className="accion accion--principal" onClick={saveQuotation} disabled={saving} title="Guardar los cambios de esta cotización">
+                                <Icon name={saving ? 'refresh' : 'check'} size={15} />
+                                <span>{saving ? 'Guardando…' : 'Guardar'}</span>
                             </button>
                         </div>
                     </div>
@@ -578,8 +582,8 @@ export default function QuotationEditor() {
 
                     {paso === 1 && (<>
                     <h3 className="paso1__titulo">Emisor</h3>
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div style={{ maxWidth: 420 }}>
+                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
+                        <div className="campos" style={{ maxWidth: 420 }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -600,8 +604,8 @@ export default function QuotationEditor() {
                     </div>
 
                     <h3 className="paso1__titulo">Cliente</h3>
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-3-col">
+                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
+                        <div className="grid-3-col campos">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
                                     Empresa Cliente (CRM) 
@@ -696,8 +700,8 @@ export default function QuotationEditor() {
                     </div>
 
                     <h3 className="paso1__titulo">Objeto de la cotización</h3>
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                            <div style={{ position: 'relative' }}>
+                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem' }}>
+                            <div className="campo" style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Descripción del servicio o producto</label>
                                 {renderRemoteCursorLabel('serviceDescription')}
                                 <textarea
@@ -713,8 +717,8 @@ export default function QuotationEditor() {
 
 
                     <h3 className="paso1__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
-                    <div className="card-editor" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
-                        <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
+                    <div className="card-editor card-editor--plano" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
+                        <div className="grid-3-col campos" style={{ alignItems: 'flex-end' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
