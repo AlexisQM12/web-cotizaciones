@@ -577,8 +577,9 @@ export default function QuotationEditor() {
                     </nav>
 
                     {paso === 1 && (<>
+                    <h3 className="paso1__titulo">Emisor</h3>
                     <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-3-col">
+                        <div style={{ maxWidth: 420 }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -595,7 +596,12 @@ export default function QuotationEditor() {
                                     ))}
                                 </select>
                             </div>
-                            
+                        </div>
+                    </div>
+
+                    <h3 className="paso1__titulo">Cliente</h3>
+                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
+                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
                                     Empresa Cliente (CRM) 
@@ -615,44 +621,6 @@ export default function QuotationEditor() {
                                     ))}
                                 </select>
                             </div>
-
-                            <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
-                                    Personas de Contacto 
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirán acceso</span>
-                                </label>
-                                {renderRemoteCursorLabel('crmContactId')}
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', border: '1px solid #cbd5e1', padding: '0.3rem 0.4rem', borderRadius: '4px', minHeight: '38px', alignItems: 'center', background: '#f8fafc', opacity: !data.crmCompanyId ? 0.6 : 1 }}>
-                                    {(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).map(id => {
-                                        const contact = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.find(c => String(c.id) === String(id));
-                                        if (!contact) return null;
-                                        return (
-                                            <span key={id} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #cbd5e1', color: '#334155' }}>
-                                                {contact.name}
-                                                <button onClick={() => handleToggleCrmContact(id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8rem', padding: 0, display: 'flex', alignItems: 'center' }}>✕</button>
-                                            </span>
-                                        );
-                                    })}
-                                    <select
-                                        value=""
-                                        onChange={(e) => { if(e.target.value) handleToggleCrmContact(e.target.value); }}
-                                        style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, minWidth: '150px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer', padding: 0 }}
-                                        disabled={!data.crmCompanyId}
-                                        onFocus={() => handleFocus('crmContactId')}
-                                        onBlur={() => handleBlur('crmContactId')}
-                                    >
-                                        <option value="" disabled>+ Añadir contacto...</option>
-                                        {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.filter(c => !(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).includes(String(c.id))).map(contact => (
-                                            <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Nombre de Cliente</label>
                                 {renderRemoteCursorLabel('clientName')}
@@ -692,22 +660,59 @@ export default function QuotationEditor() {
                                     placeholder="Calle Falsa 123"
                                 />
                             </div>
-                            <div style={{ gridColumn: 'span 3', marginTop: '0.6rem', position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>2. Descripción del Servicio o Producto</label>
+                            <div style={{ position: 'relative', gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
+                                    Personas de Contacto 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirán acceso</span>
+                                </label>
+                                {renderRemoteCursorLabel('crmContactId')}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', border: '1px solid #cbd5e1', padding: '0.3rem 0.4rem', borderRadius: '4px', minHeight: '38px', alignItems: 'center', background: '#f8fafc', opacity: !data.crmCompanyId ? 0.6 : 1 }}>
+                                    {(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).map(id => {
+                                        const contact = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.find(c => String(c.id) === String(id));
+                                        if (!contact) return null;
+                                        return (
+                                            <span key={id} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #cbd5e1', color: '#334155' }}>
+                                                {contact.name}
+                                                <button onClick={() => handleToggleCrmContact(id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8rem', padding: 0, display: 'flex', alignItems: 'center' }}>✕</button>
+                                            </span>
+                                        );
+                                    })}
+                                    <select
+                                        value=""
+                                        onChange={(e) => { if(e.target.value) handleToggleCrmContact(e.target.value); }}
+                                        style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, minWidth: '150px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer', padding: 0 }}
+                                        disabled={!data.crmCompanyId}
+                                        onFocus={() => handleFocus('crmContactId')}
+                                        onBlur={() => handleBlur('crmContactId')}
+                                    >
+                                        <option value="" disabled>+ Añadir contacto...</option>
+                                        {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.filter(c => !(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).includes(String(c.id))).map(contact => (
+                                            <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 className="paso1__titulo">Objeto de la cotización</h3>
+                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Descripción del servicio o producto</label>
                                 {renderRemoteCursorLabel('serviceDescription')}
                                 <textarea
                                     value={data.serviceDescription || ''}
                                     onChange={(e) => handleChange('serviceDescription', e.target.value)}
                                     onFocus={() => handleFocus('serviceDescription')}
                                     onBlur={() => handleBlur('serviceDescription')}
-                                    style={getInputStyle('serviceDescription', { minHeight: '60px' })}
+                                    style={getInputStyle('serviceDescription', { minHeight: '110px' })}
                                     placeholder="Describa brevemente el servicio o producto a cotizar..."
                                 />
                             </div>
-                        </div>
                     </div>
 
-                    <h3 style={{ color: '#1e293b', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Configuración Global de Precios (Interno)</h3>
+
+                    <h3 className="paso1__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
                     <div className="card-editor" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
                         <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
                             <div style={{ position: 'relative' }}>

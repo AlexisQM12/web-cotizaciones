@@ -1059,3 +1059,24 @@ textarea:focus,
 .pasos__siguiente:hover { background: #0369a1; }
 .pasos__anterior { background: #f1f5f9; color: #475569; }
 .pasos__anterior:hover { background: #e2e8f0; }
+
+/* ── Paso 1: títulos de sección ──────────────────────────────────────────── */
+.paso1__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 1.4rem 0 0.5rem;
+}
+.paso1__titulo:first-of-type { margin-top: 0; }
+.paso1__nota {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94a3b8;
+}
