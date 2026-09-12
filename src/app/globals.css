@@ -1134,9 +1134,10 @@ textarea:focus,
   -webkit-column-break-inside: avoid;
   margin-bottom: 1rem;
   --acento: #475569;
-  --tinte: #f1f5f9;
-  background: var(--tinte);
-  border: 1px solid #e2e8f0;
+  --borde: #cbd5e1;
+  /* El color va sólo en el contorno; el interior queda en blanco. */
+  background: #fff;
+  border: 1.5px solid var(--borde);
   border-radius: 12px;
   padding: 1rem 1.15rem 1.15rem;
 }
@@ -1153,13 +1154,13 @@ textarea:focus,
   color: var(--acento);
   margin: 0 0 0.9rem;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid var(--borde);
 }
 
-.seccion--emisor  { --acento: #4f46e5; --tinte: #eef2ff; }
-.seccion--cliente { --acento: #0369a1; --tinte: #e0f2fe; }
-.seccion--objeto  { --acento: #6d28d9; --tinte: #f5f3ff; }
-.seccion--precios { --acento: #047857; --tinte: #ecfdf5; }
+.seccion--emisor  { --acento: #4f46e5; --borde: #a5b4fc; }
+.seccion--cliente { --acento: #0369a1; --borde: #7dd3fc; }
+.seccion--objeto  { --acento: #6d28d9; --borde: #c4b5fd; }
+.seccion--precios { --acento: #047857; --borde: #6ee7b7; }
 
 /* Dentro de media tarjeta no caben tres columnas de campos. */
 .seccion .grid-3-col {
@@ -1172,7 +1173,6 @@ textarea:focus,
 .seccion select,
 .seccion textarea {
   width: 100%;
-  background: #fff;
 }
 
 /* El botón de aplicar porcentajes ocupa su propia fila completa. */
