@@ -1367,3 +1367,36 @@ textarea:focus,
   cursor: pointer;
   padding: 0;
 }
+
+/* ── Interruptor de precio general (Paso 1 → Precios globales) ───────────── */
+.precio-general__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+.precio-general__switch input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #0284c7;
+  cursor: pointer;
+}
+.precio-general__switch em {
+  font-style: normal;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.items-editor__nota--aviso {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-top: 0.4rem;
+}

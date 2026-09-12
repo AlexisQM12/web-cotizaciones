@@ -46,6 +46,7 @@ export default function ItemsEditor({
     getInputStyle = (_, base) => base,
     onFocusCampo,
     onBlurCampo,
+    usarPrecioGeneral = false,
 }) {
     // Si el ítem seleccionado desaparece (por borrado), volvemos al anterior.
     useEffect(() => {
@@ -97,10 +98,12 @@ export default function ItemsEditor({
                                     </span>
                                 </div>
                                 {resumen && <div className="items-editor__resumen">{resumen}</div>}
-                                <div className="items-editor__cuadro-pie">
-                                    <span>{moneda(it.quantity || 0)} × S/ {moneda(it.price)}</span>
-                                    <strong>S/ {moneda(total)}</strong>
-                                </div>
+                                {!usarPrecioGeneral && (
+                                    <div className="items-editor__cuadro-pie">
+                                        <span>{moneda(it.quantity || 0)} × S/ {moneda(it.price)}</span>
+                                        <strong>S/ {moneda(total)}</strong>
+                                    </div>
+                                )}
                                 {(it.imageUrl || (it.subItems || []).length > 0) && (
                                     <div className="items-editor__marcas">
                                         {it.imageUrl && <span title="Tiene imagen">🖼</span>}
@@ -154,26 +157,35 @@ export default function ItemsEditor({
                             placeholder="Detalla el alcance, materiales, medidas… Usa los botones para dar formato."
                         />
 
-                        <div className="items-editor__numeros">
-                            {CAMPOS_NUMERICOS.map(({ campo, etiqueta, marcador, paso }) => (
-                                <div key={campo}>
-                                    <label className="items-editor__label">{etiqueta}</label>
-                                    <input
-                                        type="number"
-                                        step={paso}
-                                        placeholder={marcador}
-                                        value={item[campo] ?? ''}
-                                        onChange={(e) => cambiarNumero(campo, e.target.value)}
-                                        onFocus={() => onFocusCampo?.(`item_${indice}_${campo}`)}
-                                        onBlur={() => onBlurCampo?.(`item_${indice}_${campo}`)}
-                                        style={getInputStyle(`item_${indice}_${campo}`, {})}
-                                    />
+                        {usarPrecioGeneral ? (
+                            <p className="items-editor__nota items-editor__nota--aviso">
+                                El precio de este ítem no se pide aquí: la cotización usa un precio general
+                                para todos los ítems (ver «Precios globales» en el paso Datos).
+                            </p>
+                        ) : (
+                            <>
+                                <div className="items-editor__numeros">
+                                    {CAMPOS_NUMERICOS.map(({ campo, etiqueta, marcador, paso }) => (
+                                        <div key={campo}>
+                                            <label className="items-editor__label">{etiqueta}</label>
+                                            <input
+                                                type="number"
+                                                step={paso}
+                                                placeholder={marcador}
+                                                value={item[campo] ?? ''}
+                                                onChange={(e) => cambiarNumero(campo, e.target.value)}
+                                                onFocus={() => onFocusCampo?.(`item_${indice}_${campo}`)}
+                                                onBlur={() => onBlurCampo?.(`item_${indice}_${campo}`)}
+                                                style={getInputStyle(`item_${indice}_${campo}`, {})}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <p className="items-editor__nota">
-                            El precio unitario se recalcula solo: costo base + % ganancia + % otros.
-                        </p>
+                                <p className="items-editor__nota">
+                                    El precio unitario se recalcula solo: costo base + % ganancia + % otros.
+                                </p>
+                            </>
+                        )}
 
                         <div className="items-editor__extras">
                             {item.imageUrl ? (

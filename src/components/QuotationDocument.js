@@ -209,6 +209,9 @@ const styles = StyleSheet.create({
     // Columns (Flexible widths)
     colCode: { width: '8%' },
     colDesc: { width: '62%' }, // Increased width
+    // Con "precio general" se ocultan CANT/PRECIO.U/SUBTOTAL (32% liberado):
+    // la descripción ocupa el resto de la fila en vez de dejarlo en blanco.
+    colDescAncho: { width: '92%' },
     // colUnit removed
     colQty: { width: '10%', textAlign: 'center' },
     // colVal removed
@@ -319,10 +322,17 @@ export const QuotationDocument = ({ data }) => {
         currency = 'Soles', // Default currency
         notes = '', // Default notes
         serviceDescription = '', // Default service description
+        usarPrecioGeneral = false, // Precio único para toda la cotización, sin desglose por ítem
+        precioGeneralMonto = 0,
     } = data;
 
     // Calculate totals
-    const subtotal = items.reduce((acc, item) => acc + (parseFloat(item.price || 0) * parseFloat(item.quantity || 1)), 0);
+    // Con "precio general" el monto no sale de sumar los ítems: se fija a mano
+    // en el paso Datos y los ítems se imprimen sólo como descripción (ver la
+    // tabla más abajo, que omite las columnas de precio en ese caso).
+    const subtotal = usarPrecioGeneral
+        ? (parseFloat(precioGeneralMonto) || 0)
+        : items.reduce((acc, item) => acc + (parseFloat(item.price || 0) * parseFloat(item.quantity || 1)), 0);
     const igvRate = 0.18;
     // Assuming the input price is the UNIT PRICE (Inc IGV) or UNIT VALUE (Ex IGV)? 
     // Usually in these systems, you simplify. Let's assume input price is "Valor U" (Ex IGV) for the calculation flow:
@@ -416,10 +426,14 @@ export const QuotationDocument = ({ data }) => {
                     {/* Header */}
                     <View style={styles.tableHeader}>
                         <Text style={[styles.th, styles.colCode]}>ITEM</Text>
-                        <Text style={[styles.th, styles.colDesc]}>DESCRIPCIÓN</Text>
-                        <Text style={[styles.th, styles.colQty]}>CANT</Text>
-                        <Text style={[styles.th, styles.colPrice]}>PRECIO.U</Text>
-                        <Text style={[styles.th, styles.colTotal]}>SUBTOTAL</Text>
+                        <Text style={[styles.th, styles.colDesc, usarPrecioGeneral && styles.colDescAncho]}>DESCRIPCIÓN</Text>
+                        {!usarPrecioGeneral && (
+                            <>
+                                <Text style={[styles.th, styles.colQty]}>CANT</Text>
+                                <Text style={[styles.th, styles.colPrice]}>PRECIO.U</Text>
+                                <Text style={[styles.th, styles.colTotal]}>SUBTOTAL</Text>
+                            </>
+                        )}
                     </View>
 
                     {/* Body */}
@@ -434,7 +448,7 @@ export const QuotationDocument = ({ data }) => {
                             <View key={index} style={styles.tableRow}>
                                 <Text style={[styles.colCode, { fontSize: 8 }]}>{index + 1}</Text>
 
-                                <View style={styles.colDesc}>
+                                <View style={[styles.colDesc, usarPrecioGeneral && styles.colDescAncho]}>
                                     <View style={styles.descContainer}>
                                         {item.imageUrl && (
                                             <Image src={getProxiedImageUrl(item.imageUrl)} style={styles.itemImage} />
@@ -448,9 +462,13 @@ export const QuotationDocument = ({ data }) => {
                                     </View>
                                 </View>
 
-                                <Text style={[styles.colQty, { fontSize: 8 }]}>{formatAmount(itemQty)}</Text>
-                                <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {formatAmount(itemPrecioU)}</Text>
-                                <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {formatAmount(itemSubtotal)}</Text>
+                                {!usarPrecioGeneral && (
+                                    <>
+                                        <Text style={[styles.colQty, { fontSize: 8 }]}>{formatAmount(itemQty)}</Text>
+                                        <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {formatAmount(itemPrecioU)}</Text>
+                                        <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {formatAmount(itemSubtotal)}</Text>
+                                    </>
+                                )}
                             </View>
                         );
                     })}

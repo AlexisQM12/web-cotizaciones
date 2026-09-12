@@ -47,6 +47,18 @@ const PdfPreview = memo(function PdfPreview({ dataForPdf }) {
     );
 });
 
+// Total de la cotización. Si "usarPrecioGeneral" está activo, el monto se
+// fija a mano en vez de sumar precio × cantidad de cada ítem — para
+// cotizaciones donde no se quiere desglosar precio por ítem.
+function calcularTotalCotizacion(d) {
+    if (!d) return 0;
+    if (d.usarPrecioGeneral) return parseFloat(d.precioGeneralMonto) || 0;
+    return (d.items || []).reduce(
+        (acc, item) => acc + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0),
+        0
+    );
+}
+
 export default function QuotationEditor() {
     const params = useParams();
     const router = useRouter();
@@ -410,7 +422,7 @@ export default function QuotationEditor() {
 
             try {
                 // Generate and upload PDF automatically
-                const pdfTotal = data.items ? data.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
+                const pdfTotal = calcularTotalCotizacion(data);
                 const pdfCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) || data.companyProfiles?.find(p => p.isDefault) || {};
                 const pdfClient = data.clientProfiles?.find(p => String(p.id) === String(data.clientProfileId)) || data.clientProfiles?.find(p => p.isDefault) || {};
                 const localDataForPdf = {
@@ -465,7 +477,7 @@ export default function QuotationEditor() {
         }
     }
 
-    const total = data.items ? data.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
+    const total = calcularTotalCotizacion(data);
 
     // Find the selected company profile data
     const selectedCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) ||
@@ -479,9 +491,7 @@ export default function QuotationEditor() {
     // This prevents PDFViewer from re-rendering on every keystroke
     const dataForPdf = useMemo(() => {
         const safePdfData = pdfData || {};
-        const pdfTotal = safePdfData.items
-            ? safePdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0)
-            : 0;
+        const pdfTotal = calcularTotalCotizacion(safePdfData);
         const pdfSelectedCompany =
             safePdfData.companyProfiles?.find(p => String(p.id) === String(safePdfData.companyProfileId)) ||
             safePdfData.companyProfiles?.find(p => p.isDefault) || {};
@@ -715,7 +725,38 @@ export default function QuotationEditor() {
 
                     <section className="seccion seccion--precios">
                         <h3 className="seccion__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
-                        <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
+
+                        <label className="precio-general__switch">
+                            <input
+                                type="checkbox"
+                                checked={!!data.usarPrecioGeneral}
+                                onChange={(e) => handleChange('usarPrecioGeneral', e.target.checked)}
+                            />
+                            <span>Precio general para todos los ítems <em>(en vez de precio por ítem)</em></span>
+                        </label>
+
+                        {data.usarPrecioGeneral ? (
+                            <div style={{ marginTop: '0.9rem', position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.35rem', color: '#1e293b' }}>
+                                    Precio total (S/) — antes de IGV
+                                </label>
+                                {renderRemoteCursorLabel('precioGeneralMonto')}
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={data.precioGeneralMonto ?? ''}
+                                    onChange={(e) => handleChange('precioGeneralMonto', e.target.value)}
+                                    onFocus={() => handleFocus('precioGeneralMonto')}
+                                    onBlur={() => handleBlur('precioGeneralMonto')}
+                                    style={getInputStyle('precioGeneralMonto')}
+                                />
+                                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.6rem' }}>
+                                    * El PDF listará los ítems sin precio individual: sólo aparecerá este monto como total de la cotización. El precio por ítem y el % Ganancia/Otros quedan sin efecto mientras esta opción esté activa.
+                                </p>
+                            </div>
+                        ) : (
+                        <>
+                        <div className="grid-3-col" style={{ alignItems: 'flex-end', marginTop: '0.9rem' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
@@ -767,6 +808,8 @@ export default function QuotationEditor() {
                         <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.75rem' }}>
                             * Esto actualizará los porcentajes y recalculará el Precio U. de cada ítem basado en su Costo Base.
                         </p>
+                        </>
+                        )}
                     </section>
                     </div>
 
@@ -796,6 +839,7 @@ export default function QuotationEditor() {
                         getInputStyle={getInputStyle}
                         onFocusCampo={handleFocus}
                         onBlurCampo={handleBlur}
+                        usarPrecioGeneral={!!data.usarPrecioGeneral}
                     />
 
 
