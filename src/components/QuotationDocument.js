@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     tableHeader: {
+        position: 'relative', // el encabezado reutiliza colCode (absolute): necesita este ancla igual que tableRow
         flexDirection: 'row',
         backgroundColor: '#f9fafb',
         borderBottomWidth: 1,
@@ -198,6 +199,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     tableRow: {
+        position: 'relative', // ancla para el número de ítem (position: absolute)
         flexDirection: 'row',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -207,11 +209,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     // Columns (Flexible widths)
-    colCode: { width: '8%' },
-    colDesc: { width: '62%' }, // Increased width
+    //
+    // El número de ítem (colCode) va con position:'absolute' a propósito: con
+    // flexDirection:'row', cuando la descripción de un ítem es tan larga que
+    // react-pdf tiene que partirla entre páginas, el fragmento que continúa en
+    // la página siguiente perdía la sangría — porque esa posición dependía de
+    // venir "después" del número en el flujo, y el corte de página no
+    // preserva ese flujo entre columnas. Al sacar el número del flujo y darle
+    // a colDesc su propio paddingLeft (equivalente al ancho que ocupaba
+    // colCode), la sangría queda en el estilo de la propia columna: sobrevive
+    // el corte, y el número simplemente no se repite en la continuación —que
+    // es el comportamiento esperado, igual que una lista numerada.
+    colCode: {
+        position: 'absolute',
+        left: 0,
+        top: 4, // alinea con la primera línea del título, en vez de centrarse en toda la altura de la fila
+    },
+    // paddingLeft en PUNTOS FIJOS, no en '%': medido con pdftotext -layout,
+    // un padding porcentual se reducía a la mitad en el fragmento que continúa
+    // en la página siguiente (probablemente el huérfano recalcula el % contra
+    // otra base) — pasaba de 6 a 3 espacios de sangría entre página 1 y 2. Un
+    // valor fijo no depende de ningún cálculo relativo al contenedor, así que
+    // no tiene esa base que recalcular. 40pt equivale al 8% de esta tabla en A4.
+    colDesc: { width: '70%', paddingLeft: 40 }, // 62% + 8% del número, reservados como padding propio
     // Con "precio general" se ocultan CANT/PRECIO.U/SUBTOTAL (32% liberado):
     // la descripción ocupa el resto de la fila en vez de dejarlo en blanco.
-    colDescAncho: { width: '92%' },
+    colDescAncho: { width: '100%' },
     // colUnit removed
     colQty: { width: '10%', textAlign: 'center' },
     // colVal removed
