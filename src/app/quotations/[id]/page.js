@@ -636,8 +636,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientName')}
                                     onBlur={() => handleBlur('clientName')}
                                     style={getInputStyle('clientName')}
-                                    placeholder="Juan Pérez"
-                                />
+                                                                    />
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>RUC</label>
@@ -649,8 +648,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientRuc')}
                                     onBlur={() => handleBlur('clientRuc')}
                                     style={getInputStyle('clientRuc')}
-                                    placeholder="12345678901"
-                                />
+                                                                    />
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Dirección</label>
@@ -662,8 +660,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientAddress')}
                                     onBlur={() => handleBlur('clientAddress')}
                                     style={getInputStyle('clientAddress')}
-                                    placeholder="Calle Falsa 123"
-                                />
+                                                                    />
                             </div>
                             <div style={{ position: 'relative', gridColumn: 'span 2' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
@@ -711,8 +708,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('serviceDescription')}
                                     onBlur={() => handleBlur('serviceDescription')}
                                     style={getInputStyle('serviceDescription', { minHeight: '110px' })}
-                                    placeholder="Describa brevemente el servicio o producto a cotizar..."
-                                />
+                                                                    />
                             </div>
                     </section>
 
@@ -820,8 +816,7 @@ export default function QuotationEditor() {
                             onBlur={() => handleBlur('notes')}
                             rows={6}
                             style={getInputStyle('notes', { width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' })}
-                            placeholder="Notas adicionales para esta cotización..."
-                        />
+                                                    />
                     </div>
 
 
