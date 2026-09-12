@@ -1145,13 +1145,14 @@ textarea:focus,
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
   margin-bottom: 1rem;
-  --acento: #475569;
-  --borde: #cbd5e1;
-  /* El color va sólo en el contorno; el interior queda en blanco. */
+  /* Tarjeta blanca flotante: la diferencia entre secciones ya no es un color
+     de contorno, es la elevación (sombra), como paneles de un formulario
+     modal en vez de casillas con borde de color. */
   background: #fff;
-  border: 1.5px solid var(--borde);
-  border-radius: 12px;
-  padding: 1rem 1.15rem 1.15rem;
+  border: 1px solid #f1f5f9;
+  border-radius: 18px;
+  padding: 1.35rem 1.5rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 28px rgba(15, 23, 42, 0.07);
 }
 
 .seccion__titulo {
@@ -1159,20 +1160,13 @@ textarea:focus,
   align-items: baseline;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--acento);
-  margin: 0 0 0.9rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--borde);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1.1rem;
 }
 
-.seccion--emisor  { --acento: #4f46e5; --borde: #a5b4fc; }
-.seccion--cliente { --acento: #0369a1; --borde: #7dd3fc; }
-.seccion--objeto  { --acento: #6d28d9; --borde: #c4b5fd; }
-.seccion--precios { --acento: #047857; --borde: #6ee7b7; }
+
 
 /* Dentro de media tarjeta no caben tres columnas de campos. */
 .seccion .grid-3-col {
