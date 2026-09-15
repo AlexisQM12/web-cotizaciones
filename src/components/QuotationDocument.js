@@ -527,7 +527,7 @@ export const QuotationDocument = ({ data }) => {
                 {/* 6. Notes */}
                 <Text style={[styles.sectionHeader, { marginTop: 10 }]}>4. NOTAS</Text>
                 <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 5 }}>
-                    <Text style={styles.notesText}>{notes}</Text>
+                    {renderTextoConFormato(notes, styles.notesText)}
                 </View>
 
                 {/* 6.5. Warranty terms — opcional, según el tipo de servicio */}

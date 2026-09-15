@@ -10,6 +10,7 @@ import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
 import ItemsEditor from '@/components/ItemsEditor';
 import RichTextEditor from '@/components/RichTextEditor';
+import { paraEditorVisual } from '@/lib/richText';
 import Icon from '@/components/icons/Icon';
 
 const PASOS = [
@@ -854,14 +855,16 @@ export default function QuotationEditor() {
                     <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Notas / Condiciones</h3>
                     <div className="card-editor" style={{ position: 'relative' }}>
                         {renderRemoteCursorLabel('notes')}
-                        <textarea
-                            value={data.notes !== undefined && data.notes !== null && data.notes !== '' ? data.notes : (selectedCompany?.conditions || '')}
-                            onChange={(e) => handleChange('notes', e.target.value)}
+                        <RichTextEditor
+                            value={paraEditorVisual(
+                                data.notes !== undefined && data.notes !== null && data.notes !== '' ? data.notes : (selectedCompany?.conditions || '')
+                            )}
+                            onChange={(html) => handleChange('notes', html)}
                             onFocus={() => handleFocus('notes')}
                             onBlur={() => handleBlur('notes')}
-                            rows={6}
-                            style={getInputStyle('notes', { width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' })}
-                                                    />
+                            placeholder="Notas adicionales, condiciones, plazos de validez…"
+                            minHeight={150}
+                        />
                     </div>
 
                     <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem', marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -882,7 +885,7 @@ export default function QuotationEditor() {
                         <div className="card-editor" style={{ position: 'relative' }}>
                             {renderRemoteCursorLabel('garantiaTexto')}
                             <RichTextEditor
-                                value={data.garantiaTexto || ''}
+                                value={paraEditorVisual(data.garantiaTexto)}
                                 onChange={(html) => handleChange('garantiaTexto', html)}
                                 onFocus={() => handleFocus('garantiaTexto')}
                                 onBlur={() => handleBlur('garantiaTexto')}

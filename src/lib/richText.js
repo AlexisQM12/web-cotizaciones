@@ -190,3 +190,16 @@ export function sanitizarHtml(html) {
 export function tieneContenido(valor) {
     return aBloques(valor).length > 0;
 }
+
+// Prepara un valor para volcarlo en RichTextEditor (que asigna directamente a
+// `el.innerHTML`, sin pasar por aBloques). Si ya es HTML, se devuelve tal
+// cual. Si es texto heredado con saltos de línea reales (p. ej. las
+// "Condiciones" por defecto de una empresa, escritas antes de que existiera
+// este editor), un textarea los mostraba bien porque conserva los \n, pero
+// un <div contentEditable> los colapsa: sin este paso, el texto aparecería
+// todo pegado en una sola línea la primera vez que se abre el campo.
+export function paraEditorVisual(valor) {
+    if (!valor) return '';
+    if (pareceHtml(valor)) return valor;
+    return escapar(String(valor)).replace(/\n/g, '<br>');
+}

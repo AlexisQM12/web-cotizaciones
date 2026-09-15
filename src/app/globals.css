@@ -1400,3 +1400,18 @@ textarea:focus,
   line-height: 1.4;
   margin-top: 0.4rem;
 }
+
+/* ── Listas dentro del editor de texto enriquecido ────────────────────────── */
+/* El reset global (`* { margin:0; padding:0 }`) le quita al <ul> el
+   padding-left que el navegador usa para dejarle espacio a la marca de
+   viñeta. Sin esto, execCommand('insertUnorderedList') sí crea el <ul><li>
+   —por eso el PDF, que dibuja el "•" a mano, se veía bien— pero en el propio
+   editor la viñeta no tenía dónde dibujarse y quedaba invisible. */
+.rich-text-editor__area ul,
+.rich-text-editor__area ol {
+  padding-left: 1.4em;
+  margin: 0.2em 0;
+}
+.rich-text-editor__area li {
+  margin: 0.15em 0;
+}

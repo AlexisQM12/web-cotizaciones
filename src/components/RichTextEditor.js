@@ -160,6 +160,7 @@ export default function RichTextEditor({
                 )}
                 <div
                     ref={ref}
+                    className="rich-text-editor__area"
                     contentEditable
                     suppressContentEditableWarning
                     onInput={emitir}
