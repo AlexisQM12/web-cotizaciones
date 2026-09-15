@@ -1,3 +1,14 @@
+// ⚠️ COPIA DE REFERENCIA — NO DESPLEGAR DESDE ESTE REPO ⚠️
+//
+// La base de datos zenlogic-8a575 es compartida por los 3 productos de Zentria
+// (CGO, SAC, ResLab). Las reglas vivas se despliegan desde el repo de ZenLogic
+// (D:\ZenLogic\firestore.rules), que es la ÚNICA fuente de verdad y contiene
+// además las reglas de `admins`, `tenant_users` y `allowedTechnicians`.
+//
+// Este archivo NO incluye esas reglas: desplegarlo tumbaría el panel de ZenLogic
+// y el login por whitelist de los tres productos. Por eso se quitó el bloque
+// "firestore" de firebase.json. Cualquier cambio de reglas se hace en ZenLogic.
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -7,21 +18,46 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper: get user's empresaId
-    function getUserEmpresaId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.empresaId;
+    // Helper: get user's empresaId as string
+    function getUserEmpresaIdStr() {
+      let docData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let eid = docData.empresaId != null ? docData.empresaId : docData.tenantId;
+      return eid != null ? string(eid) : '';
+    }
+
+    // Helper: Is SuperAdmin
+    function isSuperAdmin() {
+      return isAuth() &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    }
+
+    // admins
+    match /admins/{email} {
+      allow read: if isAuth() && request.auth.token.email.lower() == email;
+      allow read, write: if isSuperAdmin();
+    }
+
+    // tenant_users (Whitelist for Tenant Admins)
+    match /tenant_users/{email} {
+      allow read: if isSuperAdmin() || (isAuth() && request.auth.token.email.lower() == email);
+      allow write: if isSuperAdmin();
+    }
+    
+    // allowedTechnicians
+    match /allowedTechnicians/{email} {
+      allow read: if true;
     }
 
     // Helper: verify if the request matches the user's empresaId
     function isUserInEmpresa(empresaId) {
-      return isAuth() && getUserEmpresaId() == empresaId;
+      return isAuth() && getUserEmpresaIdStr() == string(empresaId);
     }
 
     // Quotations: authenticated users can only access quotations for their empresaId
     match /quotations/{quotationId} {
-      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
-      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
-      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow read: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
+      allow create: if isAuth() && string(request.resource.data.empresaId) == getUserEmpresaIdStr();
+      allow update, delete: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
 
       // ActiveUsers subcollection: authenticated users can read/write their own doc
       match /activeUsers/{userId} {
@@ -34,16 +70,16 @@ service cloud.firestore {
     // Company profiles
     match /company_profiles/{profileId} {
       // The profileId is essentially the empresaId for the main tenant architecture
-      allow read, update, delete: if isAuth() && getUserEmpresaId() == profileId;
+      allow read, update, delete: if isAuth() && getUserEmpresaIdStr() == string(profileId);
       // Anyone authenticated can create a company (happens during onboarding)
       allow create: if isAuth();
     }
 
     // Client profiles
     match /client_profiles/{profileId} {
-      allow read: if isAuth() && resource.data.empresaId == getUserEmpresaId();
-      allow create: if isAuth() && request.resource.data.empresaId == getUserEmpresaId();
-      allow update, delete: if isAuth() && resource.data.empresaId == getUserEmpresaId();
+      allow read: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
+      allow create: if isAuth() && string(request.resource.data.empresaId) == getUserEmpresaIdStr();
+      allow update, delete: if isAuth() && string(resource.data.empresaId) == getUserEmpresaIdStr();
     }
 
     // Settings (general conditions, etc.)
@@ -53,14 +89,27 @@ service cloud.firestore {
     
     // Accounting config
     match /accounting_config/{configId} {
-      allow read, update, delete: if isAuth() && getUserEmpresaId() == configId;
+      allow read, update, delete: if isAuth() && getUserEmpresaIdStr() == string(configId);
       allow create: if isAuth();
+    }
+
+    // Scanner state
+    match /scanner_state/{docId} {
+      allow read: if isAuth();
+    }
+
+    // ── Multi-tenant SaaS (modelo actual): datos bajo tenants/{empresaId}/cgo_* ──
+    match /tenants/{tenantId} {
+      allow read, write: if isUserInEmpresa(tenantId) || isSuperAdmin();
+      match /{document=**} {
+        allow read, write: if isUserInEmpresa(tenantId) || isSuperAdmin();
+      }
     }
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuth();
-      allow write: if isAuth() && request.auth.uid == userId;
+      allow read: if isAuth() || isSuperAdmin();
+      allow write: if (isAuth() && request.auth.uid == userId) || isSuperAdmin();
     }
   }
 }

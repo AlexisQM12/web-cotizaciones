@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { authFetch } from '@/lib/authFetch';
 
 // Carga la configuración contable de la empresa default (o la indicada).
 // Devuelve { loading, exists, config, companyProfileId, error, reload }.
@@ -19,7 +20,7 @@ export function useAccountingConfig(companyProfileId = null) {
         try {
             const targetId = companyProfileId || user.empresaId;
             const qs = `?empresaId=${targetId}`;
-            const r = await fetch(`/api/accounting/config${qs}`);
+            const r = await authFetch(`/api/accounting/config${qs}`);
             const data = await r.json();
             if (!r.ok) throw new Error(data.error || 'Error cargando configuración');
             setExists(!!data.exists);

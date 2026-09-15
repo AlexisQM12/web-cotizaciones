@@ -1,5 +1,7 @@
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { InstallPWA } from '@/components/InstallPWA'
+import NotasFlotantes from '@/components/NotasFlotantes'
 
 export const metadata = {
     title: 'CGO Pymes - Dashboard',
@@ -17,7 +19,10 @@ export default function RootLayout({ children }) {
             <body>
                 <AuthProvider>
                     {children}
+                    {/* Flota sobre cualquier pantalla; se oculta sola sin sesión. */}
+                    <NotasFlotantes />
                 </AuthProvider>
+                <InstallPWA />
             </body>
         </html>
     )

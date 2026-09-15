@@ -1,8 +1,8 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function POST(req) {
     try {
-        const { quotationId } = await req.json();
+        const { quotationId, empresaId } = await req.json();
 
         if (!quotationId) {
             return Response.json({ error: 'Quotation ID is required' }, { status: 400 });
@@ -12,7 +12,7 @@ export async function POST(req) {
         const currentYear = new Date().getFullYear();
 
         // Get all published quotations and filter in memory to avoid composite index
-        const snapshot = await firestore.collection('quotations')
+        const snapshot = await getTenantCollection(empresaId, 'quotations')
             .where('isPublished', '==', true)
             .get();
 
@@ -49,7 +49,7 @@ export async function POST(req) {
         console.log('📊 Code generation:', { codeNumbers, maxCodeNumber, nextNumber, code });
 
         // Update quotation to published with code
-        await firestore.collection('quotations').doc(quotationId).update({
+        await getTenantCollection(empresaId, 'quotations').doc(quotationId).update({
             code,
             isPublished: true,
             status: 'published',

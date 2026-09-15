@@ -235,6 +235,19 @@ const PATHS = {
             <path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2z" />
         </>
     ),
+    'cloud-download': (
+        <>
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+            <path d="M12 12v9" />
+            <path d="m8 17 4 4 4-4" />
+        </>
+    ),
+    'shield-check': (
+        <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
+        </>
+    )
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 1.6, className = '', style }) {

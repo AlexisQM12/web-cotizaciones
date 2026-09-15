@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function POST(req) {
     try {
@@ -23,26 +23,93 @@ export async function POST(req) {
         // Check if user exists
         const userDoc = await userRef.get();
 
+        let dbUser = userDoc.exists ? userDoc.data() : null;
+        let assignedTenantId = dbUser?.empresaId || dbUser?.tenantId || null;
+        let assignedRole = dbUser?.role || null;
+        let assignedModules = dbUser?.modules || null;
+
+        console.log('[Auth API] Intento de inicio de sesión:', { email, uid, dbUserExists: !!dbUser, assignedTenantId, assignedRole });
+
+        // Admin validation (global admins)
+        if (email) {
+            const adminDoc = await firestore.collection('admins').doc(email.trim().toLowerCase()).get();
+            if (adminDoc.exists) {
+                assignedRole = 'admin';
+                if (!assignedTenantId) {
+                    assignedTenantId = '6'; // Asignar tenant por defecto para que puedan acceder a la plataforma
+                }
+                console.log('[Auth API] Encontrado en admins globales:', { assignedTenantId, assignedRole });
+            }
+        }
+
+        // Whitelist validation (tenant_users): check if this email has been registered from the Zentria panel
+        if (email) {
+            const normalizedEmail = email.trim().toLowerCase();
+            const tenantUserDoc = await firestore.collection('tenant_users').doc(normalizedEmail).get();
+            if (tenantUserDoc.exists) {
+                const tenantUserData = tenantUserDoc.data();
+                if (!assignedTenantId) assignedTenantId = tenantUserData.tenantId;
+                assignedRole = tenantUserData.role || 'admin';
+                assignedModules = tenantUserData.role === 'employee' ? (tenantUserData.modules || []) : null;
+                console.log('[Auth API] Encontrado en tenant_users (whitelist):', { assignedTenantId, assignedRole, assignedModules });
+            }
+        }
+
+        // Auto-Join by Domain: if user has no tenant, check if their email domain matches any registered tenant
+        if (!assignedTenantId && email.includes('@')) {
+            const domain = email.split('@')[1].toLowerCase();
+            // Don't auto-join public email providers
+            const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com'];
+            
+            if (!publicDomains.includes(domain)) {
+                const tenantsSnap = await firestore.collection('tenants').where('customDomain', '==', domain).limit(1).get();
+                if (!tenantsSnap.empty) {
+                    assignedTenantId = tenantsSnap.docs[0].id;
+                    console.log('[Auth API] Encontrado por dominio:', assignedTenantId);
+                }
+            }
+        }
+
+        console.log('[Auth API] Resultado de asignación:', { assignedTenantId, assignedRole });
+
         if (userDoc.exists) {
             // Update existing user
             await userRef.update({
                 lastActive: userData.lastActive,
                 updatedAt: userData.updatedAt,
-                // Update profile info in case it changed
                 displayName: userData.displayName,
                 photoURL: userData.photoURL,
-                firstName: userData.firstName
+                firstName: userData.firstName,
+                ...(assignedTenantId && !dbUser.empresaId ? { empresaId: assignedTenantId, tenantId: assignedTenantId } : {}),
+                ...(assignedRole ? { role: assignedRole } : {}),
+                ...(assignedModules !== null ? { modules: assignedModules } : {})
             });
             const updatedUser = (await userRef.get()).data();
+            
+            // If they still don't have a tenant after all attempts, reject them
+            if (!updatedUser.empresaId && !updatedUser.tenantId) {
+                return Response.json({ error: 'Acceso Denegado. Tu cuenta no está registrada en Zentria ni asociada a un dominio empresarial.' }, { status: 403 });
+            }
+            
             return Response.json({ success: true, user: updatedUser });
         } else {
-            // Create new user
-            const newUser = {
-                ...userData,
-                createdAt: new Date().toISOString()
-            };
-            await userRef.set(newUser);
-            return Response.json({ success: true, user: newUser });
+            // User doesn't exist. If we found a tenant via whitelist or domain, let them in!
+            if (assignedTenantId) {
+                const defaultRole = assignedRole || 'employee';
+                const newUser = {
+                    ...userData,
+                    empresaId: assignedTenantId,
+                    tenantId: assignedTenantId,
+                    role: defaultRole,
+                    modules: assignedModules !== null ? assignedModules : (defaultRole === 'employee' ? [] : null),
+                    createdAt: new Date().toISOString()
+                };
+                await userRef.set(newUser);
+                return Response.json({ success: true, user: newUser });
+            } else {
+                // Reject new user registration from CGO
+                return Response.json({ error: 'Acceso Denegado. No estás registrado en Zentria y tu dominio no está asociado a ninguna empresa.' }, { status: 403 });
+            }
         }
     } catch (error) {
         console.error('User API Error:', error);

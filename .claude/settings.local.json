@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firebase deploy *)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({...p.dependencies,...p.devDependencies}, null, 2\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('tesseract.js'\\); require\\('pdfjs-dist'\\); require\\('@napi-rs/canvas'\\); console.log\\('OK'\\)\")",
+      "Bash(awk -F= '{ if\\($2==\"\"\\) print $1\"= \\(VACÍO\\)\"; else print $1\"= [tiene valor]\" }' .env.production)",
+      "Bash(npx eslint *)",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('src/app/quotations/page.js','utf8'\\); console.log\\('lines:', s.split\\('\\\\n'\\).length\\); console.log\\('useEffect count:', \\(s.match\\(/useEffect\\\\\\(/g\\)||[]\\).length\\); console.log\\('onSnapshot count:', \\(s.match\\(/onSnapshot\\\\\\(/g\\)||[]\\).length\\); console.log\\('getSocket refs:', \\(s.match\\(/getSocket/g\\)||[]\\).length\\); console.log\\('fetch\\(/api/quotations refs:', \\(s.match\\(/fetch\\\\\\(\\\\`\\\\/api\\\\/quotations\\\\?/g\\)||[]\\).length\\); console.log\\('computeTotalConIGV defined:', s.includes\\('function computeTotalConIGV'\\)\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('scripts:', JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -match 'next' } | Select-Object ProcessId, @{n='Cmd';e={$_.CommandLine.Substring\\(0,[Math]::Min\\(90,$_.CommandLine.Length\\)\\)}} | Format-Table -AutoSize; Write-Output \"--- .next existe? ---\"; Test-Path \".next\"; if \\(Test-Path \".next/BUILD_ID\"\\) { Write-Output \"Hay BUILD_ID \\(artefacto de produccion presente\\)\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/quotations\" -UseBasicParsing -TimeoutSec 60; Write-Output \"GET /quotations -> HTTP $\\($r.StatusCode\\)\" } catch { Write-Output \"GET /quotations -> $\\($_.Exception.Message\\)\" }; Start-Sleep -Seconds 2; $log = \"C:\\\\Users\\\\LENOVO\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-LENOVO-Documents-WEB-DE-cotizaciones\\\\7015d90c-8ca8-4fce-880c-561afbf93149\\\\tasks\\\\bqyb89bqe.output\"; Write-Output \"--- log dev \\(compilacion\\) ---\"; Get-Content $log -Tail 15)",
+      "PowerShell(Write-Output \"--- firebase CLI ---\"; try { npx --no-install firebase --version 2>$null } catch { Write-Output \"no firebase via npx\" }; Write-Output \"--- gcloud ---\"; $g = Get-Command gcloud -ErrorAction SilentlyContinue; if \\($g\\) { Write-Output $g.Source } else { Write-Output \"gcloud no instalado\" }; Write-Output \"--- firebase login state ---\"; if \\(Test-Path \"$env:USERPROFILE\\\\.config\\\\configstore\\\\firebase-tools.json\"\\) { Write-Output \"hay firebase-tools.json \\(sesion firebase CLI\\)\" } else { Write-Output \"sin sesion firebase CLI guardada\" })",
+      "PowerShell(npx --no-install firebase deploy --only firestore:rules --project zenlogic-8a575 2>&1)",
+      "Bash(node -e \"const fs=require\\('fs'\\);require\\('esbuild'\\).transformSync\\(fs.readFileSync\\('src/app/quotations/page.js','utf8'\\),{loader:'jsx'}\\);console.log\\('esbuild page.js: OK'\\);\")",
+      "Bash(git check-ignore *)",
+      "Bash(git log *)",
+      "Bash(git ls-files *)",
+      "Bash(grep -n \"env\" .gitignore)",
+      "Bash(git commit -m 'feat\\(cotizaciones\\): scanner→ayatech, fix factura PDF upload, panel Gmail replegable + botones icono móvil' -m '- Scanner \\(emailListener\\) apunta a TENANT_ID \\(default ayatech\\) en vez del tenant legado 6 *)",
+      "Bash(git push *)",
+      "Read(//d/ZenLogic/**)",
+      "Bash(cd /d/ZenLogic && echo \"=== src ===\" && ls src && echo \"\" && echo \"=== src/pages o views ===\" && ls src/pages src/views src/components 2>/dev/null | head -40)",
+      "Bash(cd /d/ZenLogic && grep -rlniE \"activeTools|sacModules|tenants\" src --include=*.jsx --include=*.js | head -20)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('firebase.json','utf8'\\)\\); console.log\\('firebase.json: JSON válido ✓'\\); const j=JSON.parse\\(require\\('fs'\\).readFileSync\\('firebase.json','utf8'\\)\\); console.log\\('bloque firestore presente:', 'firestore' in j\\);\")",
+      "Bash(cp '/c/Users/LENOVO/Documents/WEB DE cotizaciones/src/lib/cgoConfig.js' /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/cgoConfig.mjs)",
+      "Read(//c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/**)",
+      "Bash(node --input-type=module -e ' *)",
+      "PowerShell(Remove-Item -Recurse -Force \".next\" -ErrorAction SilentlyContinue; Write-Output \".next limpiado \\(artefactos de produccion\\) : $\\(-not \\(Test-Path '.next'\\)\\)\")",
+      "Bash(cp /d/ZenLogic/src/utils/toolsCatalog.js /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/tc.mjs)",
+      "Bash(node --check /c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Documents-WEB-DE-cotizaciones/0bb644ea-15a6-405d-ab81-ef8df5a38813/scratchpad/tc.mjs)"
+    ]
+  }
+}

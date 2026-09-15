@@ -3,18 +3,76 @@ import { simpleParser } from 'mailparser';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { PDFParse } = require('pdf-parse');
-import { firestore, storage, admin } from '../lib/firebase-admin.js';
+import { firestore, storage, admin } from './firebase-admin.js';
 
 // ── Persistencia en Firestore (compatible con entornos sin sistema de archivos) ──
 const STATE_COL  = 'scanner_state';
 const CACHE_DOC  = 'cache';
 const LOGS_DOC   = 'logs';
+const LEADS_COL  = 'quote_leads';
+
+// ── Tenant destino del escáner ──────────────────────────────────────────────
+// La empresa real es 'ayatech'. Antes estaba clavado '6' (tenant legado), por
+// eso el escáner actualizaba un tenant equivocado y las tarjetas no cambiaban.
+// Configurable por env para soportar otras empresas sin tocar el código.
+const TENANT_ID = process.env.SCANNER_TENANT_ID || 'ayatech';
+
+// ── Detección de solicitudes de cotización ────────────────────────────────
+const QUOTE_KEYWORDS = [
+  /solicitud\s+de\s+cotizaci[oó]n/i,
+  /solicitud\s+de\s+presupuesto/i,
+  /solicitud\s+de\s+precio/i,
+  /solicitar\s+cotizaci[oó]n/i,
+  /cotizaci[oó]n\s+de\b/i,
+  /pedir\s+cotizaci[oó]n/i,
+  /quisiera\s+cotizar/i,
+  /me\s+pueden\s+cotizar/i,
+  /pueden\s+cotizarme/i,
+  /solicito\s+cotizaci[oó]n/i,
+  /necesito\s+cotizaci[oó]n/i,
+  /requiero\s+cotizaci[oó]n/i,
+  /\brequest\s+for\s+quot(e|ation)\b/i,
+  /\brfq\b/i,
+  /presupuesto\s+para\b/i,
+  /\bproforma\b/i,
+  /invitaci[oó]n\s+(de\s+)?(compra|licitaci[oó]n|concurso)/i,
+];
+
+function isLikelyQuoteRequest(subject) {
+  return QUOTE_KEYWORDS.some(re => re.test(subject));
+}
+
+async function saveQuoteLead(uid, subject, fromRaw, dateRaw, io) {
+  if (!firestore) return;
+  try {
+    const docId = `inbox-${uid}`;
+    const ref   = firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quote_leads').doc(docId);
+    const snap  = await ref.get();
+    if (snap.exists) return; // ya guardado en ciclo anterior
+
+    const lead = {
+      emailUid:   String(uid),
+      subject:    subject || '(sin asunto)',
+      from:       fromRaw || '',
+      receivedAt: dateRaw || new Date().toISOString(),
+      status:     'pending',
+      createdAt:  new Date().toISOString(),
+    };
+    await ref.set(lead);
+    console.log(`[Lector] 📩 Solicitud de cotización detectada: "${subject}" de ${fromRaw}`);
+    if (io) io.emit('quote_lead_detected', { id: docId, ...lead });
+  } catch (e) {
+    console.warn('[Lector] Error guardando lead:', e.message);
+  }
+}
 
 export const poLogs         = [];
 const processedUids         = new Set();
 const processedSentUids     = new Set();
+const quoteLeadCheckedUids  = new Set();
 
 async function loadFromFirestore() {
+  if (!firestore) return;
   try {
     const [cacheSnap, logsSnap] = await Promise.all([
       firestore.collection(STATE_COL).doc(CACHE_DOC).get(),
@@ -22,10 +80,19 @@ async function loadFromFirestore() {
     ]);
     if (cacheSnap.exists) {
       const d = cacheSnap.data();
-      (d.inboxUids || []).forEach(u => processedUids.add(u));
-      (d.sentUids  || []).forEach(u => processedSentUids.add(u));
+      
+      // Limpiar memoria caché local antes de sincronizar con DB
+      // Esto es crucial porque Cloud Functions re-usa el estado global en RAM
+      processedUids.clear();
+      processedSentUids.clear();
+      quoteLeadCheckedUids.clear();
+
+      (d.inboxUids       || []).forEach(u => processedUids.add(u));
+      (d.sentUids        || []).forEach(u => processedSentUids.add(u));
+      (d.quoteLeadUids   || []).forEach(u => quoteLeadCheckedUids.add(u));
     }
     if (logsSnap.exists) {
+      poLogs.length = 0; // Vaciar array global
       const entries = logsSnap.data().entries || [];
       const seen = new Set();
       for (const entry of entries) {
@@ -35,18 +102,20 @@ async function loadFromFirestore() {
         }
       }
     }
-    console.log(`[Lector] Firestore: ${processedUids.size} inbox | ${processedSentUids.size} sent | ${poLogs.length} logs`);
+    console.log(`[Lector] Firestore (Sincronizado): ${processedUids.size} inbox | ${processedSentUids.size} sent | ${poLogs.length} logs`);
   } catch (e) {
     console.warn('[Lector] Error cargando estado desde Firestore:', e.message);
   }
 }
 
 async function saveCache() {
+  if (!firestore) return;
   try {
     await firestore.collection(STATE_COL).doc(CACHE_DOC).set({
-      inboxUids: [...processedUids],
-      sentUids:  [...processedSentUids],
-      updatedAt: new Date().toISOString(),
+      inboxUids:     [...processedUids],
+      sentUids:      [...processedSentUids],
+      quoteLeadUids: [...quoteLeadCheckedUids],
+      updatedAt:     new Date().toISOString(),
     });
   } catch (e) {
     console.warn('[Lector] Error guardando caché:', e.message);
@@ -63,6 +132,7 @@ function addLog(entry, io) {
 }
 
 async function saveLogs() {
+  if (!firestore) return;
   try {
     await firestore.collection(STATE_COL).doc(LOGS_DOC).set({
       entries:   poLogs,
@@ -86,6 +156,12 @@ export let scanStatus = {
 function emitStatus(io, update) {
   scanStatus = { ...scanStatus, ...update };
   if (io) io.emit('scan_status', scanStatus);
+  if (typeof firestore !== 'undefined' && firestore) {
+    firestore.collection('scanner_state').doc('status').set({
+      ...scanStatus,
+      updatedAt: new Date().toISOString()
+    }).catch(e => console.warn('[Lector] Error guardando status:', e.message));
+  }
 }
 
 function hasPdfInStruct(struct) {
@@ -145,7 +221,7 @@ export async function startEmailListener(io) {
       await scanSent();
     } finally {
       isScanning = false;
-      scheduleNext();
+      scheduleNext(); // Esto actualiza la UI a estado "idle" y muestra la cuenta regresiva
     }
   };
 
@@ -222,6 +298,50 @@ export async function startEmailListener(io) {
 
       console.log(`[Lector] ${pdfQueue.length} PDFs extraídos de ${withPdf.length} correos. Cerrando IMAP...`);
 
+      // ── Fase 2b: detectar solicitudes de cotización por asunto ──────────
+      // Corre sobre TODOS los correos (incluye ya leídos / ciclos anteriores)
+      // usando un set independiente de processedUids para no interferir con OC.
+      const uncheckedForLeads = allMessages.filter(m => !quoteLeadCheckedUids.has(m.attributes.uid));
+      uncheckedForLeads.forEach(m => quoteLeadCheckedUids.add(m.attributes.uid));
+      if (uncheckedForLeads.length > 0) saveCache();
+
+      // Construir set de UIDs respondidos para filtrar leads
+      const answeredUids = new Set(
+        allMessages
+          .filter(m => (m.attributes.flags || []).includes('\\Answered'))
+          .map(m => String(m.attributes.uid))
+      );
+
+      // Auto-descartar leads pendientes cuyo correo ya fue respondido
+      if (answeredUids.size > 0) {
+        try {
+          const pendingSnap = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quote_leads')
+            .where('status', '==', 'pending').get();
+          for (const doc of pendingSnap.docs) {
+            if (answeredUids.has(String(doc.data().emailUid))) {
+              await doc.ref.update({ status: 'dismissed', dismissedReason: 'replied', updatedAt: new Date().toISOString() });
+              console.log(`[Lector] Lead auto-descartado (correo respondido): ${doc.id}`);
+              if (io) io.emit('quote_lead_dismissed', { id: doc.id });
+            }
+          }
+        } catch (e) {
+          console.warn('[Lector] Error auto-descartando leads respondidos:', e.message);
+        }
+      }
+
+      console.log(`[Lector] Revisando ${uncheckedForLeads.length} correos para detección de leads de cotización`);
+      for (const m of uncheckedForLeads) {
+        // Saltar si el correo ya fue respondido
+        if (answeredUids.has(String(m.attributes.uid))) continue;
+        const headerPart = m.parts?.find(p => String(p.which || '').includes('HEADER'));
+        const subject = (headerPart?.body?.subject?.[0] || '').trim();
+        if (isLikelyQuoteRequest(subject)) {
+          const fromRaw = (headerPart?.body?.from?.[0] || '').trim();
+          const dateRaw = (headerPart?.body?.date?.[0] || '').trim();
+          await saveQuoteLead(m.attributes.uid, subject, fromRaw, dateRaw, io);
+        }
+      }
+
       // ── FASE 2: Procesar PDFs — sin conexión IMAP abierta ──
       if (pdfQueue.length === 0) return;
 
@@ -253,7 +373,7 @@ export async function startEmailListener(io) {
         try {
           const parser  = new PDFParse({ data: buffer });
           const pdfData = await parser.getText();
-          const match   = pdfData.text.match(/(COT-\d{4}-\d{4,})/i);
+          const match   = pdfData.text.match(/(COT-\d{4}-\d+)/i);
 
           if (match?.[1]) {
             // ── Coincidencia por código COT ──
@@ -417,8 +537,8 @@ export async function startEmailListener(io) {
             const nameClean = name.replace(/[‐-―−]/g, '-'); // normalizar guiones unicode
             const isInvoice = /^PDF-DOC-E\d{3}-\d+/i.test(nameClean)
                            || /^\d{8,11}-01-[A-Z]{1,2}\d{1,4}-\d+/i.test(nameClean);
-            console.log(`[Lector/Sent]   isInvoice=${isInvoice} isCot=${/COT-\d{4}-\d{4,}/i.test(nameClean)} para "${name}"`);
-            const isCot     = /COT-\d{4}-\d{4,}/i.test(name);
+            console.log(`[Lector/Sent]   isInvoice=${isInvoice} isCot=${/COT-\d{4}-\d+/i.test(nameClean)} para "${name}"`);
+            const isCot     = /COT-\d{4}-\d+/i.test(name);
 
             if (isInvoice) {
               invoiceQueue.push({ uid, filename: name, buffer: att.content });
@@ -446,7 +566,7 @@ export async function startEmailListener(io) {
             const parser  = new PDFParse({ data: item.buffer });
             const pdfData = await parser.getText();
             const text    = pdfData.text || '';
-            const cotMatch = text.match(/(COT-\d{4}-\d{4,})/i);
+            const cotMatch = text.match(/(COT-\d{4}-\d+)/i);
             if (/FACTURA/i.test(text)) {
               invoiceQueue.push(item);
               console.log(`[Lector/Sent] "${item.filename}" → FACTURA (por contenido)`);
@@ -557,7 +677,7 @@ export async function startEmailListener(io) {
 
         try {
           // Extraer código COT del nombre del archivo
-          const cotMatch = filename.match(/(COT-\d{4}-\d{4,})/i);
+          const cotMatch = filename.match(/(COT-\d{4}-\d+)/i);
           if (cotMatch?.[1]) {
             const cotCode = cotMatch[1].toUpperCase();
             logEntry.foundCode = cotCode;
@@ -571,7 +691,7 @@ export async function startEmailListener(io) {
             // Intentar extraer COT del contenido del PDF
             const parser  = new PDFParse({ data: buffer });
             const pdfData = await parser.getText();
-            const pdfCot  = pdfData.text.match(/(COT-\d{4}-\d{4,})/i);
+            const pdfCot  = pdfData.text.match(/(COT-\d{4}-\d+)/i);
             if (pdfCot?.[1]) {
               const cotCode = pdfCot[1].toUpperCase();
               logEntry.foundCode = cotCode;
@@ -593,10 +713,9 @@ export async function startEmailListener(io) {
     }
   };
 
-  console.log(`Iniciando servicio IMAP escuchando en: ${emailUser}`);
+  console.log(`Iniciando servicio IMAP (Cloud Function) para: ${emailUser}`);
   await loadFromFirestore();
-  runScanCycle();
-  setInterval(runScanCycle, SCAN_INTERVAL_MS);
+  await runScanCycle();
 
   if (io) {
     io.on('connection', (socket) => {
@@ -609,8 +728,8 @@ export async function startEmailListener(io) {
         if (!firestore || !oldDocId || !newDocId || oldDocId === newDocId) return;
         try {
           const [oldSnap, newSnap] = await Promise.all([
-            firestore.collection('quotations').doc(oldDocId).get(),
-            firestore.collection('quotations').doc(newDocId).get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(oldDocId).get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(newDocId).get(),
           ]);
           if (!oldSnap.exists || !newSnap.exists) return;
 
@@ -656,6 +775,7 @@ export async function startEmailListener(io) {
         console.log('[Lector] Re-escaneo forzado: limpiando cachés...');
         processedUids.clear();
         processedSentUids.clear();
+        quoteLeadCheckedUids.clear();
         await saveCache();
         runScanCycle();
       });
@@ -793,8 +913,8 @@ export async function startEmailListener(io) {
 
           // Revertir aprobada Y completado — ambos fueron asignados por el scanner
           const [snapAprobada, snapCompletado] = await Promise.all([
-            firestore.collection('quotations').where('quotationStatus', '==', 'aprobada').get(),
-            firestore.collection('quotations').where('quotationStatus', '==', 'completado').get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').where('quotationStatus', '==', 'aprobada').get(),
+            firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').where('quotationStatus', '==', 'completado').get(),
           ]);
 
           const batch = firestore.batch();
@@ -825,6 +945,7 @@ export async function startEmailListener(io) {
           poLogs.length = 0;
           processedUids.clear();
           processedSentUids.clear();
+          quoteLeadCheckedUids.clear();
           await Promise.all([saveLogs(), saveCache()]);
           io.emit('po_logs_list', poLogs);
 
@@ -851,8 +972,8 @@ async function findInvoiceMatch({ labeled, general }) {
   if (!amountToMatch) return null;
 
   try {
-    const snapshot = await firestore.collection('quotations')
-      .where('quotationStatus', '==', 'aprobada')
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations')
+      .where('quotationStatus', 'in', ['aprobada', 'pendiente_factura'])
       .get();
 
     const TOLERANCE = 1.00;
@@ -860,10 +981,8 @@ async function findInvoiceMatch({ labeled, general }) {
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      // Requiere código Y que el scanner haya subido una OC (ocPdfUrl presente).
-      // Sin ocPdfUrl la OC fue marcada manualmente vía dropdown — no es válida
-      // para auto-completar con factura, ya que el sistema no la verificó.
-      if (!data.code || !data.ocPdfUrl) continue;
+      // Requiere código. Una OC puede ser marcada manualmente sin subir PDF.
+      if (!data.code) continue;
 
       let subtotal = 0;
       if (data.items && data.items.length > 0) {
@@ -906,7 +1025,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
       invoicePdfUrl: ocPdfUrl || null,
       updatedAt: new Date().toISOString(),
     };
-    await firestore.collection('quotations').doc(docId).update(updateData);
+    await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(docId).update(updateData);
     if (io) io.emit('quotation_updated', { id: docId, ...updateData });
     return { success: true, docId };
   } catch (err) {
@@ -919,7 +1038,7 @@ async function markInvoiceCompleted(docId, pdfBuffer, pdfFilename, io) {
 async function markQuotationSent(cotCode, io) {
   if (!firestore) return { success: false };
   try {
-    const snapshot = await firestore.collection('quotations')
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations')
       .where('code', '==', cotCode).get();
 
     if (snapshot.empty) return { success: false, reason: 'Not Found' };
@@ -929,7 +1048,7 @@ async function markQuotationSent(cotCode, io) {
 
     if (data.isSent) return { success: false, reason: 'Already Sent', docId: doc.id };
 
-    await firestore.collection('quotations').doc(doc.id).update({
+    await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').doc(doc.id).update({
       isSent: true,
       updatedAt: new Date().toISOString(),
     });
@@ -1000,7 +1119,7 @@ async function findQuotationByAmount({ labeled, general }) {
   const maxGeneral = general.length > 0 ? Math.max(...general) : null;
 
   try {
-    const snapshot = await firestore.collection('quotations').get();
+    const snapshot = await firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations').get();
 
     // Solo tolerancia absoluta: sin porcentaje.
     // Las OC son documentos formales — los montos deben coincidir al centavo
@@ -1117,7 +1236,14 @@ async function getPdfjsDocument(buffer) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const workerPath = require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = `file:///${workerPath.replace(/\\/g, '/')}`;
-  return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+  
+  const path = require('path');
+  const standardFontDataUrl = path.join(require.resolve('pdfjs-dist/package.json'), '../standard_fonts/');
+  
+  return pdfjs.getDocument({ 
+    data: new Uint8Array(buffer),
+    standardFontDataUrl: standardFontDataUrl
+  }).promise;
 }
 
 // Etapa 2: pdfjs-dist getTextContent — mejor soporte de encodings que pdf-parse
@@ -1170,7 +1296,7 @@ async function extractTextWithOCR(buffer) {
   const texts = [];
   for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
     const page     = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 2.5 });
+    const viewport = page.getViewport({ scale: 1.5 });
     const w = Math.ceil(viewport.width);
     const h = Math.ceil(viewport.height);
     console.log(`[OCR] Renderizando pág ${i}: ${w}×${h}px`);
@@ -1234,7 +1360,7 @@ async function updateQuotationStatus(quotationId, pdfBuffer, pdfFilename, io) {
   }
 
   try {
-    const quotesRef = firestore.collection('quotations');
+    const quotesRef = firestore.collection('tenants').doc(TENANT_ID).collection('cgo_quotations');
     const snapshot  = await quotesRef.where('code', '==', quotationId).get();
 
     if (snapshot.empty) {

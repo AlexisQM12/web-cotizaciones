@@ -1,11 +1,12 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
     const { user, loading, signInWithGoogle } = useAuth();
     const router = useRouter();
+    const [isSigningIn, setIsSigningIn] = useState(false);
 
     useEffect(() => {
         // Redirect if already logged in
@@ -15,11 +16,20 @@ export default function LoginPage() {
     }, [user, loading, router]);
 
     const handleGoogleSignIn = async () => {
+        if (isSigningIn) return;
+        setIsSigningIn(true);
         try {
             await signInWithGoogle();
             router.push('/');
         } catch (error) {
-            alert('Error al iniciar sesión: ' + error.message);
+            if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+                // Ignore errors caused by the user closing the popup or cancelling the request
+                console.warn('Login popup closed or cancelled by user.');
+            } else {
+                alert('Error al iniciar sesión: ' + error.message);
+            }
+        } finally {
+            setIsSigningIn(false);
         }
     };
 
@@ -74,6 +84,7 @@ export default function LoginPage() {
 
                 <button
                     onClick={handleGoogleSignIn}
+                    disabled={isSigningIn}
                     className="btn"
                     style={{
                         width: '100%',
@@ -86,7 +97,9 @@ export default function LoginPage() {
                         justifyContent: 'center',
                         gap: '12px',
                         fontSize: '1rem',
-                        fontWeight: '500'
+                        fontWeight: '500',
+                        opacity: isSigningIn ? 0.7 : 1,
+                        cursor: isSigningIn ? 'not-allowed' : 'pointer'
                     }}
                 >
                     <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -95,7 +108,7 @@ export default function LoginPage() {
                         <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.59.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05" />
                         <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
                     </svg>
-                    Continuar con Google
+                    {isSigningIn ? 'Conectando...' : 'Continuar con Google'}
                 </button>
 
                 <p style={{
