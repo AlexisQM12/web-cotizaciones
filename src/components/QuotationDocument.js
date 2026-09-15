@@ -1,7 +1,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { numberToSpanishWords, formatAmount } from '@/lib/numberToWords';
-import { aBloques, aTextoPlano } from '@/lib/richText';
+import { aBloques, aTextoPlano, tieneContenido } from '@/lib/richText';
 
 // Pinta el texto con formato de un ítem.
 //
@@ -347,7 +347,15 @@ export const QuotationDocument = ({ data }) => {
         serviceDescription = '', // Default service description
         usarPrecioGeneral = false, // Precio único para toda la cotización, sin desglose por ítem
         precioGeneralMonto = 0,
+        garantiaHabilitada = false, // No todo servicio lleva garantía; se activa por cotización
+        garantiaTexto = '',
     } = data;
+
+    // La sección de Garantía es opcional: si no está activa (o está activa pero
+    // vacía), "Condiciones de Pago" recupera el número que tendría sin ella, en
+    // vez de dejar un hueco fijo en la numeración del documento.
+    const mostrarGarantia = !!garantiaHabilitada && tieneContenido(garantiaTexto);
+    const numCondicionesPago = mostrarGarantia ? 6 : 5;
 
     // Calculate totals
     // Con "precio general" el monto no sale de sumar los ítems: se fija a mano
@@ -522,8 +530,18 @@ export const QuotationDocument = ({ data }) => {
                     <Text style={styles.notesText}>{notes}</Text>
                 </View>
 
+                {/* 6.5. Warranty terms — opcional, según el tipo de servicio */}
+                {mostrarGarantia && (
+                    <View style={{ marginTop: 6 }}>
+                        <Text style={styles.sectionHeader}>5. TÉRMINOS DE GARANTÍA DEL SERVICIO</Text>
+                        <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 5 }}>
+                            {renderTextoConFormato(garantiaTexto, styles.notesText)}
+                        </View>
+                    </View>
+                )}
+
                 {/* 7. Conditions */}
-                <Text style={styles.sectionHeader}>5. CONDICIONES DE PAGO</Text>
+                <Text style={styles.sectionHeader}>{numCondicionesPago}. CONDICIONES DE PAGO</Text>
                 <View style={styles.paymentContainer}>
                     <View style={styles.paymentRow}>
                         <Text style={styles.paymentLabel}>CUENTAS BANCARIAS:</Text>

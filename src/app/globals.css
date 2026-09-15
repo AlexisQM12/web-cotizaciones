@@ -1369,7 +1369,7 @@ textarea:focus,
 }
 
 /* ── Interruptor de precio general (Paso 1 → Precios globales) ───────────── */
-.precio-general__switch {
+.switch-simple {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1378,13 +1378,13 @@ textarea:focus,
   color: #334155;
   cursor: pointer;
 }
-.precio-general__switch input[type="checkbox"] {
+.switch-simple input[type="checkbox"] {
   width: 15px;
   height: 15px;
   accent-color: #0284c7;
   cursor: pointer;
 }
-.precio-general__switch em {
+.switch-simple em {
   font-style: normal;
   font-weight: 400;
   color: #94a3b8;

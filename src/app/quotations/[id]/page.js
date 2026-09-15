@@ -9,6 +9,7 @@ import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
 import ItemsEditor from '@/components/ItemsEditor';
+import RichTextEditor from '@/components/RichTextEditor';
 import Icon from '@/components/icons/Icon';
 
 const PASOS = [
@@ -726,7 +727,7 @@ export default function QuotationEditor() {
                     <section className="seccion seccion--precios">
                         <h3 className="seccion__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
 
-                        <label className="precio-general__switch">
+                        <label className="switch-simple">
                             <input
                                 type="checkbox"
                                 checked={!!data.usarPrecioGeneral}
@@ -863,6 +864,37 @@ export default function QuotationEditor() {
                                                     />
                     </div>
 
+                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem', marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        Términos de Garantía del Servicio
+                        <label className="switch-simple" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                            <input
+                                type="checkbox"
+                                checked={!!data.garantiaHabilitada}
+                                onChange={(e) => handleChange('garantiaHabilitada', e.target.checked)}
+                            />
+                            <span>Incluir en esta cotización</span>
+                        </label>
+                    </h3>
+                    {/* No todos los servicios llevan garantía (ej. una simple asesoría),
+                        así que esta sección va aparte de Notas y se activa por cotización
+                        según el tipo de servicio, no por configuración global. */}
+                    {data.garantiaHabilitada ? (
+                        <div className="card-editor" style={{ position: 'relative' }}>
+                            {renderRemoteCursorLabel('garantiaTexto')}
+                            <RichTextEditor
+                                value={data.garantiaTexto || ''}
+                                onChange={(html) => handleChange('garantiaTexto', html)}
+                                onFocus={() => handleFocus('garantiaTexto')}
+                                onBlur={() => handleBlur('garantiaTexto')}
+                                placeholder="Ej: Cobertura de 6 meses en mano de obra y materiales. No incluye daños por mal uso, corte eléctrico o eventos de fuerza mayor…"
+                                minHeight={140}
+                            />
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                            Desactivada: esta cotización no mostrará una sección de garantía en el PDF. Actívala si el servicio la requiere.
+                        </p>
+                    )}
 
                     <div className="pasos__pie">
                         <button type="button" className="pasos__anterior" onClick={() => setPaso(2)}>← Volver a Ítems</button>
