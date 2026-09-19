@@ -4,7 +4,10 @@ import {
     signInWithPopup,
     GoogleAuthProvider,
     signOut as firebaseSignOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
 
@@ -138,10 +141,50 @@ export function AuthProvider({ children }) {
         }
     };
 
+    // ── Correo y contraseña ──────────────────────────────────────────────────
+    // Segundo método de acceso, para quienes no tienen una cuenta de Google
+    // (p. ej. un correo de Hostinger). No hace falta tocar el gate de acceso:
+    // onAuthStateChanged de arriba ya es agnóstico al proveedor — llama a
+    // /api/users con el uid/email que sea, y esa ruta es la que de verdad
+    // decide si la cuenta está en tenant_users/admins. Crear la cuenta de
+    // Firebase Auth aquí no otorga acceso por sí solo, igual que hoy cualquiera
+    // puede entrar con SU Google y ser rechazado si no está en la whitelist.
+    const signUpWithEmail = async (email, password) => {
+        try {
+            const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
+            return result.user;
+        } catch (error) {
+            console.error('Error creando cuenta con correo:', error);
+            throw error;
+        }
+    };
+
+    const signInWithEmail = async (email, password) => {
+        try {
+            const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+            return result.user;
+        } catch (error) {
+            console.error('Error iniciando sesión con correo:', error);
+            throw error;
+        }
+    };
+
+    const resetPassword = async (email) => {
+        try {
+            await sendPasswordResetEmail(auth, email.trim());
+        } catch (error) {
+            console.error('Error enviando correo de recuperación:', error);
+            throw error;
+        }
+    };
+
     const value = {
         user,
         loading,
         signInWithGoogle,
+        signUpWithEmail,
+        signInWithEmail,
+        resetPassword,
         signOut
     };
 
