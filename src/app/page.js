@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'logistica', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'logistica', 'compras', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
 
 export default function Home() {
     const router = useRouter()
@@ -75,6 +75,19 @@ export default function Home() {
     }
 
     const cardsMap = {
+        compras: (
+            <>
+                <div style={{ background: '#fff7ed', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="9" cy="21" r="1" />
+                      <circle cx="20" cy="21" r="1" />
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Compras</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>Sigue tus pedidos pendientes en Amazon, AliExpress y Alibaba.</p>
+            </>
+        ),
         quotations: (
             <>
                 {pendingLeads > 0 && (

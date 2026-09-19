@@ -68,7 +68,8 @@ export const getTenantCollection = (empresaId, collectionName) => {
         'sales_ledger': 'cgo_sales',
         'portfolio_companies': 'cgo_portfolio_companies',
         'quote_leads': 'cgo_quote_leads',
-        'notas': 'cgo_notas'
+        'notas': 'cgo_notas',
+        'compras': 'cgo_compras'
     };
     const cgoCollection = map[collectionName] || collectionName;
     return firestore.collection('tenants').doc(String(finalEmpresaId)).collection(cgoCollection);

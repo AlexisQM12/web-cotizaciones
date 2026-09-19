@@ -1415,3 +1415,174 @@ textarea:focus,
 .rich-text-editor__area li {
   margin: 0.15em 0;
 }
+
+/* ── Compras online ──────────────────────────────────────────────────────── */
+.compras-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.compras-vacio {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.compras-form { margin-bottom: 2rem; }
+
+.compras-form__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.compras-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0.85rem 0 0.3rem;
+}
+
+.compras-pista {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 0.35rem;
+}
+
+.compras-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.compras-form__pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.compras-grupo { margin-bottom: 2.25rem; }
+
+.compras-grupo__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.compras-grupo__conteo {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.compras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.compra-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.compra-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.compra-card__estado {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+}
+
+.compra-card__acciones { display: flex; gap: 0.25rem; }
+.compra-card__acciones button {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 6px;
+  width: 28px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.compra-card__acciones button:hover { background: #e2e8f0; }
+.compra-card__peligro { color: #dc2626 !important; }
+
+.compra-card__titulo {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 0.4rem;
+  line-height: 1.35;
+}
+
+.compra-card__enlace {
+  font-size: 0.78rem;
+  color: #0284c7;
+  text-decoration: none;
+  word-break: break-all;
+}
+.compra-card__enlace:hover { text-decoration: underline; }
+
+.compra-card__datos {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.compra-card__datos strong { color: #16a34a; font-size: 0.9rem; }
+
+.compra-card__extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.compra-card__notas {
+  margin-top: 0.55rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.compra-card__cambiar-estado {
+  margin-top: 0.85rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 8px !important;
+}
