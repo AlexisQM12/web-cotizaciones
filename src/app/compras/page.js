@@ -5,11 +5,13 @@
 // porque es como se sigue un pedido en la práctica: cada tienda tiene su
 // propio rastreo, sus propios plazos y su propia cuenta.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavBar } from '@/components/NavBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { authFetch } from '@/lib/authFetch';
+import { storage } from '@/lib/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import TiendaLogo from '@/components/TiendaLogo';
 import { ORDEN_TIENDAS, TIENDAS, ESTADOS, estadoDe, detectarTienda, tiendaDe } from '@/lib/tiendas';
 
@@ -17,6 +19,7 @@ const VACIA = {
     titulo: '', url: '', tienda: '', estado: 'porPedir',
     cantidad: 1, precio: '', moneda: 'USD',
     seguimiento: '', fechaPedido: '', fechaEstimada: '', notas: '',
+    imagenUrl: '',
 };
 
 const monto = (n, moneda) =>
@@ -39,8 +42,12 @@ export default function ComprasPage() {
     const [form, setForm] = useState(VACIA);
     const [editandoId, setEditandoId] = useState(null);
     const [guardando, setGuardando] = useState(false);
+    const [subiendoImagen, setSubiendoImagen] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [modalImagen, setModalImagen] = useState(null);
     const [formAbierto, setFormAbierto] = useState(false);
     const [verRecibidas, setVerRecibidas] = useState(false);
+    const fileInputRef = useRef(null);
 
     const cargar = useCallback(async () => {
         if (!empresaId) return;
@@ -96,6 +103,47 @@ export default function ComprasPage() {
         }
     };
 
+    const subirArchivo = async (file) => {
+        if (!file || !empresaId) return;
+        if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+            setError('Por favor selecciona una imagen (PNG, JPG, WEBP) o un archivo PDF.');
+            return;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+            setError('El archivo supera el límite de 15MB.');
+            return;
+        }
+        setSubiendoImagen(true);
+        setError(null);
+        try {
+            const ext = file.name ? file.name.split('.').pop() : 'png';
+            const safeName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+            const storageRef = ref(storage, `tenants/${empresaId}/compras/${safeName}`);
+            await uploadBytes(storageRef, file);
+            const downloadUrl = await getDownloadURL(storageRef);
+            setForm(f => ({ ...f, imagenUrl: downloadUrl }));
+        } catch (err) {
+            console.error('Error al subir imagen de compra:', err);
+            setError('No se pudo subir la imagen: ' + (err.message || 'Error desconocido'));
+        } finally {
+            setSubiendoImagen(false);
+        }
+    };
+
+    const handlePaste = (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type && (items[i].type.indexOf('image') !== -1 || items[i].type === 'application/pdf')) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    subirArchivo(file);
+                    break;
+                }
+            }
+        }
+    };
+
     const cambiarEstado = async (compra, estado) => {
         const previas = compras;
         setCompras(prev => prev.map(c => (c.id === compra.id ? { ...c, estado } : c))); // optimista
@@ -133,6 +181,7 @@ export default function ComprasPage() {
             seguimiento: compra.seguimiento || '',
             fechaPedido: compra.fechaPedido || '', fechaEstimada: compra.fechaEstimada || '',
             notas: compra.notas || '',
+            imagenUrl: compra.imagenUrl || '',
         });
         setEditandoId(compra.id);
         setFormAbierto(true);
@@ -193,7 +242,7 @@ export default function ComprasPage() {
                 )}
 
                 {formAbierto && (
-                    <form className="card-editor compras-form" onSubmit={guardar}>
+                    <form className="card-editor compras-form" onSubmit={guardar} onPaste={handlePaste}>
                         <div className="compras-form__cabecera">
                             <strong>{editandoId ? 'Editar compra' : 'Nueva compra'}</strong>
                             <TiendaLogo tienda={tiendaEfectiva} />
@@ -213,6 +262,7 @@ export default function ComprasPage() {
 
                         <label className="compras-label">¿Qué es?</label>
                         <input
+                            type="text"
                             value={form.titulo}
                             onChange={(e) => setForm(f => ({ ...f, titulo: e.target.value }))}
                             placeholder="Ej. Sensor de temperatura PT100"
@@ -250,7 +300,7 @@ export default function ComprasPage() {
                             </div>
                             <div>
                                 <label className="compras-label">Nº de seguimiento</label>
-                                <input value={form.seguimiento} placeholder="Tracking"
+                                <input type="text" value={form.seguimiento} placeholder="Tracking"
                                     onChange={(e) => setForm(f => ({ ...f, seguimiento: e.target.value }))} />
                             </div>
                             <div>
@@ -265,13 +315,73 @@ export default function ComprasPage() {
                             </div>
                         </div>
 
+                        <label className="compras-label">Captura o imagen del pedido / comprobante</label>
+                        {form.imagenUrl ? (
+                            <div className="compras-img-preview">
+                                <img
+                                    src={form.imagenUrl}
+                                    alt="Captura"
+                                    onClick={() => setModalImagen(form.imagenUrl)}
+                                    title="Haz clic para ampliar"
+                                />
+                                <div className="compras-img-preview__info">
+                                    <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Captura adjuntada</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalImagen(form.imagenUrl)}
+                                        style={{ background: 'none', border: 'none', color: '#0284c7', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: '0.78rem' }}
+                                    >
+                                        Ver en tamaño completo ↗
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="compras-img-preview__btn-del"
+                                    onClick={() => setForm(f => ({ ...f, imagenUrl: '' }))}
+                                >
+                                    ✕ Quitar
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                className={`compras-upload-box ${isDragOver ? 'is-dragover' : ''}`}
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                                onDragLeave={() => setIsDragOver(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setIsDragOver(false);
+                                    const file = e.dataTransfer?.files?.[0];
+                                    if (file) subirArchivo(file);
+                                }}
+                            >
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    accept="image/*,application/pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) subirArchivo(file);
+                                    }}
+                                    style={{ display: 'none' }}
+                                />
+                                <span className="compras-upload-box__icon">📸</span>
+                                <div className="compras-upload-box__text">
+                                    {subiendoImagen ? 'Subiendo imagen a la nube… ⏳' : 'Haz clic o arrastra una captura aquí'}
+                                </div>
+                                <div className="compras-upload-box__subtext">
+                                    {subiendoImagen ? 'Por favor espera un momento' : 'Puedes pegar con Ctrl+V una captura recortada (PNG, JPG, WEBP o PDF)'}
+                                </div>
+                            </div>
+                        )}
+
                         <label className="compras-label">Notas</label>
                         <textarea rows={2} value={form.notas} placeholder="Observaciones, variante, color…"
                             onChange={(e) => setForm(f => ({ ...f, notas: e.target.value }))} />
 
                         <div className="compras-form__pie">
                             <button type="button" className="btn btn-secondary" onClick={cerrarForm}>Cancelar</button>
-                            <button type="submit" className="btn btn-primary" disabled={guardando}>
+                            <button type="submit" className="btn btn-primary" disabled={guardando || subiendoImagen}>
                                 {guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Agregar compra'}
                             </button>
                         </div>
@@ -338,6 +448,17 @@ export default function ComprasPage() {
 
                                             {c.notas && <p className="compra-card__notas">{c.notas}</p>}
 
+                                            {c.imagenUrl && (
+                                                <div
+                                                    className="compra-card__thumb"
+                                                    onClick={() => setModalImagen(c.imagenUrl)}
+                                                    title="Ver imagen completa"
+                                                >
+                                                    <img src={c.imagenUrl} alt={c.titulo || 'Captura de compra'} loading="lazy" />
+                                                    <span className="compra-card__thumb-badge">🔍 Ver captura</span>
+                                                </div>
+                                            )}
+
                                             <select
                                                 className="compra-card__cambiar-estado"
                                                 value={c.estado || 'porPedir'}
@@ -351,6 +472,26 @@ export default function ComprasPage() {
                             </div>
                         </section>
                     ))
+                )}
+
+                {modalImagen && (
+                    <div className="compras-modal-overlay" onClick={() => setModalImagen(null)}>
+                        <div className="compras-modal-content" onClick={e => e.stopPropagation()}>
+                            <button type="button" className="compras-modal-close" onClick={() => setModalImagen(null)} title="Cerrar">✕</button>
+                            <img src={modalImagen} alt="Captura ampliada" />
+                            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', width: '100%', justifyContent: 'flex-end' }}>
+                                <a
+                                    href={modalImagen}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                                >
+                                    Abrir original ↗
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </main>
         </ProtectedRoute>

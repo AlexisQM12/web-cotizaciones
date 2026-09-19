@@ -36,6 +36,7 @@ function normalizar(body) {
         fechaPedido:   body.fechaPedido || null,
         fechaEstimada: body.fechaEstimada || null,
         notas:     String(body.notas ?? '').trim(),
+        imagenUrl: body.imagenUrl ? String(body.imagenUrl).trim() : null,
     };
 }
 

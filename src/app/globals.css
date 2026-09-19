@@ -113,6 +113,10 @@ input[type="number"],
 input[type="email"],
 input[type="password"],
 input[type="file"],
+input[type="url"],
+input[type="date"],
+input[type="tel"],
+input:not([type]),
 select,
 textarea,
 .input {
@@ -133,6 +137,7 @@ textarea:focus,
   border-color: #1e293b;
   outline: none;
   background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.08);
 }
 
 /* Buttons */
@@ -1463,6 +1468,195 @@ textarea:focus,
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.75rem 1rem;
   margin-top: 0.5rem;
+}
+
+.compras-form input,
+.compras-form select,
+.compras-form textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #1e293b;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.compras-form input:focus,
+.compras-form select:focus,
+.compras-form textarea:focus {
+  border-color: #0f172a;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.compras-upload-box {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.35rem;
+  position: relative;
+}
+
+.compras-upload-box:hover,
+.compras-upload-box.is-dragover {
+  border-color: #64748b;
+  background: #f1f5f9;
+}
+
+.compras-upload-box__icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.compras-upload-box__text {
+  font-size: 0.82rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.compras-upload-box__subtext {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+}
+
+.compras-img-preview {
+  position: relative;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+
+.compras-img-preview img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+}
+
+.compras-img-preview__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.compras-img-preview__btn-del {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.compras-img-preview__btn-del:hover {
+  background: #fecaca;
+}
+
+.compra-card__thumb {
+  margin-top: 0.7rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  position: relative;
+  max-height: 130px;
+  cursor: pointer;
+}
+
+.compra-card__thumb img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.compra-card__thumb:hover img {
+  transform: scale(1.02);
+}
+
+.compra-card__thumb-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+.compras-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.compras-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.compras-modal-content img {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.compras-modal-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .compras-form__pie {
