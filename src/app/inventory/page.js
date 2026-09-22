@@ -617,20 +617,47 @@ export default function InventoryDashboard() {
                                         </div>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>{coreLabel(config, 'category', 'Categoría')}</label>
-                                            <input 
-                                                type="text" 
-                                                name="category" 
-                                                value={formData.category} 
-                                                onChange={handleChange} 
-                                                placeholder="Ej. Consumibles"
-                                                list="category-suggestions"
-                                                style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
-                                            />
-                                            <datalist id="category-suggestions">
-                                                {Object.keys(categoryStats).filter(c => c !== 'Todas').map(cat => (
-                                                    <option key={cat} value={cat} />
-                                                ))}
-                                            </datalist>
+                                            {/* Con familias definidas para el rubro se elige de una
+                                                lista cerrada; si no hay, se sigue escribiendo a mano
+                                                como siempre. El texto libre acaba generando
+                                                "Planchas", "planchas" y "Plancha" como tres familias
+                                                distintas, y la tienda las muestra separadas. */}
+                                            {config.categories?.length > 0 ? (
+                                                <select
+                                                    name="category"
+                                                    value={formData.category}
+                                                    onChange={handleChange}
+                                                    style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: '#fff' }}
+                                                >
+                                                    <option value="">Sin clasificar</option>
+                                                    {config.categories.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                    {/* Un artículo antiguo puede tener una familia que
+                                                        ya no está en la lista: se conserva para no
+                                                        cambiarla sin querer al editar otra cosa. */}
+                                                    {formData.category && !config.categories.includes(formData.category) && (
+                                                        <option value={formData.category}>{formData.category} (en desuso)</option>
+                                                    )}
+                                                </select>
+                                            ) : (
+                                                <>
+                                                    <input 
+                                                        type="text" 
+                                                        name="category" 
+                                                        value={formData.category} 
+                                                        onChange={handleChange} 
+                                                        placeholder="Ej. Consumibles"
+                                                        list="category-suggestions"
+                                                        style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }} 
+                                                    />
+                                                    <datalist id="category-suggestions">
+                                                        {Object.keys(categoryStats).filter(c => c !== 'Todas').map(cat => (
+                                                            <option key={cat} value={cat} />
+                                                        ))}
+                                                    </datalist>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>

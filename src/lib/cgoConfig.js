@@ -54,6 +54,15 @@ export const INVENTORY_PRESETS = {
             // pone el artículo en venta, y borrarlo lo retira.
             { key: 'precioVenta', label: 'Precio de venta', type: 'number', unit: 'S/', step: '0.01', help: 'Si lo dejas vacío, el artículo no aparece en la tienda pública.' },
         ],
+        // Familias cerradas en vez de texto libre: el almacén se ordena solo y
+        // la tienda agrupa bien. Escribiéndolas a mano acaban conviviendo
+        // "Planchas", "planchas" y "Plancha" como tres familias distintas.
+        categories: [
+            'Planchas metálicas',
+            'Ejes redondos sólidos',
+            'Perfiles y tubos',
+            'Insumos y consumibles',
+        ],
         listColumns: ['calidad', 'espesor', 'precioVenta'],
     },
 
@@ -126,6 +135,15 @@ export function resolveInventoryConfig(raw) {
         ? raw.unitOptions.map(String)
         : preset.unitOptions;
 
+    // Familias del rubro, o las que haya definido el tenant. Vacío = texto
+    // libre, que es como se comportaba antes de existir esto.
+    const categories = (Array.isArray(raw?.categories) && raw.categories.length > 0
+        ? raw.categories
+        : preset.categories || [])
+        .map(String)
+        .map(c => c.trim())
+        .filter(Boolean);
+
     const listColumns = (Array.isArray(raw?.listColumns) ? raw.listColumns : preset.listColumns)
         .map(String)
         .filter(k => validKeys.has(k)); // solo columnas que existan como campo
@@ -136,6 +154,7 @@ export function resolveInventoryConfig(raw) {
         variant: raw?.variant || 'simple',   // reservado: 'simple' | 'kardex'
         labels: { ...(preset.labels || {}), ...(raw?.labels || {}) },
         unitOptions,
+        categories,
         extraFields,
         listColumns,
     };
