@@ -1,6 +1,7 @@
 import { getTenantCollection } from '@/lib/firebase-admin';
 import { getInventoryConfig } from '@/lib/cgoConfig.server';
 import { sanitizeAttributes } from '@/lib/inventoryPayload';
+import { sincronizar } from '@/lib/catalogoPublico';
 
 export async function GET(req) {
     try {
@@ -54,6 +55,8 @@ export async function POST(req) {
         };
 
         await newItemRef.set(itemData);
+        // La tienda pública del cliente se alimenta de aquí.
+        await sincronizar(empresaId, newItemRef.id, itemData);
 
         return Response.json({ id: newItemRef.id, ...itemData });
     } catch (error) {

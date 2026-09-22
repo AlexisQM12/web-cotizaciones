@@ -49,8 +49,12 @@ export const INVENTORY_PRESETS = {
             { key: 'largo',    label: 'Largo',           type: 'number', unit: 'mm' },
             { key: 'pesoUnit', label: 'Peso por unidad', type: 'number', unit: 'kg', step: '0.01' },
             { key: 'acabado',  label: 'Acabado',         type: 'select', options: ['Laminado en caliente', 'Laminado en frío', 'Galvanizado', 'Negro', 'Pulido'] },
+            // El costo es lo que le cuesta a la empresa y nunca sale de aquí.
+            // Este es el que ve el cliente en la tienda: cargarlo es lo que
+            // pone el artículo en venta, y borrarlo lo retira.
+            { key: 'precioVenta', label: 'Precio de venta', type: 'number', unit: 'S/', step: '0.01', help: 'Si lo dejas vacío, el artículo no aparece en la tienda pública.' },
         ],
-        listColumns: ['calidad', 'espesor'],
+        listColumns: ['calidad', 'espesor', 'precioVenta'],
     },
 
     // Tienda de productos comestibles.

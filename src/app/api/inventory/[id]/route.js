@@ -1,6 +1,7 @@
 import { getTenantCollection } from '@/lib/firebase-admin';
 import { getInventoryConfig } from '@/lib/cgoConfig.server';
 import { sanitizeAttributes } from '@/lib/inventoryPayload';
+import { sincronizar, retirar } from '@/lib/catalogoPublico';
 
 // Referencia al ítem de inventario del tenant.
 // OJO: antes se usaba getTenantDoc(empresaId, 'inventory', id), pero getTenantDoc
@@ -36,6 +37,10 @@ export async function PUT(req, { params }) {
         if (imageUrl !== undefined) updateData.imageUrl = imageUrl || '';
 
         await itemRef(empresaId, id).update(updateData);
+        // `update` es parcial, pero la tienda necesita el ítem entero: se
+        // releé para no publicar una versión a medias (p. ej. sin imagen).
+        const guardado = (await itemRef(empresaId, id).get()).data();
+        await sincronizar(empresaId, id, guardado);
 
         return Response.json({ id, ...updateData });
     } catch (error) {
@@ -55,6 +60,7 @@ export async function DELETE(req, { params }) {
         }
 
         await itemRef(empresaId, id).delete();
+        await retirar(empresaId, id);
 
         return Response.json({ success: true });
     } catch (error) {
