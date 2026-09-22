@@ -702,12 +702,12 @@ export default function InventoryDashboard() {
                                                 >
                                                     <option value="">Sin clasificar</option>
                                                     {config.categories.map(cat => (
-                                                        <option key={cat} value={cat}>{cat}</option>
+                                                        <option key={cat.label} value={cat.label}>{cat.label}</option>
                                                     ))}
                                                     {/* Un artículo antiguo puede tener una familia que
                                                         ya no está en la lista: se conserva para no
                                                         cambiarla sin querer al editar otra cosa. */}
-                                                    {formData.category && !config.categories.includes(formData.category) && (
+                                                    {formData.category && !config.categories.some(c => c.label === formData.category) && (
                                                         <option value={formData.category}>{formData.category} (en desuso)</option>
                                                     )}
                                                 </select>
