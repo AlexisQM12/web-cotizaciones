@@ -46,6 +46,7 @@ export const INVENTORY_PRESETS = {
             { key: 'calidad',  label: 'Norma / Calidad', type: 'select', options: ['A36', 'A572', 'ASTM A1011', 'Inox 304', 'Inox 316', 'Otro'] },
             { key: 'espesor',  label: 'Espesor',         type: 'number', unit: 'mm', step: '0.01' },
             { key: 'ancho',    label: 'Ancho',           type: 'number', unit: 'mm' },
+            { key: 'diametro', label: 'Diámetro',        type: 'number', unit: 'mm', step: '0.01' },
             { key: 'largo',    label: 'Largo',           type: 'number', unit: 'mm' },
             { key: 'pesoUnit', label: 'Peso por unidad', type: 'number', unit: 'kg', step: '0.01' },
             { key: 'acabado',  label: 'Acabado',         type: 'select', options: ['Laminado en caliente', 'Laminado en frío', 'Galvanizado', 'Negro', 'Pulido'] },
@@ -58,10 +59,14 @@ export const INVENTORY_PRESETS = {
         // la tienda agrupa bien. Escribiéndolas a mano acaban conviviendo
         // "Planchas", "planchas" y "Plancha" como tres familias distintas.
         categories: [
-            'Planchas metálicas',
-            'Ejes redondos sólidos',
-            'Perfiles y tubos',
-            'Insumos y consumibles',
+            {
+                label: 'Planchas metálicas',
+                fields: ['calidad', 'espesor', 'ancho', 'largo', 'pesoUnit', 'acabado', 'precioVenta'],
+            },
+            {
+                label: 'Ejes redondos sólidos',
+                fields: ['calidad', 'diametro', 'largo', 'pesoUnit', 'acabado', 'precioVenta'],
+            },
         ],
         listColumns: ['calidad', 'espesor', 'precioVenta'],
     },
@@ -137,11 +142,23 @@ export function resolveInventoryConfig(raw) {
 
     // Familias del rubro, o las que haya definido el tenant. Vacío = texto
     // libre, que es como se comportaba antes de existir esto.
+    //
+    // Cada familia puede declarar QUÉ campos le corresponden. Una plancha no
+    // tiene diámetro y un eje no tiene ancho: con un formulario único hay que
+    // ir saltándose la mitad de las casillas, y al final se llenan mal. Una
+    // familia sin `fields` usa todos los del rubro, como antes.
     const categories = (Array.isArray(raw?.categories) && raw.categories.length > 0
         ? raw.categories
         : preset.categories || [])
-        .map(String)
-        .map(c => c.trim())
+        .map(c => {
+            const label = String(typeof c === 'string' ? c : c?.label || '').trim();
+            if (!label) return null;
+            const declarados = typeof c === 'object' && Array.isArray(c?.fields) ? c.fields : null;
+            const fields = declarados
+                ? declarados.map(String).filter(k => validKeys.has(k))
+                : [...validKeys];
+            return { label, fields };
+        })
         .filter(Boolean);
 
     const listColumns = (Array.isArray(raw?.listColumns) ? raw.listColumns : preset.listColumns)
@@ -158,6 +175,18 @@ export function resolveInventoryConfig(raw) {
         extraFields,
         listColumns,
     };
+}
+
+/**
+ * Campos que corresponden a una familia de producto.
+ * Sin familia (o con una que ya no existe) se devuelven todos los del rubro:
+ * es preferible enseñar de más que esconderle un dato a quien edita un
+ * artículo antiguo.
+ */
+export function fieldsForCategory(config, category) {
+    const familia = (config?.categories || []).find(c => c.label === category);
+    if (!familia) return config?.extraFields || [];
+    return (config.extraFields || []).filter(f => familia.fields.includes(f.key));
 }
 
 /** Etiqueta de un campo núcleo, respetando el override del tenant. */

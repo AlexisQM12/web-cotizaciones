@@ -11,7 +11,7 @@ import { storage } from '@/lib/firebaseConfig'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { useInventoryConfig } from '@/hooks/useInventoryConfig'
 import { DynamicFields } from '@/components/DynamicFields'
-import { coreLabel, formatFieldValue } from '@/lib/cgoConfig'
+import { coreLabel, formatFieldValue, fieldsForCategory } from '@/lib/cgoConfig'
 
 export default function InventoryDashboard() {
     const { user } = useAuth()
@@ -69,7 +69,7 @@ export default function InventoryDashboard() {
         setLoading(false)
     }
 
-    const handleOpenModal = (item = null) => {
+    const handleOpenModal = (item = null, categoriaInicial = '') => {
         setSelectedImage(null)
         if (item) {
             setEditingItem(item)
@@ -89,7 +89,7 @@ export default function InventoryDashboard() {
             setFormData({
                 name: '',
                 sku: '',
-                category: '',
+                category: categoriaInicial || '',
                 stock: '',
                 minStock: '',
                 unit: config.unitOptions[0] || 'Unidades',
@@ -142,6 +142,21 @@ export default function InventoryDashboard() {
             }
             return nextData;
         });
+
+        // Al cambiar de familia se descartan los atributos que no le tocan. Sin
+        // esto, un eje al que antes se le puso "ancho" lo conservaria oculto y
+        // se guardaria igual: `sanitizeAttributes` valida contra todos los
+        // campos del rubro, no contra los de la familia.
+        if (name === 'category') {
+            const permitidas = new Set(fieldsForCategory(config, value).map(f => f.key));
+            setAttributes(prev => {
+                const limpio = {};
+                for (const [k, v] of Object.entries(prev || {})) {
+                    if (permitidas.has(k)) limpio[k] = v;
+                }
+                return limpio;
+            });
+        }
     }
 
     const handleSubmit = async (e) => {
@@ -236,6 +251,14 @@ export default function InventoryDashboard() {
         if (s <= m) return 'Bajo';
         return 'Normal';
     }
+
+    // Solo los campos de la familia elegida. Con el formulario unico habia que
+    // saltarse el diametro al dar de alta una plancha y el ancho al dar de alta
+    // un eje, y asi es como se acaban llenando mal.
+    const camposDeLaFamilia = useMemo(
+        () => fieldsForCategory(config, formData.category),
+        [config, formData.category]
+    )
 
     const showFolders = categoryFilter === '' && searchQuery === '';
 
@@ -376,7 +399,55 @@ export default function InventoryDashboard() {
                             )}
                         </div>
 
-                        {showFolders ? (
+                        {showFolders && config.categories?.length > 0 ? (
+                            /* Una tarjeta por familia, cada una con su propio formulario.
+                               Antes habia un solo boton de alta y un formulario con los
+                               campos de todas las familias mezclados. */
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', padding: '1rem 0' }}>
+                                {config.categories.map(fam => {
+                                    const count = items.filter(i => (i.category || '') === fam.label).length
+                                    return (
+                                        <div
+                                            key={fam.label}
+                                            style={{
+                                                background: '#ffffff', borderRadius: '16px', border: '2px solid #e2e8f0',
+                                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex',
+                                                flexDirection: 'column', alignItems: 'center', gap: '1rem',
+                                                padding: '2rem 1.5rem', transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'none'; }}
+                                        >
+                                            <div style={{ background: '#eff6ff', borderRadius: '50%', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#1e293b' }}>{fam.label}</h3>
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>{count} items</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCategoryFilter(fam.label)}
+                                                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                                                >
+                                                    Ver
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenModal(null, fam.label)}
+                                                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                                                >
+                                                    + Agregar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : showFolders ? (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.5rem', padding: '1rem 0' }}>
                                 {Object.entries(categoryStats).filter(([cat]) => cat !== 'Todas').sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
                                     <div 
@@ -717,13 +788,13 @@ export default function InventoryDashboard() {
                                     </div>
 
                                     {/* Campos propios del rubro de la empresa (configurables por tenant) */}
-                                    {config.extraFields.length > 0 && (
+                                    {camposDeLaFamilia.length > 0 && (
                                         <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
                                             <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                                {config.presetLabel}
+                                                {formData.category || config.presetLabel}
                                             </p>
                                             <DynamicFields
-                                                fields={config.extraFields}
+                                                fields={camposDeLaFamilia}
                                                 values={attributes}
                                                 onChange={setAttributes}
                                             />
