@@ -25,7 +25,7 @@ const nextConfig = {
             },
         ];
     },
-    serverExternalPackages: ['@google-cloud/vision', 'pdf-parse', '@napi-rs/canvas', 'pdfjs-dist']
+    serverExternalPackages: ['@google-cloud/vision', 'pdf-parse', '@napi-rs/canvas', 'pdfjs-dist', 'tesseract.js']
 };
 
 export default nextConfig;

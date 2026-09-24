@@ -1,0 +1,160 @@
+﻿[2026-05-13T17:10:36.687Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[2026-05-13T17:10:36.689Z] > authorizing via signed-in user (alexismost11@gmail.com)
+[2026-05-13T17:10:36.689Z] [iam] checking project web-cot-aya for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[2026-05-13T17:10:36.690Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:36.690Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:36.691Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions [none]
+[2026-05-13T17:10:36.691Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions  x-goog-user-project=web-cot-aya
+[2026-05-13T17:10:36.691Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[2026-05-13T17:10:37.599Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions 200
+[2026-05-13T17:10:37.599Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/web-cot-aya:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[2026-05-13T17:10:37.599Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:37.599Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:37.600Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya [none]
+[2026-05-13T17:10:38.030Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya 200
+[2026-05-13T17:10:38.030Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya {"projectId":"web-cot-aya","projectNumber":"58467911514","displayName":"WEB COT AYA","name":"projects/web-cot-aya","resources":{"hostingSite":"web-cot-aya"},"state":"ACTIVE","etag":"1_7baad6dd-11a9-4217-a7f1-8e00f2fe4ab9"}
+[2026-05-13T17:10:39.658Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:39.658Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:39.658Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites pageToken=&pageSize=10
+[2026-05-13T17:10:41.123Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[2026-05-13T17:10:41.124Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[2026-05-13T17:10:41.125Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:41.125Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:41.125Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 
+[2026-05-13T17:10:41.493Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites 200
+[2026-05-13T17:10:41.493Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites {"sites":[{"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}]}
+[2026-05-13T17:10:41.493Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:41.493Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:41.493Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config [none]
+[2026-05-13T17:10:41.963Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config 200
+[2026-05-13T17:10:41.963Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/web-cot-aya/webApps/-/config {"projectId":"web-cot-aya","storageBucket":"web-cot-aya.firebasestorage.app","apiKey":"AIzaSyAZ4t2IgeCSBCA_7Di9HvE3KC1WzrsH3q0","authDomain":"web-cot-aya.firebaseapp.com","messagingSenderId":"58467911514","projectNumber":"58467911514","version":"2"}
+node.exe : No Firebase app associated with site web-cot-aya, injecting project default config.
+En C:\Users\LENOVO\AppData\Roaming\npm\firebase.ps1: 24 Carácter: 5
++     & "node$exe"  "$basedir/node_modules/firebase-tools/lib/bin/fireb ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (No Firebase app...default config.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  You can link a Web app to a Hosting site here 
+https://console.firebase.google.com/project/web-cot-aya/settings/general/web
+
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[2026-05-13T17:10:45.474Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:45.474Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:45.474Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[2026-05-13T17:10:45.839Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[2026-05-13T17:10:45.839Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+Ôû▓ Next.js 16.1.2 (Turbopack)
+
+- Environments: .env
+
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+  Creating an optimized production build ...
+
+Ô£ô Compiled successfully in 3.4s
+
+  Running TypeScript ...
+
+  Collecting page data using 19 workers ...
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+[Firebase] Admin SDK iniciado correctamente.
+
+  Generating static pages using 19 workers (0/12) ...
+
+[Firebase] Admin SDK iniciado correctamente.
+
+  Generating static pages using 19 workers (3/12) 
+
+  Generating static pages using 19 workers (6/12) 
+
+  Generating static pages using 19 workers (9/12) 
+
+Ô£ô Generating static pages using 19 workers (12/12) in 948.7ms
+
+  Finalizing page optimization ...
+
+
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ ãÆ /api/client-profiles
+Ôö£ ãÆ /api/client-profiles/[id]
+Ôö£ ãÆ /api/company-profiles
+Ôö£ ãÆ /api/company-profiles/[id]
+Ôö£ ãÆ /api/general-conditions
+Ôö£ ãÆ /api/quotations
+Ôö£ ãÆ /api/quotations/[id]
+Ôö£ ãÆ /api/quotations/migrate
+Ôö£ ãÆ /api/quotations/publish
+Ôö£ ãÆ /api/users
+Ôö£ Ôùï /login
+Ôö£ ãÆ /quotations/[id]
+Ôöö Ôùï /settings
+
+
+ãÆ Proxy (Middleware)
+
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+
+
+Building a Cloud Function to run this application. This is needed due to:
+ ÔÇó middleware
+ ÔÇó non-static component /api/client-profiles/[id]/route
+ ÔÇó non-static component /api/client-profiles/route
+ ÔÇó non-static component /api/company-profiles/[id]/route
+ ÔÇó non-static component /api/company-profiles/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/general-conditions/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/quotations/[id]/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/quotations/migrate/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/quotations/publish/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/quotations/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /api/users/route
+[2026-05-13T17:10:54.538Z]  ÔÇó non-static component /quotations/[id]/page
+
+[2026-05-13T17:10:55.179Z] skipping /_global-error due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping /_not-found due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping /login due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping / due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping /settings due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping /404 due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:55.180Z] skipping /500 due to it matching an unsupported rewrite/redirect/header or middlware
+[2026-05-13T17:10:58.257Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:58.257Z] Checked if tokens are valid: true, expires at: 1778694705099
+[2026-05-13T17:10:58.258Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya [none]
+[2026-05-13T17:10:59.519Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya 200
+[2026-05-13T17:10:59.519Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/web-cot-aya/sites/web-cot-aya {"name":"projects/web-cot-aya/sites/web-cot-aya","defaultUrl":"https://web-cot-aya.web.app","type":"DEFAULT_SITE"}
+[2026-05-13T17:11:00.626Z] Error: EPERM: operation not permitted, symlink 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\node_modules\firebase-admin' -> 'C:\Users\LENOVO\Documents\WEB DE cotizaciones\.firebase\web-cot-aya\functions\.next\node_modules\firebase-admin-a14c8a5423a75469'
+
+Error: An unexpected error has occurred.

@@ -1,161 +1,186 @@
 import { NextResponse } from 'next/server';
-import vision from '@google-cloud/vision';
-import path from 'path';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { PDFParse } = require('pdf-parse'); // Destructurado para evitar constructor TypeErrors
+import { admin } from '@/lib/firebase-admin';
 
-// ─── Cliente de Google Cloud Vision con las mismas credenciales de Firebase Admin ───
-function getVisionClient() {
-    const projectId    = process.env.FIREBASE_PROJECT_ID?.trim().replace(/^["']|["']$/g, '');
-    const clientEmail  = process.env.FIREBASE_CLIENT_EMAIL?.trim().replace(/^["']|["']$/g, '');
-    const privateKey   = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
-
-    // En producción (GCP / Firebase App Hosting), si no hay env variables explícitas,
-    // dejamos que use automáticamente la Cuenta de Servicio del entorno de Cloud Run (ADC)
-    if (clientEmail && privateKey) {
-        return new vision.ImageAnnotatorClient({
-            credentials: { client_email: clientEmail, private_key: privateKey },
-            projectId,
-        });
-    }
-
-    return new vision.ImageAnnotatorClient();
-}
-
-// ─── Renderizador de PDF en imagen usando pdfjs-dist y canvas local ───
-async function getPdfjsDocument(buffer) {
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    // Para Next.js, importar el worker en proceso es mucho más seguro y portable
-    // que depender de resoluciones de rutas relativas con file:///
-    const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerPort = pdfjsWorker;
-    return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
-}
-
-async function renderPdfPageToImage(buffer) {
-    const { createCanvas } = await import('@napi-rs/canvas');
-    const pdf = await getPdfjsDocument(buffer);
-    const page = await pdf.getPage(1); // Escaneamos la primera página (donde están todos los totales y datos)
-    const viewport = page.getViewport({ scale: 2.0 }); // Escala 2.0 para alta definición en OCR
-    const w = Math.ceil(viewport.width);
-    const h = Math.ceil(viewport.height);
-
-    const canvas = createCanvas(w, h);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, w, h);
-    
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    return canvas.toBuffer('image/png');
-}
-
-// Endpoint OCR inteligente para escanear facturas/comprobantes (PDF o imagen).
-// 1) Si es PDF nativo con texto legible, usa pdf-parse (instantáneo y gratis).
-// 2) Si es PDF escaneado (imagen) o con encoding raro, lo convierte a imagen y hace OCR de Google Vision.
-// 3) Si es imagen, hace OCR de Google Vision directo.
 export async function POST(req) {
     try {
         const formData = await req.formData();
         const file = formData.get('file');
 
-        if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
+        if (!file || !file.name) {
+            return NextResponse.json({ error: 'No se envió ningún archivo.' }, { status: 400 });
+        }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const type   = file.type || '';
-        const name   = file.name || '';
+        const name = file.name;
+        const type = file.type || 'application/octet-stream';
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-        const client = getVisionClient();
+        // Max 10MB
+        if (buffer.byteLength > 10 * 1024 * 1024) {
+            return NextResponse.json({
+                error: `El archivo pesa ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB. El máximo soportado es 10 MB.`,
+            }, { status: 400 });
+        }
+
+        // Obtener el token OAuth2 desde el Admin SDK
+        const credential = admin.app().options.credential;
+        const tokenData = await credential.getAccessToken();
+        const accessToken = tokenData.access_token;
+
+        if (!accessToken) {
+            throw new Error('No se pudo obtener el token de acceso para Vision API.');
+        }
+
         let extractedText = '';
         let textSource = '';
 
         if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
-            // 1. Intentamos extracción rápida de texto nativo
-            try {
-                const parser = new PDFParse({ data: buffer });
-                const pdfData = await parser.getText();
-                extractedText = pdfData?.text || '';
-                textSource = 'pdf-parse';
-            } catch (parseErr) {
-                console.warn('pdf-parse falló, se intentará renderizar:', parseErr);
-            }
-
-            // 2. Si no hay texto, o el texto es sospechosamente corto, o no tiene los datos clave,
-            // renderizamos la primera página a imagen y hacemos el OCR robusto de Google Vision.
-            const isTextGarbage = !extractedText || extractedText.trim().length < 50;
-            const tempAmount = isTextGarbage ? null : extractTotalAmount(extractedText);
-            const tempRuc    = isTextGarbage ? null : extractRUC(extractedText);
-
-            if (isTextGarbage || !tempAmount || !tempRuc) {
-                try {
-                    console.log('PDF escaneado o ilegible detectado. Convirtiendo a imagen para OCR con Google Vision...');
-                    const pageImageBuffer = await renderPdfPageToImage(buffer);
-                    
-                    const [result] = await client.documentTextDetection({
-                        image: { content: pageImageBuffer.toString('base64') },
-                        imageContext: { languageHints: ['es', 'en'] },
-                    });
-                    extractedText = result.fullTextAnnotation?.text || '';
-                    textSource = 'google-vision-pdf';
-                } catch (ocrErr) {
-                    console.error('OCR de PDF renderizado falló:', ocrErr);
-                }
-            }
-        } else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
-            // Para imágenes directo a Google Vision
-            const [result] = await client.documentTextDetection({
-                image: { content: buffer.toString('base64') },
-                imageContext: { languageHints: ['es', 'en'] },
+            // Llamada REST a files:annotate
+            const response = await fetch('https://vision.googleapis.com/v1/files:annotate', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    requests: [{
+                        inputConfig: {
+                            content: buffer.toString('base64'),
+                            mimeType: 'application/pdf',
+                        },
+                        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                        pages: [1, 2, 3] // Solo primeras 3 pags para evitar timeout
+                    }]
+                })
             });
-            extractedText = result.fullTextAnnotation?.text || '';
-            textSource = 'google-vision-image';
-        } else {
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Error en Vision API (PDF)');
+            }
+
+            const data = await response.json();
+            const pages = data.responses?.[0]?.responses || [];
+            extractedText = pages
+                .map(p => p?.fullTextAnnotation?.text || '')
+                .filter(Boolean)
+                .join('\n');
+            textSource = 'google-vision-rest-pdf';
+        } 
+        else if (type.startsWith('image/') || /\.(png|jpe?g|webp|tiff?|bmp)$/i.test(name)) {
+            // Llamada REST a images:annotate
+            const response = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    requests: [{
+                        image: { content: buffer.toString('base64') },
+                        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                        imageContext: { languageHints: ['es', 'en'] }
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Error en Vision API (Image)');
+            }
+
+            const data = await response.json();
+            extractedText = data.responses?.[0]?.fullTextAnnotation?.text || '';
+            textSource = 'google-vision-rest-image';
+        } 
+        else {
             return NextResponse.json({ error: `Tipo de archivo no soportado: ${type || name}` }, { status: 400 });
         }
 
         if (!extractedText || extractedText.trim().length === 0) {
             return NextResponse.json({
-                error: 'No se pudo extraer texto del documento.',
+                error: 'No se pudo extraer texto del comprobante.',
                 text: '',
             }, { status: 200 });
         }
 
-        // ── Extraer datos estructurados ──────────────────────────────────
-        const amount      = extractTotalAmount(extractedText);
+        // ── Extracción Segura ──
+        const amountData  = extractTotalAmountAndCurrency(extractedText);
         const ruc         = extractRUC(extractedText);
         const serie       = extractSerieNumero(extractedText, name);
         const fecha       = extractFecha(extractedText);
         const razonSocial = extractRazonSocial(extractedText, ruc);
+        const items       = extractItems(extractedText);
 
         return NextResponse.json({
-            amount,
+            amount: amountData.amount,
+            currency: amountData.currency,
             ruc,
             serie:  serie?.serie  || null,
             numero: serie?.numero || null,
             fecha,
             razonSocial,
-            text: extractedText.slice(0, 3000),
+            items,
+            text: (extractedText || '').slice(0, 3000),
             textSource,
+            stages: [
+                { name: textSource, chars: extractedText.length, error: null }
+            ]
         });
 
     } catch (err) {
-        console.error('[scan-invoice] Error:', err);
-        return NextResponse.json({ error: err?.message || 'Error desconocido' }, { status: 500 });
+        console.error('[scan-invoice] Error crítico:', err);
+        return NextResponse.json({ error: err?.message || 'Error interno en el servidor.' }, { status: 500 });
     }
 }
 
+// ─── Extracción de Ítems (Básico) ──────────────────────────────────────────
+function extractItems(text) {
+    if (!text) return [];
+    const lines = text.split('\n');
+    const items = [];
+    
+    // Busca patrones tipo: "2 [UND] Teclado Inalambrico 50.00 100.00"
+    const itemRegex = /^(\d+(?:\.\d{1,2})?)\s+(?:(?:UND|PZA|KG|LT|MTR|U|NIU)\s+)?([A-Za-z0-9\s\-\.,/]+?)\s+([\d,]+\.\d{2})(?:\s+([\d,]+\.\d{2}))?$/i;
+    
+    for (const line of lines) {
+        const match = line.trim().match(itemRegex);
+        if (match) {
+            const qty = parseFloat(match[1]);
+            let desc = match[2].trim();
+            const price = parseFloat(match[3].replace(/,/g, ''));
+            const total = match[4] ? parseFloat(match[4].replace(/,/g, '')) : (qty * price);
+            
+            // Filtros para evitar basura
+            const descLower = desc.toLowerCase();
+            if (desc.length > 2 && !descLower.includes('total') && !descLower.includes('subtotal') && !descLower.includes('igv') && !descLower.includes('dscto')) {
+                items.push({
+                    quantity: qty,
+                    description: desc,
+                    unitPrice: price,
+                    total: total
+                });
+            }
+        }
+    }
+    
+    return items;
+}
+
 // ─── Extracción del MONTO TOTAL ──────────────────────────────────────────
-function extractTotalAmount(text) {
+function extractTotalAmountAndCurrency(text) {
+    if (!text) return { amount: null, currency: 'PEN' };
     const upper = text.toUpperCase().replace(/\s+/g, ' ');
 
-    // Buscamos todas las coincidencias de patrones de TOTAL real
+    let currency = 'PEN';
+    if (upper.includes('US$') || upper.includes('USD') || upper.includes('DOLARES') || upper.includes('DÓLARES')) {
+        currency = 'USD';
+    }
+
     const regexes = [
-        // 1. TOTAL A PAGAR o IMPORTE TOTAL (las etiquetas más específicas)
-        /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        // 2. TOTAL a secas (evitando SUB TOTAL, P. TOTAL y PRECIO TOTAL)
-        /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
-        // 3. IMPORTE a secas
-        /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /(?:IMPORTE\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL\s+NETO)\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /(?<!SUB\s*|P\.\s*)(?<!PRECIO\s*)TOTAL\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
+        /IMPORTE\s*[:\-–\s]*\s*(?:S\s*\/?[.\s]*|PEN\s*|\$\s*|US\$\s*)?([\d,]+\.\d{2})\b/gi,
     ];
 
     for (const regex of regexes) {
@@ -164,61 +189,57 @@ function extractTotalAmount(text) {
         const matches = [];
         while ((match = regex.exec(upper)) !== null) {
             const val = parseFloat(match[1].replace(/,/g, ''));
-            if (val > 0 && val < 1000000) {
-                matches.push(val);
-            }
+            if (val > 0 && val < 1000000) matches.push({ val, matchStr: match[0] });
         }
         if (matches.length > 0) {
-            // Devolvemos el último encontrado en el documento, que corresponde al total final del pie de página
-            return matches[matches.length - 1];
+            const m = matches[matches.length - 1];
+            if (m.matchStr.includes('US$') || m.matchStr.includes('USD')) currency = 'USD';
+            return { amount: m.val, currency };
         }
     }
 
-    // Fallback inteligente: si no se detectan etiquetas, buscamos el último valor monetario del documento con S/
-    const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
+    const moneyRegex = /(?:S\s*\/?[.\s]*|PEN\s*|US\$\s*|\$\s*)([\d,]+\.\d{2})\b/gi;
     let m;
     const moneyValues = [];
     while ((m = moneyRegex.exec(upper)) !== null) {
         const val = parseFloat(m[1].replace(/,/g, ''));
-        if (val > 0 && val < 1000000) {
-            moneyValues.push(val);
-        }
+        if (val > 0 && val < 1000000) moneyValues.push({ val, matchStr: m[0] });
     }
     if (moneyValues.length > 0) {
-        return moneyValues[moneyValues.length - 1]; // El último monto con S/ suele ser el total final
+        const mv = moneyValues[moneyValues.length - 1];
+        if (mv.matchStr.includes('US$') || mv.matchStr.includes('USD')) currency = 'USD';
+        return { amount: mv.val, currency };
     }
 
-    return null;
+    return { amount: null, currency };
 }
 
-// ─── Extracción del RUC del emisor ───────────────────────────────────────
+// ─── Extracción del RUC ───────────────────────────────────────
 function extractRUC(text) {
+    if (!text) return null;
     const upper = text.toUpperCase();
-    // RUC explícito con etiqueta
     const m = upper.match(/R\.?U\.?C\.?\s*[:N°#]?\s*([12]\d{10})\b/);
     if (m?.[1]) return m[1];
-    // Cualquier número de 11 dígitos que empiece por 10, 15, 17, 20
     const m2 = upper.match(/\b(10|15|17|20)\d{9}\b/);
     return m2?.[0] || null;
 }
 
-// ─── Extracción de Serie + Número del comprobante ────────────────────────
+// ─── Extracción de Serie + Número ────────────────────────
 function extractSerieNumero(text, filename = '') {
-    // Del nombre del archivo (PDF electrónico SUNAT)
+    if (!text) return null;
     const fnMatch = filename.match(/(\d{8,11})-(\d{2})-([EFB]\d{2,3})-(\d+)/i);
     if (fnMatch) return { serie: fnMatch[3].toUpperCase(), numero: fnMatch[4] };
 
     const upper = text.toUpperCase();
-    // F001-35710, E001-123, B001-456
     const m = upper.match(/\b([EFB]\d{2,3})\s*[-–]\s*(\d{1,10})\b/);
     if (m) return { serie: m[1], numero: m[2].replace(/^0+/, '') || m[2] };
     return null;
 }
 
-// ─── Extracción de fecha de emisión ──────────────────────────────────────
+// ─── Extracción de Fecha ──────────────────────────────────────
 function extractFecha(text) {
+    if (!text) return null;
     const upper = text.toUpperCase();
-    // "F. Emision: 11/05/2026" o similar
     const m = upper.match(/(?:F\.?\s*EMISI[ÓO]N|FECHA[^:]*)[:\s]+(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
     if (m) {
         const dd = m[1].padStart(2, '0');
@@ -227,7 +248,6 @@ function extractFecha(text) {
         const d = new Date(`${yy}-${mm}-${dd}`);
         if (!isNaN(d) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) return `${yy}-${mm}-${dd}`;
     }
-    // Cualquier DD/MM/YYYY
     const m2 = upper.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})\b/);
     if (m2) {
         const dd = m2[1].padStart(2, '0'), mm = m2[2].padStart(2, '0'), yy = m2[3];
@@ -237,9 +257,9 @@ function extractFecha(text) {
     return null;
 }
 
-// ─── Extracción de razón social del emisor ────────────────────────────────
+// ─── Extracción de Razón Social ────────────────────────────────
 function extractRazonSocial(text, ruc) {
-    if (!ruc) return null;
+    if (!text || !ruc) return null;
     const idx = text.toUpperCase().indexOf(ruc);
     if (idx === -1) return null;
     const before = text.slice(Math.max(0, idx - 300), idx);

@@ -20,7 +20,7 @@ export default function ContabilidadIndex() {
     }, [loading, exists, router]);
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedModule="contabilidad">
             <NavBar />
             <main className="container">
                 <p style={{ paddingTop: '5rem', color: '#94a3b8' }}>Cargando hub contable...</p>
