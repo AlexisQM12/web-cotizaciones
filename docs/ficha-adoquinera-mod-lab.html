@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ficha Técnica — Adoquinera MOD-LAB · Aya Technologies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--green:#54B53C;--ink:#0e0e0e;--ink-soft:#444;--ink-muted:#888;--line:#e0e0e0;--surface:#f6f6f6;--font:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);font-size:9.5pt;color:var(--ink);background:#ccc;line-height:1.5;}
+/* Hoja A4 exacta: 210 x 297 mm. Altura fija para que 1 div = 1 hoja impresa. */
+.page{width:210mm;height:297mm;overflow:hidden;background:#fff;margin:12mm auto;padding:14mm 16mm 22mm;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.18);}
+.page-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:14px;}
+/* logotipo oficial: PNG con fondo transparente, alto fijo y ancho proporcional */
+.logo-img{height:15mm;width:auto;display:block;flex-shrink:0;}
+.doc-meta{text-align:right;}
+.doc-meta .doc-title{font-size:8pt;font-weight:500;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;}
+.doc-meta .doc-ref{font-family:var(--mono);font-size:7pt;color:var(--ink-muted);margin-top:2px;}
+/* Texto claro sobre fondo oscuro: antialiasing en escala de grises para evitar
+   el fringing/entrecortado del subpixel rendering. */
+.cover-band{background:var(--ink);color:#fff;padding:22px 22px 20px;margin:0 -16mm;position:relative;overflow:hidden;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+/* color solido pre-mezclado (#0e0e0e + #54B53C al 12%): evita crear una capa
+   de composicion con opacity, que era lo que rompia el render del texto. */
+.cover-band::before{content:"";position:absolute;right:-20px;top:-20px;width:140px;height:140px;background:#162214;border-radius:50%;}
+.cover-band>*{position:relative;z-index:1;}
+.mono-tag{font-family:var(--mono);font-size:7.5pt;color:var(--green);display:block;margin-bottom:8px;}
+.cover-band h1{font-size:22pt;font-weight:300;line-height:1.08;letter-spacing:-0.02em;}
+.cover-band h1 strong{font-weight:700;}
+/* colores opacos equivalentes a los rgba anteriores, sin canal alfa */
+.cover-band .sub{font-size:10pt;color:#b0b0b0;margin-top:8px;font-weight:400;}
+.cover-specs{display:flex;gap:0;margin:16px 0 0;border-top:1px solid #323232;padding-top:14px;}
+.cover-spec{flex:1;border-right:1px solid #262626;padding-right:14px;margin-right:14px;}
+.cover-spec:last-child{border-right:none;padding-right:0;margin-right:0;}
+.cover-spec .label{font-family:var(--mono);font-size:7pt;color:#8d8d8d;text-transform:uppercase;letter-spacing:.06em;}
+.cover-spec .value{font-size:10pt;font-weight:500;color:#fff;margin-top:2px;}
+.section-title{display:flex;align-items:center;gap:10px;margin:17px 0 9px;padding-bottom:5px;border-bottom:1px solid var(--line);}
+.section-title .mono-tag{font-family:var(--mono);font-size:7pt;color:var(--green);flex-shrink:0;margin-bottom:0;}
+.section-title h2{font-size:11pt;font-weight:500;letter-spacing:-0.01em;color:var(--ink);}
+/* prosa justificada con particion silabica (el <html lang="es"> activa el diccionario) */
+.alert{padding:8px 12px;border-left:3px solid var(--green);background:#f2faf0;font-size:8.5pt;color:var(--ink-soft);margin:9px 0;border-radius:0 4px 4px 0;text-align:justify;hyphens:auto;}
+.alert.warn{border-color:#E8612A;background:#fff6f2;}
+.alert.note{border-color:#3d8be8;background:#f2f7ff;}
+table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:9px 0;}
+th{background:var(--ink);color:#fff;font-weight:500;text-align:left;padding:6px 9px;font-size:8pt;}
+th.green{background:var(--green);}
+td{padding:5px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
+tr:nth-child(even) td{background:var(--surface);}
+td.lc{font-weight:500;color:var(--ink);width:42%;}
+td.mn{font-family:var(--mono);font-size:8pt;}
+.two-t{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:9px 0;}
+.foto-wrap{margin:10px 0;border-radius:6px;overflow:hidden;border:1px solid var(--line);}
+.foto-wrap img{width:100%;display:block;height:76mm;object-fit:cover;}
+.foto-caption{padding:6px 10px;background:var(--surface);font-size:7.5pt;color:var(--ink-muted);border-top:1px solid var(--line);font-family:var(--mono);}
+/* ficha de equipo: foto arriba, tabla de especificaciones debajo */
+.equipo{display:flex;flex-direction:column;}
+.equipo-foto{border:1px solid var(--line);border-radius:5px;background:var(--surface);padding:6px;}
+.equipo-foto img{width:100%;height:38mm;object-fit:contain;display:block;}
+.mold-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:9px 0;}
+.mold-card{border:1px solid var(--line);border-radius:5px;overflow:hidden;display:flex;flex-direction:column;}
+.mold-card img{width:100%;display:block;background:#f8f8f8;max-height:225px;object-fit:contain;}
+.mold-caption{padding:7px 9px;background:var(--surface);border-top:1px solid var(--line);}
+.mold-name{font-weight:500;font-size:8pt;}
+.mold-dims{font-family:var(--mono);font-size:7.5pt;color:var(--ink-muted);margin-top:2px;}
+.mold-desc{font-size:7.5pt;color:var(--ink-soft);margin-top:3px;line-height:1.4;}
+.maint-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:9px 0;}
+.maint-card{border:1px solid var(--line);border-radius:6px;padding:10px 12px;}
+.card-head{font-family:var(--mono);font-size:7pt;text-transform:uppercase;letter-spacing:.06em;color:var(--green);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.maint-card ul{margin:0;padding-left:13px;}
+.maint-card li{font-size:7.8pt;color:var(--ink-soft);margin:2px 0;line-height:1.4;}
+.vida-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:9px 0;}
+.vida-card{padding:9px 11px;border:1px solid var(--line);border-radius:5px;}
+.v-label{font-family:var(--mono);font-size:7pt;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;}
+.v-val{font-size:14pt;font-weight:300;color:var(--ink);margin:2px 0;letter-spacing:-.02em;}
+.v-val span{font-size:8pt;color:var(--ink-muted);}
+.v-note{font-size:7.5pt;color:var(--ink-soft);line-height:1.4;}
+.safety-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:9px 0;}
+.safety-item{border:1px solid var(--line);border-radius:5px;padding:8px 9px;display:flex;gap:8px;align-items:flex-start;}
+.safety-icon{font-size:14pt;flex-shrink:0;line-height:1;}
+.s-title{font-size:8pt;font-weight:500;color:var(--ink);}
+.s-body{font-size:7.5pt;color:var(--ink-soft);margin-top:2px;line-height:1.38;}
+.page-footer{position:absolute;bottom:8mm;left:16mm;right:16mm;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:5px;}
+.f-left{font-family:var(--mono);font-size:6.5pt;color:var(--ink-muted);}
+.f-center{font-size:7pt;color:var(--ink-muted);text-align:center;}
+.f-right{font-family:var(--mono);font-size:7pt;color:var(--ink-muted);}
+.page-num{color:var(--green);font-weight:500;}
+p.body{font-size:8.5pt;color:var(--ink-soft);line-height:1.6;margin-bottom:7px;text-align:justify;hyphens:auto;}
+ol.steps{margin:0 0 9px 16px;font-size:8.5pt;color:#444;line-height:1.65;}
+ol.steps li{text-align:justify;hyphens:auto;padding-left:2px;}
+/* seccion de laboratorio: render a la izquierda, texto a la derecha */
+.lab-split{display:grid;grid-template-columns:62mm 1fr;gap:12px;margin:9px 0;align-items:start;}
+.lab-render{border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.lab-render img{width:100%;display:block;background:#fff;}
+.lab-texto p.body:last-of-type{margin-bottom:4px;}
+ul.blist{margin:4px 0 0 14px;}
+ul.blist li{font-size:8pt;color:var(--ink-soft);margin:3px 0;line-height:1.45;text-align:justify;hyphens:auto;}
+ul.blist li::marker{color:var(--green);}
+.contact-row{display:flex;gap:20px;font-size:8.5pt;color:#444;margin-bottom:9px;}
+.contact-row .ck{font-family:var(--mono);font-size:7pt;color:#888;margin-bottom:3px;}
+.disclaimer{padding:8px 10px;background:#f6f6f6;border-radius:4px;font-size:7pt;color:#888;font-family:var(--mono);border-left:3px solid #54B53C;line-height:1.45;text-align:justify;}
+
+/* ── DATO PENDIENTE DE CONFIRMACION ──
+   Rev. 1.0: los valores que aun no han sido medidos o verificados sobre el
+   equipo fabricado se marcan explicitamente en lugar de estimarse. */
+.tbd{font-family:var(--mono);font-size:7.5pt;color:#E8612A;font-style:normal;}
+.tbd::before{content:"por confirmar";}
+.calc{font-family:var(--mono);font-size:7pt;color:var(--ink-muted);}
+
+/* boton flotante de descarga (no se imprime) */
+.pdf-btn{position:fixed;right:20px;bottom:20px;z-index:99;display:inline-flex;align-items:center;gap:8px;
+  padding:12px 20px;border:none;border-radius:999px;cursor:pointer;
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+  background:var(--ink);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.28);
+  transition:background .18s ease,transform .18s ease;}
+.pdf-btn:hover{background:var(--green);transform:translateY(-2px);}
+.pdf-btn svg{width:15px;height:15px;}
+
+/* ── IMPRESION: A4 exacto, 1 div = 1 hoja ── */
+@page{size:A4;margin:0;}
+@media print{
+  /* conserva las bandas oscuras y los encabezados verdes al exportar a PDF */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  body{background:#fff;}
+  .page{margin:0;box-shadow:none;width:210mm;height:297mm;padding:14mm 16mm 22mm;page-break-after:always;break-after:page;}
+  .page:last-child{page-break-after:auto;break-after:auto;}
+  .page-footer{position:absolute;}
+  .pdf-btn{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HOJA 1 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica de Equipo</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0 · Arequipa, Perú · 2026</div></div>
+</header>
+<div class="cover-band">
+  <span class="mono-tag">// FT-002 — Equipamiento de Laboratorio de Materiales</span>
+  <h1>Adoquinera<br><strong>Semiautomática MOD-LAB</strong></h1>
+  <div class="sub">Prensa hidráulica para conformado de adoquines de concreto y bloques geopoliméricos · Diseño Aya Technologies</div>
+  <div class="cover-specs">
+    <div class="cover-spec"><div class="label">Fuerza de prensado</div><div class="value">12 tn — 117.7 kN</div></div>
+    <div class="cover-spec"><div class="label">Presión de trabajo</div><div class="value">700 bar</div></div>
+    <div class="cover-spec"><div class="label">Producción</div><div class="value">1 pieza / tanda</div></div>
+    <div class="cover-spec"><div class="label">Alimentación</div><div class="value">220 V / 60 Hz — 1&Phi;</div></div>
+  </div>
+</div>
+
+<div class="foto-wrap" style="margin-top:14px;">
+  <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/portfolio%2F58Tvmdy8cWbbfzE0V7zt%2F1781458329109-Untitled_Project_(165).png?alt=media&token=1c4833be-1310-434d-babb-e7a53a09e195" alt="Máquina Adoquinera MOD-LAB">
+  <div class="foto-caption">Fig. 1 — Adoquinera MOD-LAB · configuración para laboratorio de materiales</div>
+</div>
+
+<div class="section-title"><span class="mono-tag">// 01</span><h2>Descripción General y Principio de Funcionamiento</h2></div>
+<p class="body">La <strong>Adoquinera MOD-LAB</strong> es un equipo de conformado por <strong>prensado hidráulico</strong>, diseñado y fabricado por Aya Technologies para la producción unitaria y controlada de adoquines de concreto y de <strong>bloques geopoliméricos</strong> en entornos de investigación. La experimentación con nuevos materiales exige precisión sin comprometer el entorno de trabajo; las adoquineras convencionales presentan limitaciones de espacio, ruido y seguridad al intentar integrarlas en centros de investigación. El diseño MOD-LAB adapta la fuerza y la robustez de un equipo industrial a las condiciones de un laboratorio: es compacto, silencioso y seguro, sin sacrificar la calidad del conformado.</p>
+<div class="alert note" style="margin-top:0;"><strong>Compactación por presión hidráulica, no por vibración.</strong> El material se densifica mediante la carga estática que un cilindro hidráulico de 12 tn aplica sobre el molde, alimentado por una unidad de poder hidráulico de 700 bar. A diferencia de las bloqueteras vibratorias, la energía de compactación es <strong>una variable medible y reproducible</strong>: se fija por la presión de trabajo y el tiempo de sostenimiento, ambos legibles en el manómetro de la central. Esto hace que las probetas obtenidas sean trazables entre sí, condición necesaria para comparar dosificaciones en un programa experimental.</div>
+<p class="body" style="margin-bottom:0;">La operación es <strong>semiautomática</strong>: el llenado del molde, el enrasado y la extracción de la pieza son manuales, mientras que el avance y el retroceso del cilindro se comandan desde el tablero eléctrico montado en el lateral del bastidor, provisto de parada de emergencia. La máquina produce <strong>un adoquín por tanda</strong>, lo que la orienta a la preparación de probetas de ensayo y a series cortas de validación, no a la producción en volumen.</p>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">1</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 2 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="alert note" style="margin-top:0;"><strong>Origen de los datos.</strong> Las magnitudes de esta ficha provienen de la medición del equipo fabricado y de la placa de características de la central hidráulica. Se exceptúan los valores marcados como <span class="calc">calculado</span>, derivados de la fuerza nominal y la presión de trabajo, y la vida útil del molde, que es una estimación de ingeniería. Ambos casos se detallan en la sección 13.</div>
+
+<div class="section-title"><span class="mono-tag">// 02</span><h2>Especificaciones Técnicas de los Equipos</h2></div>
+<div class="two-t">
+<div class="equipo">
+<table style="margin-top:0;">
+<thead><tr><th colspan="2" class="green">Adoquinera MOD-LAB</th></tr></thead>
+<tbody>
+<tr><td class="lc">Principio de conformado</td><td class="mn">Prensado hidráulico estático</td></tr>
+<tr><td class="lc">Modo de operación</td><td class="mn">Semiautomático</td></tr>
+<tr><td class="lc">Producción por tanda</td><td class="mn">1 adoquín</td></tr>
+<tr><td class="lc">Fuerza nominal de prensado</td><td class="mn">12 tn (117.7 kN)</td></tr>
+<tr><td class="lc">Dimensiones generales</td><td class="mn">900 × 520 × 1000 mm (L × A × H)</td></tr>
+<tr><td class="lc">Peso de operación</td><td class="mn">≈ 250 kg</td></tr>
+<tr><td class="lc">Carrera útil del cilindro</td><td class="mn">190 mm</td></tr>
+<tr><td class="lc">Altura de trabajo (mesa)</td><td class="mn">800 mm</td></tr>
+<tr><td class="lc">Tiempo de ciclo hidráulico</td><td class="mn">30 s</td></tr>
+<tr><td class="lc">Bastidor</td><td class="mn">Pórtico cerrado de acero soldado</td></tr>
+<tr><td class="lc">Guiado del plato</td><td class="mn">4 columnas guía</td></tr>
+<tr><td class="lc">Nivelación</td><td class="mn">4 patas regulables en altura</td></tr>
+<tr><td class="lc">Mando</td><td class="mn">Tablero lateral con parada de emergencia</td></tr>
+<tr><td class="lc">Garantía</td><td class="mn">12 meses</td></tr>
+</tbody>
+</table>
+</div>
+<div class="equipo">
+<table style="margin-top:0;">
+<thead><tr><th colspan="2" class="green">Unidad de Poder Hidráulico DB300-D2</th></tr></thead>
+<tbody>
+<tr><td class="lc">Código / marca</td><td class="mn">130006 · Hydraulicks</td></tr>
+<tr><td class="lc">Presión máxima</td><td class="mn">700 bar (10 000 psi)</td></tr>
+<tr><td class="lc">Tipo de control</td><td class="mn">Eléctrico</td></tr>
+<tr><td class="lc">Potencia del motor</td><td class="mn">3 kW — 4 HP</td></tr>
+<tr><td class="lc">Tensión de alimentación</td><td class="mn">220 V / 60 Hz, monofásico</td></tr>
+<tr><td class="lc">Tipo de bomba</td><td class="mn">Bomba doble</td></tr>
+<tr><td class="lc">Caudal de alta presión</td><td class="mn">2.8 L/min @ 700 bar</td></tr>
+<tr><td class="lc">Caudal de baja presión</td><td class="mn">14 L/min @ 70 bar</td></tr>
+<tr><td class="lc">Velocidad del motor</td><td class="mn">1 400 RPM</td></tr>
+<tr><td class="lc">Capacidad del tanque</td><td class="mn">30 L</td></tr>
+<tr><td class="lc">Tipo de aceite</td><td class="mn">Hidráulico antidesgaste</td></tr>
+<tr><td class="lc">Dimensiones / peso</td><td class="mn">510 × 388 × 630 mm · 65 kg</td></tr>
+<tr><td class="lc">Conexiones</td><td class="mn">NPT 3/8"</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="alert warn"><strong>Antes de la puesta en marcha:</strong> verificar el nivel de aceite del depósito de la central hidráulica. Operar la bomba con el tanque por debajo del nivel provoca cavitación y la destruye en pocos minutos. Indicación del fabricante de la unidad DB300-D2.</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">2</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 3 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="section-title" style="margin-top:0;"><span class="mono-tag">// 03</span><h2>Sistema Hidráulico</h2></div>
+<p class="body">El accionamiento se compone de la central de poder <strong>DB300-D2</strong> y de un <strong>cilindro hidráulico de 12 tn</strong> montado sobre el bastidor de la prensa. La central es de <strong>bomba doble</strong>: una etapa de gran caudal (14 L/min) que ejecuta el acercamiento rápido del pistón a baja presión, y una etapa de alto esfuerzo (2.8 L/min) que realiza el prensado propiamente dicho hasta los 700 bar. El cambio entre etapas es automático y depende de la resistencia que encuentra el pistón.</p>
+<table>
+<thead><tr><th>Parámetro del circuito</th><th>Valor</th><th>Origen del dato</th></tr></thead>
+<tbody>
+<tr><td class="lc">Cilindro — fuerza nominal</td><td class="mn">12 tn</td><td class="mn">Dato de diseño</td></tr>
+<tr><td class="lc">Cilindro — tipo y carrera</td><td class="mn">Doble efecto · 190 mm</td><td class="mn">Dato de diseño</td></tr>
+<tr><td class="lc">Área efectiva del pistón</td><td class="mn">≈ 1 681 mm² (&Oslash; ≈ 46 mm)</td><td><span class="calc">calculado: 117.7 kN / 70 MPa</span></td></tr>
+<tr><td class="lc">Velocidad de acercamiento</td><td class="mn">≈ 139 mm/s</td><td><span class="calc">calculado: 14 L/min / área</span></td></tr>
+<tr><td class="lc">Velocidad de prensado</td><td class="mn">≈ 28 mm/s</td><td><span class="calc">calculado: 2.8 L/min / área</span></td></tr>
+<tr><td class="lc">Fluido</td><td class="mn">Aceite antidesgaste HM · ISO VG 46</td><td class="mn">Grado habitual en centrales de este tipo</td></tr>
+<tr><td class="lc">Retorno del vástago</td><td class="mn">Hidráulico (doble efecto)</td><td class="mn">Permite la extracción por empuje</td></tr>
+</tbody>
+</table>
+
+<div class="section-title"><span class="mono-tag">// 04</span><h2>Presión de Trabajo y Energía de Compactación</h2></div>
+<p class="body">La variable que el operador controla durante el ensayo es la <strong>presión del manómetro de la central</strong>. La tabla siguiente traduce esa lectura a la fuerza que entrega el cilindro, y la segunda tabla convierte esa fuerza en la presión de compactación efectiva sobre la pieza, que es el parámetro comparable entre dosificaciones.</p>
+<div class="two-t">
+<table style="margin-top:0;">
+<thead><tr><th>Presión manométrica</th><th>Fuerza del cilindro</th></tr></thead>
+<tbody>
+<tr><td class="mn">100 bar</td><td class="mn">16.8 kN — 1.7 tn</td></tr>
+<tr><td class="mn">200 bar</td><td class="mn">33.6 kN — 3.4 tn</td></tr>
+<tr><td class="mn">300 bar</td><td class="mn">50.4 kN — 5.1 tn</td></tr>
+<tr><td class="mn">400 bar</td><td class="mn">67.2 kN — 6.9 tn</td></tr>
+<tr><td class="mn">500 bar</td><td class="mn">84.1 kN — 8.6 tn</td></tr>
+<tr><td class="mn">600 bar</td><td class="mn">100.9 kN — 10.3 tn</td></tr>
+<tr><td class="mn">700 bar</td><td class="mn">117.7 kN — 12.0 tn</td></tr>
+</tbody>
+</table>
+<table style="margin-top:0;">
+<thead><tr><th>Área en planta de la pieza</th><th>Presión de compactación a 12 tn</th></tr></thead>
+<tbody>
+<tr><td class="mn">100 cm²</td><td class="mn">120 kgf/cm² — 11.8 MPa</td></tr>
+<tr><td class="mn">150 cm²</td><td class="mn">80 kgf/cm² — 7.8 MPa</td></tr>
+<tr><td class="mn">200 cm² (adoquín 200×100)</td><td class="mn">60 kgf/cm² — 5.9 MPa</td></tr>
+<tr><td class="mn">250 cm²</td><td class="mn">48 kgf/cm² — 4.7 MPa</td></tr>
+<tr><td class="mn">300 cm²</td><td class="mn">40 kgf/cm² — 3.9 MPa</td></tr>
+<tr><td class="mn">400 cm²</td><td class="mn">30 kgf/cm² — 2.9 MPa</td></tr>
+</tbody>
+</table>
+</div>
+<div class="alert note"><strong>Cómo leer estas tablas.</strong> A mayor área de la pieza, menor es la presión de compactación que se alcanza con la misma fuerza de 12 tn. Por eso el formato máximo de adoquín que el equipo puede conformar correctamente no depende del molde sino de la presión mínima que exija la mezcla. Fijado ese umbral, el área máxima admisible es 117.7 kN dividido entre dicha presión.</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">3</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 4 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="section-title" style="margin-top:0;"><span class="mono-tag">// 05</span><h2>Capacidad de Producción</h2></div>
+<table>
+<thead><tr><th>Concepto</th><th>Valor</th><th>Observación</th></tr></thead>
+<tbody>
+<tr><td class="lc">Piezas por tanda</td><td class="mn">1</td><td>Un molde por ciclo; equipo orientado a probetas y series cortas</td></tr>
+<tr><td class="lc">Tiempo de ciclo hidráulico</td><td class="mn">30 s</td><td>Descenso, prensado, sostenimiento y retorno con extracción</td></tr>
+<tr><td class="lc">Tiempo de llenado y enrasado</td><td class="mn">40 s</td><td>Operación manual; varía con la fluidez de la mezcla</td></tr>
+<tr><td class="lc">Ciclo total por pieza</td><td class="mn">70 s</td><td><span class="calc">calculado: 30 s + 40 s</span></td></tr>
+<tr><td class="lc">Producción teórica</td><td class="mn">≈ 51 piezas/h</td><td><span class="calc">calculado: 3 600 s / 70 s</span></td></tr>
+<tr><td class="lc">Producción en régimen sostenido</td><td class="mn">40 – 45 piezas/h</td><td>Estimado; descuenta registro de datos, limpieza y pausas del operador</td></tr>
+<tr><td class="lc">Operadores requeridos</td><td class="mn">1</td><td>Un solo operador cubre el llenado, el prensado y la extracción</td></tr>
+</tbody>
+</table>
+<div class="alert note"><strong>El cuello de botella es manual, no hidráulico.</strong> El llenado y el enrasado consumen 40 de los 70 s del ciclo: más de la mitad del tiempo. Reducir el tiempo de prensado apenas mueve la producción; lo que sí la cambia es preparar la mezcla por lotes y tener la siguiente carga dosificada antes de que termine el ciclo anterior.</div>
+
+<div class="section-title"><span class="mono-tag">// 06</span><h2>Moldes y Formatos Producibles</h2></div>
+<p class="body">El molde es una pieza intercambiable compuesta por la caja de conformado y el punzón o macho superior solidario al vástago del cilindro. El cambio de formato es una operación manual de desmontaje y alineación.</p>
+<table>
+<thead><tr><th>Característica del molde</th><th>Especificación</th></tr></thead>
+<tbody>
+<tr><td class="lc">Formato estándar</td><td class="mn">Adoquín 200 × 100 × 60 mm</td></tr>
+<tr><td class="lc">Área en planta</td><td class="mn">200 cm² → 60 kgf/cm² (5.9 MPa) a 12 tn</td></tr>
+<tr><td class="lc">Espesor de pieza regulable</td><td class="mn">40 / 60 / 80 mm</td></tr>
+<tr><td class="lc">Material del molde</td><td class="mn">Acero A36 mecanizado y galvanizado</td></tr>
+<tr><td class="lc">Sistema de extracción</td><td class="mn">Por empuje del pistón del cilindro</td></tr>
+</tbody>
+</table>
+<div class="alert"><strong>Un solo formato en planta, tres espesores.</strong> La cavidad de 200 × 100 mm es fija y el espesor se regula entre 40, 60 y 80 mm. Como la fuerza de 12 tn actúa siempre sobre la misma área, <strong>la presión de compactación es de 5.9 MPa en los tres espesores</strong>: al variar la altura cambia el volumen de mezcla, no la presión. Un adoquín de 80 mm requiere por tanto un tercio más de material que uno de 60 mm bajo idéntica compactación.</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">4</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 5 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="alert note" style="margin-top:0;"><strong>Referencia normativa de formato.</strong> La NTP 399.611 clasifica los adoquines de concreto en tres tipos según su uso, y a cada tipo le asocia un espesor nominal y una resistencia mínima. Los tres espesores que admite el molde de la MOD-LAB cubren esa clasificación: <strong>40 y 60 mm</strong> corresponden al Tipo I y <strong>80 mm</strong> habilita los Tipos II y III, siempre que la mezcla alcance la resistencia exigida a cada uno.</div>
+<table>
+<thead><tr><th>Tipo (NTP 399.611)</th><th>Uso previsto</th><th>Espesor nominal</th><th>f&prime;c mín. — promedio de 3 unidades</th></tr></thead>
+<tbody>
+<tr><td class="lc">Tipo I</td><td>Pavimentos peatonales</td><td class="mn">40 y 60 mm</td><td class="mn">31 MPa (320 kg/cm²)</td></tr>
+<tr><td class="lc">Tipo II</td><td>Pavimentos de tránsito vehicular ligero</td><td class="mn">60, 80 y 100 mm</td><td class="mn">41 / 37 / 35 MPa según espesor</td></tr>
+<tr><td class="lc">Tipo III</td><td>Tránsito pesado, patios industriales y de contenedores</td><td class="mn">&ge; 80 mm</td><td class="mn">55 MPa (561 kg/cm²)</td></tr>
+</tbody>
+</table>
+
+<div class="section-title"><span class="mono-tag">// 07</span><h2>Consideraciones de Instalación</h2></div>
+<table>
+<thead><tr><th>Requisito</th><th>Especificación</th></tr></thead>
+<tbody>
+<tr><td class="lc">Alimentación eléctrica</td><td>220 V / 60 Hz monofásica, exclusiva para el equipo. Corriente nominal del motor ≈ 16 A; se recomienda llave termomagnética de 25 A y conductor de 4 mm²</td></tr>
+<tr><td class="lc">Protección diferencial</td><td>Interruptor diferencial de 30 mA aguas arriba del tomacorriente</td></tr>
+<tr><td class="lc">Puesta a tierra</td><td>Obligatoria en la central hidráulica y en el bastidor; resistencia &le; 25 &Omega;</td></tr>
+<tr><td class="lc">Superficie de apoyo</td><td>Piso firme y nivelado, capaz de soportar el peso del conjunto más la reacción de prensado</td></tr>
+<tr><td class="lc">Área de trabajo</td><td>Frente libre para el operador y espacio lateral para la central hidráulica y sus mangueras</td></tr>
+<tr><td class="lc">Nivelación</td><td>Verticalidad del cilindro respecto de la mesa: la desalineación genera carga excéntrica sobre el vástago</td></tr>
+<tr><td class="lc">Iluminación</td><td>&ge; 300 lux sobre la zona de molde</td></tr>
+<tr><td class="lc">Ventilación</td><td>Renovación de aire suficiente para evitar la acumulación de polvo de cemento en interiores</td></tr>
+<tr><td class="lc">Acceso a agua</td><td>Punto de agua cercano para la limpieza del molde al término del turno</td></tr>
+<tr><td class="lc">Área de curado</td><td>Superficie plana adyacente, con humedad controlada durante las primeras 24 h</td></tr>
+</tbody>
+</table>
+<div class="alert warn"><strong>Mangueras de alta presión.</strong> Tender las mangueras de 700 bar sin dobleces cerrados, sin torsión y fuera de las zonas de tránsito. Un radio de curvatura menor al admisible es la causa más frecuente de rotura por fatiga en circuitos de esta presión.</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">5</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 6 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="section-title" style="margin-top:0;"><span class="mono-tag">// 08</span><h2>Instrucciones de Operación</h2></div>
+<ol class="steps">
+<li><strong>Verificación previa:</strong> comprobar el nivel de aceite del depósito, la ausencia de fugas en mangueras y racores, el estado del manómetro, que la seta de emergencia esté desenclavada y que el molde esté limpio y libre de objetos extraños.</li>
+<li><strong>Purga inicial:</strong> con el molde vacío, hacer descender y ascender el cilindro en vacío una vez para expulsar el aire del circuito y confirmar que la botonera responde en ambos sentidos.</li>
+<li><strong>Preparación de la mezcla:</strong> dosificar en seco, incorporar el agua o la solución activadora y homogeneizar. Para geopolímeros, seguir el protocolo de activación alcalina definido por el laboratorio y respetar el tiempo de trabajabilidad del sistema.</li>
+<li><strong>Llenado del molde:</strong> cargar la mezcla en la cavidad en dos o tres tandas, compactándola ligeramente con varilla entre cada una para evitar bolsones de aire en las esquinas.</li>
+<li><strong>Enrasado:</strong> retirar el exceso con regla metálica hasta dejar la superficie a ras del borde de la caja. Un llenado desigual produce piezas con densidad y altura variables, que no son comparables entre sí.</li>
+<li><strong>Acercamiento:</strong> pulsar <strong>DOWN</strong> hasta que el punzón entre en contacto con la mezcla. En esta etapa opera la bomba de gran caudal y el descenso es rápido: mantener ambas manos fuera de la zona de molde.</li>
+<li><strong>Prensado:</strong> continuar pulsando DOWN. Al encontrar resistencia, la central conmuta a la etapa de alta presión. Sostener hasta alcanzar la <strong>presión objetivo del ensayo</strong> en el manómetro y mantenerla durante el tiempo de sostenimiento definido en el protocolo.</li>
+<li><strong>Registro:</strong> anotar presión alcanzada, tiempo de sostenimiento, dosificación y número de probeta. Sin este registro la pieza no es trazable y pierde valor como muestra de ensayo.</li>
+<li><strong>Extracción por empuje:</strong> el propio pistón desmolda la pieza expulsándola de la cavidad. Acompañarla con la mano enguantada al salir y depositarla sobre una superficie plana: el adoquín en verde se deforma con muy poca carga. Luego retornar el vástago hasta el tope.</li>
+<li><strong>Curado:</strong> trasladar la pieza al área de curado y mantener las condiciones que exija el material. Para concreto convencional, humedad durante las primeras 24 h y 28 días antes de un ensayo de resistencia a compresión.</li>
+<li><strong>Parada:</strong> limpiar molde, punzón y mesa con agua antes de que fragüe el residuo. Retornar el cilindro a posición replegada, apagar el motor y desconectar la alimentación.</li>
+</ol>
+<div class="alert warn"><strong>Nunca corregir la posición de la pieza o del molde con el cilindro presurizado.</strong> Retornar siempre el vástago y despresurizar el circuito antes de introducir las manos o cualquier herramienta en la zona de conformado.</div>
+
+<div class="section-title"><span class="mono-tag">// 09</span><h2>Parámetros de Mezcla</h2></div>
+<table>
+<thead><tr><th>Parámetro</th><th>Valor / Rango</th><th>Observación</th></tr></thead>
+<tbody>
+<tr><td class="lc">Tamaño máximo del árido</td><td class="mn">&le; 9.5 mm</td><td>El formato reducido de la pieza exige árido fino; el grueso genera caras defectuosas</td></tr>
+<tr><td class="lc">Humedad de la mezcla</td><td class="mn">6 – 10 %</td><td>Consistencia de "tierra húmeda": cohesiona al apretarla sin soltar agua</td></tr>
+<tr><td class="lc">Tiempo mínimo de mezclado</td><td class="mn">4 min</td><td>Asegura la homogeneidad antes del prensado</td></tr>
+<tr><td class="lc">Tiempo máximo de uso</td><td class="mn">&le; 45 min</td><td>Desechar la mezcla con signos de fraguado inicial</td></tr>
+<tr><td class="lc">Dosificación de referencia</td><td class="mn">—</td><td>La define el equipo investigador según su programa experimental</td></tr>
+<tr><td class="lc">Sistema geopolimérico</td><td class="mn">—</td><td>Precursor, molaridad del activador y relación líquido/sólido según protocolo propio</td></tr>
+</tbody>
+</table>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">6</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 7 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="section-title" style="margin-top:0;"><span class="mono-tag">// 10</span><h2>Plan de Mantenimiento</h2></div>
+<div class="maint-grid">
+<div class="maint-card">
+  <div class="card-head"><div class="dot"></div>Diario — inicio/fin de turno</div>
+  <ul>
+    <li>Verificar el nivel de aceite del depósito de 30 L</li>
+    <li>Inspeccionar mangueras, racores NPT y conexiones rápidas en busca de fugas o humedad</li>
+    <li>Limpiar molde, punzón y mesa con agua antes del fraguado del residuo</li>
+    <li>Retirar el residuo de concreto del vástago: raya el cromado y arruina el sello</li>
+    <li>Comprobar que el manómetro retorna a cero al despresurizar</li>
+    <li>Verificar la respuesta de la botonera en ambos sentidos</li>
+    <li>Dejar el cilindro replegado al finalizar el turno</li>
+  </ul>
+</div>
+<div class="maint-card">
+  <div class="card-head"><div class="dot"></div>Semanal</div>
+  <ul>
+    <li>Revisar el estado del vástago: picaduras, rayas u óxido en el cromado</li>
+    <li>Verificar el apriete de los pernos de fijación del cilindro y del molde</li>
+    <li>Comprobar la ausencia de fuga en el sello del vástago tras el retorno</li>
+    <li>Limpiar el exterior de la central y las aletas de refrigeración del motor</li>
+    <li>Revisar el estado del cable de alimentación y de la botonera colgante</li>
+    <li>Verificar la alineación del punzón respecto de la cavidad del molde</li>
+  </ul>
+</div>
+<div class="maint-card">
+  <div class="card-head"><div class="dot"></div>Mensual</div>
+  <ul>
+    <li>Inspeccionar el aceite: color oscuro, olor a quemado o aspecto lechoso indican contaminación</li>
+    <li>Limpiar el filtro de succión y el tapón respiradero del depósito</li>
+    <li>Contrastar la lectura del manómetro contra un patrón</li>
+    <li>Revisar el desgaste dimensional de la cavidad del molde con calibre</li>
+    <li>Verificar el apriete de los terminales eléctricos</li>
+    <li>Comprobar la continuidad de la puesta a tierra con multímetro</li>
+  </ul>
+</div>
+<div class="maint-card">
+  <div class="card-head"><div class="dot"></div>Semestral / Anual</div>
+  <ul>
+    <li>Cambio completo del aceite hidráulico y limpieza interior del depósito</li>
+    <li>Reemplazo de mangueras de alta presión según su antigüedad, aunque no haya fuga visible</li>
+    <li>Revisión o reemplazo del juego de sellos del cilindro</li>
+    <li>Verificación del paralelismo entre punzón y mesa</li>
+    <li>Medición de la temperatura del motor en régimen (&lt; 70 °C)</li>
+    <li>Retoque de pintura anticorrosiva donde haya óxido visible</li>
+  </ul>
+</div>
+</div>
+<div class="alert note"><strong>Sobre el aceite.</strong> En un circuito de 700 bar la limpieza del fluido es el factor que más influye en la vida de la bomba y de los sellos. Reponer siempre con aceite del mismo tipo y grado, filtrado, y nunca a través de un embudo sucio o un recipiente que haya estado expuesto al polvo del laboratorio.</div>
+
+<div class="section-title"><span class="mono-tag">// 11</span><h2>Vida Útil y Repuestos Críticos</h2></div>
+<div class="vida-grid">
+  <div class="vida-card"><div class="v-label">Vida útil — estructura</div><div class="v-val">10 – 15 <span>años</span></div><div class="v-note">Con mantenimiento preventivo regular. El bastidor soldado admite reparación y repintado.</div></div>
+  <div class="vida-card"><div class="v-label">Vida útil — molde (estimada)</div><div class="v-val">20 000 – 50 000 <span>ciclos</span></div><div class="v-note">Acero A36: el galvanizado protege en almacenamiento pero se pierde en la cavidad en los primeros cientos de ciclos; a partir de ahí manda el acero base, que es dulce y abrasable. En régimen de laboratorio equivale a varios años.</div></div>
+  <div class="vida-card"><div class="v-label">Garantía de fábrica</div><div class="v-val">12 <span>meses</span></div><div class="v-note">Según contrato. La central hidráulica conserva además la garantía de su propio fabricante.</div></div>
+  <div class="vida-card"><div class="v-label">Aceite hidráulico</div><div class="v-val">1 000 – 2 000 <span>h</span></div><div class="v-note">Intervalo habitual de cambio en unidades de este tipo; adelantarlo si hay contaminación visible.</div></div>
+</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">7</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 8 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<table style="margin-top:0;">
+<thead><tr><th>Repuesto</th><th>Frecuencia orientativa</th><th>Criterio de sustitución</th></tr></thead>
+<tbody>
+<tr><td>Juego de sellos del cilindro</td><td class="mn">12 – 24 meses</td><td>Fuga por el vástago, pérdida de presión sostenida</td></tr>
+<tr><td>Mangueras de alta presión</td><td class="mn">24 meses</td><td>Antigüedad, abrasión de la cubierta, malla expuesta o deformación</td></tr>
+<tr><td>Conexiones rápidas y racores NPT</td><td class="mn">Según desgaste</td><td>Goteo tras el reapriete, rosca dañada</td></tr>
+<tr><td>Filtro de succión del depósito</td><td class="mn">12 meses</td><td>Colmatación o rotura de la malla</td></tr>
+<tr><td>Aceite hidráulico</td><td class="mn">1 000 – 2 000 h</td><td>Oscurecimiento, aspecto lechoso, olor a quemado</td></tr>
+<tr><td>Manómetro</td><td class="mn">Según desviación</td><td>No retorna a cero o se desvía del patrón de contraste</td></tr>
+<tr><td>Molde (juego completo)</td><td class="mn">20 000 – 50 000 ciclos</td><td>Desviación dimensional fuera de la tolerancia del ensayo o rayado que impida la extracción limpia</td></tr>
+<tr><td>Botonera colgante y cable</td><td class="mn">Según desgaste</td><td>Pulsador que no retorna, aislamiento dañado</td></tr>
+</tbody>
+</table>
+
+<div class="section-title"><span class="mono-tag">// 12</span><h2>Seguridad y EPP Obligatorio</h2></div>
+<div class="safety-grid">
+  <div class="safety-item"><div class="safety-icon">&#x1F9BA;</div><div><div class="s-title">EPP obligatorio</div><div class="s-body">Lentes de seguridad, guantes, botas con punta de acero y respirador para polvo de cemento.</div></div></div>
+  <div class="safety-item"><div class="safety-icon">&#x1F91A;</div><div><div class="s-title">Riesgo de aplastamiento</div><div class="s-body">Zona de molde bajo el punzón. Nunca introducir las manos con el circuito presurizado.</div></div></div>
+  <div class="safety-item"><div class="safety-icon">&#x1F4A7;</div><div><div class="s-title">Inyección de fluido</div><div class="s-body">A 700 bar un chorro fino atraviesa la piel. Nunca buscar fugas con la mano: usar cartón.</div></div></div>
+  <div class="safety-item"><div class="safety-icon">&#x1F6D1;</div><div><div class="s-title">Parada de emergencia</div><div class="s-body">Seta en el tablero lateral. Aplicar además bloqueo LOTO antes de intervenir; no operar con el tablero abierto.</div></div></div>
+  <div class="safety-item"><div class="safety-icon">&#x1F32C;</div><div><div class="s-title">Polvo de cemento</div><div class="s-body">La sílice cristalina causa silicosis crónica. Ventilación y respirador obligatorios.</div></div></div>
+  <div class="safety-item"><div class="safety-icon">&#x2697;</div><div><div class="s-title">Activadores alcalinos</div><div class="s-body">Los geopolímeros emplean soluciones cáusticas: guantes de nitrilo, careta y ducha de emergencia.</div></div></div>
+</div>
+<div class="alert warn"><strong>Despresurización antes de intervenir.</strong> Todo mantenimiento del circuito hidráulico exige, en este orden: retornar el vástago, apagar el motor, cortar y bloquear la alimentación eléctrica y confirmar en el manómetro que la presión residual es cero. Un volumen de presión atrapada puede mover el cilindro con el equipo apagado.</div>
+
+<div class="section-title"><span class="mono-tag">// 13</span><h2>Bases de Cálculo y Estimaciones</h2></div>
+<p class="body" style="margin-bottom:0;">Tres magnitudes de este documento no son medidas directas y conviene tratarlas como tales. El <strong>área efectiva del pistón</strong> (≈ 1 681 mm², Ø ≈ 46 mm) se deduce de la fuerza nominal de 12 tn a 700 bar; de ella salen las <strong>velocidades de acercamiento y prensado</strong>, que escalan de forma inversa con el diámetro real del cilindro. La <strong>producción en régimen sostenido</strong> aplica un descuento sobre el ciclo cronometrado de 70 s para absorber el registro de datos, la limpieza y las pausas del operador. La <strong>vida útil del molde</strong> es una estimación de ingeniería, no un valor ensayado: parte del comportamiento del acero A36 frente a un árido abrasivo y se afinará con el registro real de ciclos hasta la primera desviación dimensional.</p>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">8</span> / 9</div>
+</div>
+</div>
+
+<!-- ══════════════ HOJA 9 ══════════════ -->
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Ficha Técnica — Adoquinera MOD-LAB</div><div class="doc-ref">DOC-FT-ADQ-MODLAB · Rev. 1.0</div></div>
+</header>
+<div class="section-title" style="margin-top:0;"><span class="mono-tag">// 14</span><h2>Adaptación para Entorno de Laboratorio</h2></div>
+<div class="lab-split">
+  <div class="lab-render">
+    <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/portfolio%2F58Tvmdy8cWbbfzE0V7zt%2F1781458329109-Untitled_Project_(165).png?alt=media&token=1c4833be-1310-434d-babb-e7a53a09e195" alt="Adoquinera MOD-LAB en su configuración para laboratorio">
+    <div class="foto-caption">Fig. 2 — Adoquinera MOD-LAB · diseño Aya Technologies</div>
+  </div>
+  <div class="lab-texto">
+    <p class="body">El equipo nace de un requerimiento concreto: llevar la capacidad de conformado de una adoquinera industrial a un centro de investigación, donde las máquinas convencionales resultan inviables por espacio, ruido y seguridad. La solución fue desarrollar el equipo desde cero en lugar de adaptar una máquina de taller.</p>
+    <ul class="blist">
+      <li><strong>Conformado silencioso:</strong> al compactar por prensado y no por vibración, se elimina la principal fuente de ruido y de vibración transmitida al edificio. No requiere aislamiento antivibratorio ni sala dedicada.</li>
+      <li><strong>Huella reducida:</strong> estructura compacta, dimensionada para una sola pieza por tanda, que se instala sobre el piso del laboratorio sin anclaje a losa ni obra civil previa.</li>
+      <li><strong>Alimentación monofásica:</strong> la central opera en 220 V / 60 Hz monofásico, la red disponible en cualquier laboratorio, sin acometida trifásica.</li>
+      <li><strong>Energía de compactación trazable:</strong> la presión de prensado se lee, se fija y se registra por probeta, lo que permite comparar dosificaciones bajo una misma condición de compactación.</li>
+      <li><strong>Operación por una persona:</strong> el ciclo completo lo ejecuta un solo investigador, sin el equipo de apoyo que exige una línea de producción.</li>
+    </ul>
+  </div>
+</div>
+<div class="alert note"><strong>Alcance de uso.</strong> El equipo está concebido para la preparación de probetas y series cortas de validación en laboratorio. No sustituye a una línea de producción: para fabricación en volumen corresponde una bloquetera vibratoria de múltiples cavidades por ciclo.</div>
+
+<div class="section-title"><span class="mono-tag">// 15</span><h2>Control de Calidad y Normas de Referencia</h2></div>
+<table>
+<thead><tr><th>Norma</th><th>Alcance</th></tr></thead>
+<tbody>
+<tr><td class="lc">NTP 399.611</td><td>Adoquines de concreto para pavimentos. Clasificación por tipo, espesor nominal y resistencia mínima</td></tr>
+<tr><td class="lc">NTP 399.604</td><td>Métodos de muestreo y ensayo de unidades de albañilería de concreto</td></tr>
+<tr><td class="lc">NTP 400.037</td><td>Requisitos de los agregados para concreto</td></tr>
+<tr><td class="lc">NTP 334.009 / 334.082 / 334.090</td><td>Cementos Portland, adicionados y de uso general</td></tr>
+<tr><td class="lc">NTP 339.088</td><td>Requisitos del agua de mezcla</td></tr>
+<tr><td class="lc">ASTM C936 / C936M</td><td>Referencia internacional para adoquines entrabados: resistencia media mínima de 55 MPa</td></tr>
+</tbody>
+</table>
+
+<div class="section-title"><span class="mono-tag">// 16</span><h2>Soporte Técnico — Aya Technologies</h2></div>
+<div class="contact-row">
+  <div><div class="ck">EMPRESA</div><div style="font-weight:500;">Aya Technologies S.A.C.</div><div>Arequipa, Perú</div></div>
+  <div><div class="ck">CORREO</div><div>soporte@ayatech.com.pe</div></div>
+  <div><div class="ck">WEB</div><div>www.ayatech.com.pe</div></div>
+  <div><div class="ck">DOCUMENTO</div><div style="font-family:var(--mono);font-size:7.5pt;">DOC-FT-ADQ-MODLAB · Rev. 1.0 · 2026</div></div>
+</div>
+<div class="disclaimer">Documento preparado por Aya Technologies S.A.C. con fines de referencia técnica. Los valores calculados y estimados se identifican como tales en la sección 13. Las especificaciones pueden variar según la configuración fabricada. Para datos de desempeño bajo condiciones específicas de uso, consultar con nuestro equipo de ingeniería.</div>
+<div class="page-footer">
+  <div class="f-left">DOC-FT-ADQ-MODLAB · Rev. 1.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú · ayatech.com.pe</div>
+  <div class="f-right">Pág. <span class="page-num">9</span> / 9</div>
+</div>
+</div>
+
+<button class="pdf-btn" onclick="window.print()" title="Guardar como PDF (A4, 9 páginas)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Descargar PDF
+</button>
+</body>
+</html>

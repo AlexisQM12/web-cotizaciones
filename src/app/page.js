@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { NavBar } from '@/components/NavBar'
 import { useAuth } from '@/contexts/AuthContext'
 
-const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'logistica', 'compras', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
+const DEFAULT_ORDER = ['quotations', 'pendings', 'projects', 'team', 'contabilidad', 'logistica', 'compras', 'formatos', 'loans', 'suppliers', 'clients', 'inventory', 'caja-chica'];
 
 export default function Home() {
     const router = useRouter()
@@ -75,6 +75,21 @@ export default function Home() {
     }
 
     const cardsMap = {
+        formatos: (
+            <>
+                <div style={{ background: '#f5f3ff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15.5 2H8.5A2.5 2.5 0 0 0 6 4.5v15A2.5 2.5 0 0 0 8.5 22h9a2.5 2.5 0 0 0 2.5-2.5V6.5L15.5 2z" />
+                      <polyline points="15 2 15 7 20 7" />
+                      <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4" opacity="0.5" />
+                      <line x1="9.5" y1="12" x2="16.5" y2="12" />
+                      <line x1="9.5" y1="16" x2="14" y2="16" />
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#101828' }}>Formatos</h2>
+                <p style={{ color: '#667085', fontSize: '0.95rem' }}>ATS, fichas técnicas, manuales y cartas: duplica la plantilla y rellénala.</p>
+            </>
+        ),
         compras: (
             <>
                 <div style={{ background: '#fff7ed', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>

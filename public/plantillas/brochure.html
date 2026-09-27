@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brochure Corporativo - Aya Technologies</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #f6f6f4;
+      --color-line: #e6e6e2;
+      --color-ink: #0e0e0e;
+      --color-ink-soft: #5a5a57;
+      --color-ink-muted: #8c8c87;
+      --color-accent: #54b53c; /* verde */
+      --color-accent-2: #E8612A; /* naranja */
+      --font-display: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: #e2e2e2;
+      color: var(--color-ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      gap: 40px;
+    }
+
+    /* A4 Page Container */
+    .page {
+      width: 210mm;
+      height: 297mm;
+      background: var(--color-bg);
+      padding: 16mm 20mm;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 4px; /* Slight radius for screen view */
+      flex-shrink: 0;
+    }
+
+    /* Reglas específicas para impresión */
+    @page {
+      size: A4 portrait;
+      margin: 0; 
+    }
+
+    @media print {
+      /* Conserva fondos al exportar a PDF. Sin esto, Chrome descarta los
+         rellenos y la banda oscura de contacto sale con texto blanco sobre
+         blanco, es decir, invisible. */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body {
+        background: transparent;
+        padding: 0;
+        display: block;
+      }
+      .page {
+        margin: 0;
+        box-shadow: none;
+        width: 210mm;
+        height: 297mm;
+        padding: 16mm 20mm;
+        border-radius: 0;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    /* Floating Export Button */
+    .export-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--color-ink);
+      color: var(--color-bg);
+      border: none;
+      border-radius: 50px;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 500;
+      font-family: var(--font-display);
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transition: transform 0.2s, background 0.2s;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .export-btn:hover {
+      transform: translateY(-3px);
+      background: #222;
+    }
+
+    /* --- PORTADA (Cover Page) --- */
+    .cover-page {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: #fafaf9; /* Ligeramente distinto para la portada */
+      border: 1px solid var(--color-line);
+    }
+    .cover-logo {
+      width: 140px;
+      height: auto;
+      margin-bottom: 40px;
+    }
+    /* Antetitulo discreto: identifica el tipo de documento sin competir con el
+       nombre de la empresa, que es el titular real de la portada. */
+    .cover-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      margin-bottom: 16px;
+    }
+    .cover-title {
+      font-size: 3.4rem;
+      font-weight: 300;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 18px;
+      color: var(--color-ink);
+      white-space: nowrap;
+    }
+    .cover-title strong {
+      font-weight: 700;
+    }
+    .cover-tagline {
+      font-size: 1.02rem;
+      color: var(--color-ink-soft);
+      line-height: 1.5;
+      max-width: 128mm;
+      margin-bottom: 42px;
+    }
+    .cover-tagline strong {
+      color: var(--color-accent-2);
+      font-weight: 600;
+    }
+    /* --- FRANJA COLLAGE DE PORTADA ---
+       Se alimenta del mismo Firestore que las hojas de portafolio, para no
+       mantener dos listas de imagenes. Arranca oculta y solo se muestra si el
+       fetch devuelve portadas: si falla, la portada queda limpia en vez de
+       dejar una banda gris vacia. */
+    .cover-collage {
+      display: none;
+      align-self: stretch;
+      width: calc(100% + 40mm);
+      margin: 0 -20mm;
+      height: 44mm;
+      gap: 1px;
+      background: var(--color-line);
+      border-top: 1px solid var(--color-line);
+      border-bottom: 1px solid var(--color-line);
+      overflow: hidden;
+    }
+    .cover-collage img {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      object-fit: contain;
+      background: #ffffff;
+      padding: 8px;
+    }
+    .cover-collage-caption {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--color-ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 14px;
+    }
+    .cover-footer {
+      position: absolute;
+      bottom: 40px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--color-ink-muted);
+    }
+
+    /* --- COMMON HEADER --- */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-line);
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+    .logo {
+      height: 45px;
+      width: auto;
+    }
+    .header-text {
+      text-align: right;
+    }
+    .header-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .header-subtitle {
+      font-size: 0.75rem;
+      color: var(--color-ink-soft);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    /* --- INTRO SECTION --- */
+    .intro {
+      margin-bottom: 18px;
+    }
+    .intro h1 {
+      font-size: 1.9rem;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 15px;
+    }
+    .intro h1 strong {
+      font-weight: 600;
+    }
+    .intro h1 span {
+      color: var(--color-accent-2);
+    }
+    .intro p {
+      font-size: 0.88rem;
+      color: var(--color-ink-soft);
+      max-width: 90%;
+      line-height: 1.6;
+    }
+
+    /* --- SERVICES GRID --- */
+    .section-title {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--color-ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-line);
+    }
+    
+    .services-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    /* Bloque por area tecnica: titulo + rejilla. Con veinte servicios, la lista
+       plana dejaba de leerse; agruparlos da jerarquia sin cambiar el estilo. */
+    .services-block {
+      margin-bottom: 12px;
+    }
+    .services-block:last-of-type {
+      margin-bottom: 0;
+    }
+    /* Empuja el footer al pie cuando las rejillas ya no usan flex:1 */
+    .spacer {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .service-item {
+      background: var(--color-surface);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--color-line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .service-code {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--color-accent);
+      margin-bottom: 3px;
+      display: block;
+      font-weight: 600;
+    }
+    .service-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      line-height: 1.2;
+      color: var(--color-ink);
+    }
+    .service-body {
+      font-size: 0.75rem;
+      color: var(--color-ink-soft);
+      line-height: 1.35;
+    }
+
+    /* --- CONTACTO --- */
+    .contact-lead {
+      font-size: 2.1rem;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+      margin-bottom: 14px;
+    }
+    .contact-lead span {
+      color: var(--color-accent-2);
+      font-weight: 600;
+    }
+    .contact-intro {
+      font-size: 0.9rem;
+      color: var(--color-ink-soft);
+      line-height: 1.6;
+      max-width: 92%;
+      margin-bottom: 16px;
+    }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .contact-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      border-radius: 12px;
+      padding: 12px 18px;
+    }
+    /* Canal destacado: ocupa las dos columnas y lleva el acento verde, porque
+       es la via de respuesta mas rapida. */
+    .contact-card.wide {
+      grid-column: 1 / -1;
+      border-color: var(--color-accent);
+      background: #f4faf2;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .contact-card.wide .wa-icon {
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
+      color: var(--color-accent);
+    }
+    .contact-card.wide .contact-val {
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+    .contact-card a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .contact-key {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .contact-val {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-ink);
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .contact-note {
+      font-size: 0.78rem;
+      color: var(--color-ink-soft);
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+    /* Banda oscura de cierre: unico bloque en negativo del brochure, para que
+       la llamada a la accion sea lo ultimo que se lee. */
+    .contact-cta {
+      background: var(--color-ink);
+      color: #fff;
+      border-radius: 12px;
+      padding: 22px 26px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .contact-cta .cta-key {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .contact-cta h3 {
+      font-size: 1.25rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+    .contact-cta ul {
+      margin: 0;
+      padding-left: 16px;
+    }
+    .contact-cta li {
+      font-size: 0.8rem;
+      color: #b8b8b4;
+      line-height: 1.5;
+      margin: 3px 0;
+    }
+    .contact-cta li::marker {
+      color: var(--color-accent);
+    }
+
+    /* --- PORTFOLIO STYLES --- */
+    .portfolio-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      flex: 1;
+      min-height: 0;
+    }
+    .portfolio-item {
+      display: flex;
+      flex-direction: row;
+      border: 1px solid var(--color-line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--color-surface);
+      height: 252px;
+      flex-shrink: 0;
+    }
+    .portfolio-img {
+      width: 250px;
+      height: 100%;
+      flex-shrink: 0;
+      background: #ffffff;
+      padding: 15px;
+      border-right: 1px solid var(--color-line);
+      display: flex;
+      gap: 10px;
+    }
+    .portfolio-img img {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      min-width: 0;
+    }
+    .portfolio-content {
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .portfolio-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+    .portfolio-summary {
+      font-size: 0.8rem;
+      color: var(--color-ink-soft);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 7;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    /* --- FOOTER --- */
+    footer {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid var(--color-line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+      color: var(--color-ink-muted);
+      font-family: var(--font-mono);
+    }
+    .footer-link {
+      color: var(--color-ink);
+      text-decoration: none;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Button (Hidden on Print) -->
+  <button class="export-btn no-print" onclick="window.print()" title="Imprimir o Guardar como PDF">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+    Descargar PDF
+  </button>
+
+  <!-- PÁGINA 1: PORTADA -->
+  <div class="page cover-page">
+    <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies Logo" class="cover-logo">
+    <div class="cover-eyebrow">Brochure corporativo</div>
+    <h1 class="cover-title">Aya <strong>Technologies</strong></h1>
+    <p class="cover-tagline"><strong>Ingeniería aplicada.</strong> Equipos de laboratorio, automatización industrial y manufactura metalmecánica.</p>
+    <div class="cover-collage" id="cover-collage"></div>
+    <div class="cover-collage-caption" id="cover-collage-caption" style="display:none;">Equipos diseñados y fabricados por Aya</div>
+    <div class="cover-footer">
+      Aya Technologies S.A.C.S. <br> RUC 20614135949 <br> Arequipa - Perú
+    </div>
+  </div>
+
+  <!-- PÁGINA 2: SERVICIOS -->
+  <div class="page">
+    <header>
+      <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies Logo" class="logo">
+      <div class="header-text">
+        <div class="header-title">Aya Technologies</div>
+        <div class="header-subtitle">Ingeniería & Manufactura</div>
+      </div>
+    </header>
+
+    <section class="intro">
+      <h1>Cinco áreas técnicas, <br><strong>una sola disciplina:</strong> <span>resolver lo físico.</span></h1>
+      <p>Somos un equipo de ingeniería especializado en el desarrollo, diseño y manufactura de soluciones tecnológicas, equipamiento de laboratorio y automatización industrial. Integramos mecánica, electrónica y control de software para transformar conceptos en hardware funcional y robusto.</p>
+    </section>
+
+    <div class="services-block">
+      <div class="section-title">01 — Diseño e ingeniería</div>
+      <div class="services-grid">
+        <div class="service-item"><span class="service-code">01</span><h3 class="service-title">Diseño mecánico de equipos</h3><p class="service-body">Equipos para investigación y laboratorio diseñados a medida, enfocados en precisión y durabilidad estructural.</p></div>
+        <div class="service-item"><span class="service-code">02</span><h3 class="service-title">Ingeniería inversa y digitalización</h3><p class="service-body">Levantamiento dimensional de piezas sin plano para reproducirlas, mejorarlas o fabricar repuestos.</p></div>
+        <div class="service-item"><span class="service-code">03</span><h3 class="service-title">Simulación y análisis estructural</h3><p class="service-body">Verificación por elementos finitos de resistencia, rigidez y comportamiento térmico antes de fabricar.</p></div>
+        <div class="service-item"><span class="service-code">04</span><h3 class="service-title">Diseño para impresión 3D</h3><p class="service-body">Modelado CAD y optimización de piezas complejas preparadas para manufactura aditiva.</p></div>
+      </div>
+    </div>
+
+    <div class="services-block">
+      <div class="section-title">02 — Manufactura metalmecánica</div>
+      <div class="services-grid">
+        <div class="service-item"><span class="service-code">05</span><h3 class="service-title">Fresado y torneado</h3><p class="service-body">Mecanizado de piezas metálicas a plano, con control dimensional y acabados según especificación.</p></div>
+        <div class="service-item"><span class="service-code">06</span><h3 class="service-title">Corte láser de metales</h3><p class="service-body">Corte de precisión en plancha de acero, inoxidable y aluminio a partir de archivo vectorial.</p></div>
+        <div class="service-item"><span class="service-code">07</span><h3 class="service-title">Doblado y conformado de chapa</h3><p class="service-body">Plegado de planchas para gabinetes, carcasas, cubiertas y elementos estructurales.</p></div>
+        <div class="service-item"><span class="service-code">08</span><h3 class="service-title">Estructuras metálicas y soldadura</h3><p class="service-body">Fabricación y montaje de bastidores, mesas, soportes y estructuras portantes.</p></div>
+        <div class="service-item"><span class="service-code">09</span><h3 class="service-title">Mobiliario para laboratorio</h3><p class="service-body">Mesas, gabinetes y estaciones de trabajo dimensionadas para el equipo y el espacio real.</p></div>
+        <div class="service-item"><span class="service-code">10</span><h3 class="service-title">Utillaje y probetas de ensayo</h3><p class="service-body">Componentes a medida, montajes y accesorios para ensayos mecánicos y pruebas de laboratorio.</p></div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <footer>
+      <div>Aya Technologies S.A.C.S. © <script>document.write(new Date().getFullYear())</script></div>
+      <div>ventas@ayatech.com.pe</div>
+      <a href="https://ayatech.com.pe" class="footer-link">ayatech.com.pe</a>
+    </footer>
+  </div>
+
+  <!-- PÁGINA 3: SERVICIOS (continuación) -->
+  <div class="page">
+    <header>
+      <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies Logo" class="logo">
+      <div class="header-text">
+        <div class="header-title">Aya Technologies</div>
+        <div class="header-subtitle">Ingeniería & Manufactura</div>
+      </div>
+    </header>
+
+    <div class="services-block">
+      <div class="section-title">03 — Electrónica, control y automatización</div>
+      <div class="services-grid">
+        <div class="service-item"><span class="service-code">11</span><h3 class="service-title">Electrónica e IoT</h3><p class="service-body">Tarjetas, redes y dispositivos conectados para telemetría, registro de datos y lectura de sensores en tiempo real.</p></div>
+        <div class="service-item"><span class="service-code">12</span><h3 class="service-title">Automatización de procesos</h3><p class="service-body">PLC, HMI y lógica de control para líneas de producción continua y por lotes.</p></div>
+        <div class="service-item"><span class="service-code">13</span><h3 class="service-title">Tableros eléctricos y montaje</h3><p class="service-body">Diseño y armado de tableros de fuerza y control, con su instalación y cableado en campo.</p></div>
+        <div class="service-item"><span class="service-code">14</span><h3 class="service-title">Gemelos digitales</h3><p class="service-body">Réplicas virtuales sincronizadas con el equipo físico para monitorear, simular escenarios y predecir comportamientos.</p></div>
+      </div>
+    </div>
+
+    <div class="services-block">
+      <div class="section-title">04 — Importación y equipamiento</div>
+      <div class="services-grid">
+        <div class="service-item"><span class="service-code">15</span><h3 class="service-title">Equipos y máquinas de laboratorio</h3><p class="service-body">Selección, importación y comisionamiento de instrumentación científica y máquinas de ensayo.</p></div>
+        <div class="service-item"><span class="service-code">16</span><h3 class="service-title">Electrónica y electricidad industrial</h3><p class="service-body">Importación de componentes, sensores, accionamientos y material eléctrico industrial.</p></div>
+        <div class="service-item"><span class="service-code">17</span><h3 class="service-title">Repuestos y consumibles</h3><p class="service-body">Abastecimiento de repuestos críticos y consumibles para los equipos instalados.</p></div>
+      </div>
+    </div>
+
+    <div class="services-block">
+      <div class="section-title">05 — Servicio y soporte</div>
+      <div class="services-grid">
+        <div class="service-item"><span class="service-code">18</span><h3 class="service-title">Retrofit y modernización</h3><p class="service-body">Actualización de maquinaria y sistemas legados mediante electrónica y protocolos de control modernos.</p></div>
+        <div class="service-item"><span class="service-code">19</span><h3 class="service-title">Montaje y puesta en marcha</h3><p class="service-body">Instalación en sitio, pruebas de aceptación y capacitación del personal usuario.</p></div>
+        <div class="service-item"><span class="service-code">20</span><h3 class="service-title">Documentación técnica</h3><p class="service-body">Manuales de operación, fichas técnicas, planos y procedimientos de mantenimiento.</p></div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <footer>
+      <div>Aya Technologies S.A.C.S. © <script>document.write(new Date().getFullYear())</script></div>
+      <div>ventas@ayatech.com.pe</div>
+      <a href="https://ayatech.com.pe" class="footer-link">ayatech.com.pe</a>
+    </footer>
+  </div>
+
+  <!-- LAS PÁGINAS DE PORTAFOLIO SE GENERARÁN AQUÍ -->
+  <div id="portfolio-root"></div>
+
+  <!-- PÁGINA FINAL: CONTACTO -->
+  <div class="page">
+    <header>
+      <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies Logo" class="logo">
+      <div class="header-text">
+        <div class="header-title">Aya Technologies</div>
+        <div class="header-subtitle">Ingeniería &amp; Manufactura</div>
+      </div>
+    </header>
+
+    <div class="section-title">Contacto</div>
+    <h2 class="contact-lead">¿Tienes un equipo<br><span>que aún no existe?</span></h2>
+    <p class="contact-intro">Trabajamos por proyecto: partimos del problema, no del catálogo. Escríbenos con lo que necesitas resolver y te respondemos con una propuesta técnica y comercial.</p>
+
+    <div class="contact-grid">
+      <div class="contact-card wide">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 21l1.6-4.5A8.4 8.4 0 1 1 7.9 20L3 21z"></path>
+          <path d="M8.6 8.2c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.5l.8 1.8c.1.3 0 .5-.1.7l-.4.5c-.2.2-.3.4-.1.7a7 7 0 0 0 3 2.8c.3.2.5.1.7-.1l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.3.1.4.3.4.5v.6c0 .8-.8 1.5-1.7 1.5-1 0-3.1-.6-5.1-2.6s-2.6-4-2.6-5.1c0-.9.6-1.6 1.3-1.7z" fill="currentColor" stroke="none"></path>
+        </svg>
+        <div>
+          <span class="contact-key">WhatsApp — respuesta más rápida</span>
+          <div class="contact-val"><a href="https://wa.me/51952487700">+51 952 487 700</a></div>
+          <div class="contact-note">Consultas rápidas, envío de planos, fotos y referencias.</div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Correo comercial</span>
+        <div class="contact-val">ventas@ayatech.com.pe</div>
+        <div class="contact-note">Cotizaciones, propuestas y consultas de proyecto.</div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Soporte técnico</span>
+        <div class="contact-val">soporte@ayatech.com.pe</div>
+        <div class="contact-note">Equipos ya entregados, repuestos y mantenimiento.</div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Horario de atención</span>
+        <div class="contact-val">Lunes a viernes · 09:00 – 18:00</div>
+        <div class="contact-note">Visitas técnicas coordinadas con anticipación.</div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Ubicación</span>
+        <div class="contact-val">Arequipa, Perú</div>
+        <div class="contact-note">Atendemos proyectos en todo el territorio nacional.</div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Datos de facturación</span>
+        <div class="contact-val">RUC 20614135949</div>
+        <div class="contact-note">Aya Technologies S.A.C.S.</div>
+      </div>
+      <div class="contact-card">
+        <span class="contact-key">Sitio web</span>
+        <div class="contact-val"><a href="https://ayatech.com.pe">ayatech.com.pe</a></div>
+        <div class="contact-note">Portafolio de proyectos y documentación técnica.</div>
+      </div>
+    </div>
+
+    <div class="contact-cta">
+      <span class="cta-key">// Para cotizar más rápido</span>
+      <h3>Cuéntanos el problema, no solo la pieza.</h3>
+      <ul>
+        <li>Qué debe hacer el equipo o la pieza, y en qué condiciones va a trabajar.</li>
+        <li>Cantidades, plazos y si existe un plano, muestra o referencia previa.</li>
+        <li>Norma o protocolo de ensayo que deba cumplirse, si aplica.</li>
+        <li>Espacio disponible y alimentación eléctrica del lugar de instalación.</li>
+      </ul>
+    </div>
+
+    <div class="spacer"></div>
+
+    <footer>
+      <div>Aya Technologies S.A.C.S. © <script>document.write(new Date().getFullYear())</script></div>
+      <div>ventas@ayatech.com.pe</div>
+      <a href="https://ayatech.com.pe" class="footer-link">ayatech.com.pe</a>
+    </footer>
+  </div>
+
+  <script>
+    // Componente reutilizable para el header en cada página
+    const pageHeader = `
+      <header>
+        <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies Logo" class="logo">
+        <div class="header-text">
+          <div class="header-title">Aya Technologies</div>
+          <div class="header-subtitle">Ingeniería & Manufactura</div>
+        </div>
+      </header>
+    `;
+
+    // Componente reutilizable para el footer en cada página
+    const pageFooter = `
+      <footer>
+        <div>Aya Technologies S.A.C.S. © ${new Date().getFullYear()}</div>
+        <div>ventas@ayatech.com.pe</div>
+        <a href="https://ayatech.com.pe" class="footer-link">ayatech.com.pe</a>
+      </footer>
+    `;
+
+    // Genera un resumen conciso y COMPLETO: termina siempre en una oración
+    // completa (nunca a media idea). Omite un posible título/tagline inicial.
+    function summarizeText(text, target = 300, hardCap = 380) {
+      if (!text) return '';
+
+      // Si la primera línea parece un título/tagline (corta y sin punto final),
+      // se usa el resto del texto como cuerpo del resumen.
+      const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let body;
+      if (lines.length > 1 && lines[0].length < 95 && !/[.!?]$/.test(lines[0])) {
+        body = lines.slice(1).join(' ');
+      } else {
+        body = lines.join(' ');
+      }
+
+      let clean = body.replace(/\s+/g, ' ').trim();
+      // Quita un posible prefijo tipo "NOMBRE EQUIPO:" al inicio.
+      clean = clean.replace(/^[A-ZÁÉÍÓÚÑ0-9][A-Za-zÁÉÍÓÚÑáéíóúñ0-9\s\-]{2,40}:\s*/, '');
+
+      if (clean.length <= target) return clean;
+
+      // Acumular ORACIONES completas hasta acercarse al objetivo.
+      const parts = clean.match(/[^.!?]+[.!?]+/g);
+      if (parts && parts.length) {
+        let out = '';
+        for (const s of parts) {
+          const next = (out ? out + ' ' : '') + s.trim();
+          if (!out || next.length <= target) out = next;
+          else break;
+        }
+        out = out.trim();
+        if (out && out.length <= hardCap) return out;          // termina en punto
+        if (out) {                                              // 1ª oración larguísima
+          const slice = out.slice(0, hardCap);
+          return slice.slice(0, slice.lastIndexOf(' ')).trim() + '…';
+        }
+      }
+
+      // Sin oraciones detectables: cortar por palabra como último recurso.
+      const slice = clean.slice(0, target);
+      return slice.slice(0, slice.lastIndexOf(' ')).trim() + '…';
+    }
+
+    // Función para renderizar una página del portafolio con N items
+    function renderPortfolioPage(items) {
+      let itemsHtml = items.map(item => `
+        <div class="portfolio-item">
+          <div class="portfolio-img">
+            ${item.cover ? `<img src="${item.cover}" alt="${item.title}">` : ``}
+            ${item.realPhoto ? `<img src="${item.realPhoto}" alt="Foto ${item.title}">` : ``}
+          </div>
+          <div class="portfolio-content">
+            <h3 class="portfolio-title">${item.title}</h3>
+            <p class="portfolio-summary">${summarizeText(item.summary)}</p>
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="page">
+          ${pageHeader}
+          <div class="section-title">Casos de Éxito / Proyectos</div>
+          <div class="portfolio-grid">
+            ${itemsHtml}
+          </div>
+          ${pageFooter}
+        </div>
+      `;
+    }
+
+    // Franja de portada: hasta 5 portadas de proyecto, misma fuente que las
+    // hojas de portafolio. Si no llega ninguna, la franja permanece oculta.
+    function renderCoverCollage(projects, max = 5) {
+      const strip = document.getElementById('cover-collage');
+      const caption = document.getElementById('cover-collage-caption');
+      if (!strip) return;
+
+      const covers = projects
+        .filter(p => p.cover)
+        .slice(0, max);
+
+      if (!covers.length) return;
+
+      strip.innerHTML = covers
+        .map(p => `<img src="${p.cover}" alt="${p.title}" loading="eager">`)
+        .join('');
+      strip.style.display = 'flex';
+      if (caption) caption.style.display = 'block';
+    }
+
+    // Fetch de Firestore (REST API público)
+    async function loadPortfolio() {
+      try {
+        const res = await fetch('https://firestore.googleapis.com/v1/projects/aya-web-822dd/databases/(default)/documents/portfolio');
+        const data = await res.json();
+        
+        if (data.documents && data.documents.length > 0) {
+          // Extraer campos mapeados
+          const projects = data.documents.map(doc => {
+            const fields = doc.fields || {};
+            return {
+              title: fields.title?.stringValue || '',
+              summary: fields.summary?.stringValue || '',
+              cover: fields.cover?.mapValue?.fields?.url?.stringValue || '',
+              realPhoto: fields.realPhoto?.mapValue?.fields?.url?.stringValue || '',
+              year: fields.year?.integerValue || 0
+            };
+          });
+
+          // Ordenar por año descendente
+          projects.sort((a, b) => b.year - a.year);
+
+          renderCoverCollage(projects);
+
+          // Paginación: 3 proyectos por hoja A4 en formato horizontal
+          const itemsPerPage = 3;
+          let html = '';
+          for (let i = 0; i < projects.length; i += itemsPerPage) {
+            const chunk = projects.slice(i, i + itemsPerPage);
+            html += renderPortfolioPage(chunk);
+          }
+
+          document.getElementById('portfolio-root').innerHTML = html;
+        }
+      } catch (err) {
+        console.error('Error al cargar portafolio:', err);
+      }
+    }
+
+    // Inicializar
+    loadPortfolio();
+  </script>
+
+</body>
+</html>

@@ -6,6 +6,8 @@ import { NavBar } from '@/components/NavBar';
 import { useAuth } from '@/contexts/AuthContext';
 import CajaChicaModal from '@/components/CajaChicaModal';
 import { useRouter } from 'next/navigation';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function CajaChicaPage() {
     const { user } = useAuth();
@@ -15,6 +17,18 @@ export default function CajaChicaPage() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [expenseToEdit, setExpenseToEdit] = useState(null);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    const filteredExpenses = useMemo(() => {
+        return expenses.filter(e => {
+            const expenseDate = e.createdAt ? e.createdAt.split('T')[0] : '';
+            if (!expenseDate) return true;
+            if (startDate && expenseDate < startDate) return false;
+            if (endDate && expenseDate > endDate) return false;
+            return true;
+        });
+    }, [expenses, startDate, endDate]);
 
     useEffect(() => {
         if (user?.empresaId) {
@@ -116,6 +130,56 @@ export default function CajaChicaPage() {
         return Array.from(cats).sort();
     }, [expenses]);
 
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        
+        let title = 'Reporte de Caja Chica';
+        if (startDate && endDate) title += ` (Del ${startDate} al ${endDate})`;
+        else if (startDate) title += ` (Desde ${startDate})`;
+        else if (endDate) title += ` (Hasta ${endDate})`;
+
+        doc.setFontSize(16);
+        doc.text(title, 14, 22);
+
+        const tableColumn = ["Fecha", "Categoria", "Descripcion", "Declarado por", "Monto", "Estado"];
+        const tableRows = [];
+
+        filteredExpenses.forEach(e => {
+            const expenseData = [
+                e.createdAt ? new Date(e.createdAt).toLocaleDateString() : '-',
+                e.category || '',
+                e.description || '',
+                e.declaredBy ? teamMembers.find(m => m.id === e.declaredBy)?.name || '-' : '-',
+                `${e.currency === 'USD' ? '$' : 'S/'} ${Number(e.totalAmount || 0).toFixed(2)}`,
+                e.pendienteFactura ? 'Pendiente' : 'Sustentado'
+            ];
+            tableRows.push(expenseData);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 30,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [15, 23, 42] }
+        });
+
+        const totalSustentados = filteredExpenses.filter(e => !e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0);
+        const totalNoSustentados = filteredExpenses.filter(e => e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0);
+        
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(10);
+        doc.text(`Total Sustentados: S/ ${totalSustentados.toFixed(2)}`, 14, finalY);
+        doc.text(`Total No Sustentados: S/ ${totalNoSustentados.toFixed(2)}`, 14, finalY + 7);
+
+        let fileName = 'Reporte_Caja_Chica.pdf';
+        if (startDate && endDate) fileName = `Reporte_Caja_Chica_${startDate}_al_${endDate}.pdf`;
+        else if (startDate) fileName = `Reporte_Caja_Chica_desde_${startDate}.pdf`;
+        else if (endDate) fileName = `Reporte_Caja_Chica_hasta_${endDate}.pdf`;
+
+        doc.save(fileName);
+    };
+
     return (
         <ProtectedRoute>
             <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
@@ -139,6 +203,33 @@ export default function CajaChicaPage() {
                             style={{ padding: '0.75rem 1.5rem', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                         >
                             <span style={{ fontSize: '1.2rem' }}>+</span> Nuevo Gasto
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end', background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#475569' }}>Fecha Inicio (Reembolso)</label>
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#475569' }}>Fecha Fin (Reembolso)</label>
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }} />
+                        </div>
+                        <button 
+                            onClick={() => { setStartDate(''); setEndDate(''); }}
+                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', height: '38px' }}
+                        >
+                            Limpiar Fechas
+                        </button>
+                        <button 
+                            onClick={handleExportPDF}
+                            style={{ padding: '0.5rem 1rem', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', height: '38px', display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}
+                            title="Descargar listado filtrado en PDF"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path fillRule="evenodd" d="M4 0h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm.165 11.668c.09-.196.139-.581.116-1.071-.057-.85-.308-2.435-.45-3.115-.092-.441-.186-.976-.233-1.428-.016-.145-.02-.275-.02-.387 0-.58.12-1.01.309-1.298.172-.265.438-.415.792-.415.344 0 .593.136.758.33.167.195.25.467.247.818-.003.35-.11.758-.291 1.258-.168.468-.383.92-.61 1.353-.418.8-.938 1.545-1.507 2.193a11.161 11.161 0 0 0-1.898 2.505c-.237.458-.406.877-.492 1.251-.08.351-.082.682-.016.992.062.293.18.535.346.726.168.191.385.312.646.36.262.049.566.026.91-.07.348-.096.758-.27 1.229-.519.467-.247.986-.566 1.554-.954.568-.386 1.18-.838 1.834-1.349.654-.51 1.346-1.077 2.072-1.696.724-.619 1.488-1.295 2.29-2.022a16.892 16.892 0 0 0 1.272-1.222c.264-.282.518-.58.756-.893.243-.321.467-.655.666-.995.197-.336.37-.677.514-1.015.137-.323.238-.637.304-.938.064-.294.093-.57.086-.827-.008-.261-.052-.51-.13-.75a1.868 1.868 0 0 0-.256-.563 1.314 1.314 0 0 0-.41-.422c-.172-.116-.367-.184-.579-.2a2.316 2.316 0 0 0-.792.052c-.274.067-.568.188-.875.361-.31.176-.643.398-.997.663-.352.263-.727.567-1.12.909-.391.34-.8.71-1.218 1.112-.419.4-.852.825-1.292 1.272a29.417 29.417 0 0 0-1.45 1.547c-.496.565-1.014 1.182-1.545 1.844-.528.658-1.07 1.353-1.616 2.073a38.412 38.412 0 0 0-1.218 1.677c-.395.576-.798 1.183-1.2 1.808-.4.621-.8 1.26-1.187 1.899z"/>
+                            </svg>
+                            Descargar PDF
                         </button>
                     </div>
 
@@ -176,10 +267,10 @@ export default function CajaChicaPage() {
                                     </thead>
                                     <tbody>
                                         {loading ? (
-                                            <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando gastos...</td></tr>
-                                        ) : expenses.filter(e => !e.pendienteFactura).length === 0 ? (
-                                            <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos sustentados.</td></tr>
-                                        ) : expenses.filter(e => !e.pendienteFactura).map(expense => (
+                                            <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando gastos...</td></tr>
+                                        ) : filteredExpenses.filter(e => !e.pendienteFactura).length === 0 ? (
+                                            <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos sustentados en este periodo.</td></tr>
+                                        ) : filteredExpenses.filter(e => !e.pendienteFactura).map(expense => (
                                             <tr key={expense.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.createdAt).toLocaleDateString()}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>
@@ -221,7 +312,7 @@ export default function CajaChicaPage() {
                                     <tfoot style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                                         <tr>
                                             <td colSpan="4" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total Sustentados:</td>
-                                            <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {expenses.filter(e => !e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {filteredExpenses.filter(e => !e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
                                             <td colSpan="2" style={{ borderTop: '2px solid #e2e8f0' }}></td>
                                         </tr>
                                     </tfoot>
@@ -247,10 +338,10 @@ export default function CajaChicaPage() {
                                     </thead>
                                     <tbody>
                                         {loading ? (
-                                            <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando gastos...</td></tr>
-                                        ) : expenses.filter(e => e.pendienteFactura).length === 0 ? (
-                                            <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos pendientes de factura.</td></tr>
-                                        ) : expenses.filter(e => e.pendienteFactura).map(expense => (
+                                            <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando gastos...</td></tr>
+                                        ) : filteredExpenses.filter(e => e.pendienteFactura).length === 0 ? (
+                                            <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos pendientes de factura en este periodo.</td></tr>
+                                        ) : filteredExpenses.filter(e => e.pendienteFactura).map(expense => (
                                             <tr key={expense.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.createdAt).toLocaleDateString()}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>
@@ -292,7 +383,7 @@ export default function CajaChicaPage() {
                                     <tfoot style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                                         <tr>
                                             <td colSpan="4" style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '0.875rem' }}>Total No Sustentados:</td>
-                                            <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {expenses.filter(e => e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'right', borderTop: '2px solid #e2e8f0', color: '#0f172a', fontSize: '1rem' }}>S/ {filteredExpenses.filter(e => e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0).toFixed(2)}</td>
                                             <td colSpan="2" style={{ borderTop: '2px solid #e2e8f0' }}></td>
                                         </tr>
                                     </tfoot>

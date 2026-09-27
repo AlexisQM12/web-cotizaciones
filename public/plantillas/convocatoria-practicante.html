@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Convocatoria — Practicante de Ingeniería y Proyectos · Aya Technologies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#ffffff;--surface:#f6f6f4;--surface-2:#efeeea;--line:#e6e6e2;
+    --ink:#0e0e0e;--ink-soft:#5a5a57;--ink-muted:#8c8c87;
+    --accent:#54b53c;--accent-soft:#54b53c1a;--accent-2:#e8612a;
+    --font:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--font);color:var(--ink);background:var(--surface-2);line-height:1.5;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact;
+       display:flex;flex-direction:column;align-items:center;padding:30px 16px;}
+
+  .page{position:relative;width:210mm;min-height:297mm;background:var(--bg);
+        padding:14mm 15mm;overflow:hidden;box-shadow:0 0 36px rgba(14,14,14,.16);
+        display:flex;flex-direction:column;}
+
+  .deco{position:absolute;right:-120px;top:-90px;opacity:.06;pointer-events:none;}
+
+  /* header */
+  .top{display:flex;align-items:center;justify-content:space-between;z-index:1;}
+  .top img{height:46px;width:auto;display:block;margin-left:-4px;}
+  .top .tag{font-family:var(--mono);font-size:10px;color:var(--ink-muted);letter-spacing:.04em;}
+
+  .accent-line{height:2px;width:100%;background:
+     linear-gradient(90deg,transparent 0,var(--accent) 40%,#8ce06f 50%,var(--accent) 60%,transparent 100%),var(--accent-soft);
+     background-size:42% 100%,100% 100%;background-repeat:no-repeat;}
+
+  /* hero */
+  .hero{margin-top:22px;z-index:1;}
+  .kicker{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.05em;}
+  .title{font-size:40px;font-weight:300;letter-spacing:-.025em;line-height:1.06;margin-top:10px;}
+  .title b{font-weight:700;}
+  .title .u{position:relative;white-space:nowrap;}
+  .title .u::after{content:"";position:absolute;left:0;right:0;bottom:.04em;height:4px;background:var(--accent);}
+  .hook{margin-top:14px;font-size:13.5px;font-weight:300;color:var(--ink-soft);max-width:62ch;line-height:1.6;}
+
+  /* chips meta */
+  .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;}
+  .m{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--surface);}
+  .m .l{font-family:var(--mono);font-size:8.5px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;}
+  .m .v{font-size:13px;font-weight:500;line-height:1.25;}
+
+  /* misión */
+  .mision{margin-top:16px;border-left:2px solid var(--accent);background:var(--surface);
+          padding:11px 16px;border-radius:0 10px 10px 0;}
+  .mision .l{font-family:var(--mono);font-size:8.5px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;}
+  .mision p{font-size:12.5px;color:var(--ink);line-height:1.5;}
+
+  /* dos columnas */
+  .cols{display:grid;grid-template-columns:1.15fr 1fr;gap:28px;margin-top:20px;}
+  .sec-tag{font-family:var(--mono);font-size:10px;color:var(--ink-muted);letter-spacing:.04em;
+           display:flex;align-items:center;gap:9px;margin-bottom:11px;}
+  .sec-tag::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .resp{list-style:none;display:grid;gap:9px;}
+  .resp li{display:flex;gap:10px;font-size:11.5px;color:var(--ink-soft);line-height:1.4;}
+  .resp .n{font-family:var(--mono);font-size:9px;color:var(--accent);padding-top:2px;}
+
+  .reqs{list-style:none;display:grid;gap:8px;}
+  .reqs li{font-size:11.5px;color:var(--ink-soft);line-height:1.4;padding-left:14px;position:relative;}
+  .reqs li::before{content:"";position:absolute;left:0;top:7px;width:7px;height:1.5px;background:var(--accent);}
+  .reqs li b{color:var(--ink);font-weight:600;}
+
+  /* ofrecemos */
+  .offer{margin-top:20px;}
+  .offer-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px 24px;}
+  .offer-grid li{list-style:none;font-size:11.5px;color:var(--ink-soft);line-height:1.4;padding-left:14px;position:relative;}
+  .offer-grid li::before{content:"";position:absolute;left:0;top:7px;width:7px;height:1.5px;background:var(--accent-2);}
+
+  .spacer{flex:1;min-height:14px;}
+
+  /* CTA postular */
+  .cta{background:var(--ink);color:#fff;border-radius:14px;padding:20px 24px;
+       display:flex;align-items:center;justify-content:space-between;gap:20px;}
+  .cta .l{font-family:var(--mono);font-size:10px;color:#8ce06f;letter-spacing:.05em;display:block;margin-bottom:6px;}
+  .cta h3{font-size:18px;font-weight:300;line-height:1.2;}
+  .cta h3 b{font-weight:700;}
+  .cta .contact{text-align:right;flex-shrink:0;}
+  .cta .contact .email{font-size:15px;font-weight:600;}
+  .cta .contact .phone{font-family:var(--mono);font-size:12px;color:#cfcfcf;margin-top:3px;}
+  .cta .contact .subj{font-family:var(--mono);font-size:9px;color:#9a9a9a;margin-top:6px;}
+
+  .pfoot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
+         padding-top:10px;border-top:1px solid var(--line);font-family:var(--mono);font-size:8.5px;color:var(--ink-muted);}
+
+  .actions{position:fixed;bottom:26px;right:26px;display:flex;gap:10px;z-index:50;}
+  .btn{display:inline-flex;align-items:center;gap:9px;border-radius:50px;padding:13px 22px;
+    font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;
+    box-shadow:0 10px 25px rgba(0,0,0,.18);border:1px solid transparent;}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:#222;}
+  .btn-secondary{background:#fff;color:var(--ink);border-color:var(--line);}
+  .btn-secondary:hover{border-color:var(--ink);}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .page{box-shadow:none;}
+    .no-print{display:none!important;}
+  }
+  @page{size:A4 portrait;margin:0;}
+</style>
+</head>
+<body>
+
+  <div class="actions no-print">
+    <a class="btn btn-secondary" href="Convocatoria-Practicante-Aya.docx" download>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+      Descargar Word
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Descargar PDF
+    </button>
+  </div>
+
+  <div class="page">
+    <svg class="deco" width="380" height="380" viewBox="0 0 420 420" fill="none" aria-hidden="true">
+      <circle cx="210" cy="210" r="190" stroke="#0e0e0e" stroke-width="1.2"/>
+      <circle cx="210" cy="210" r="120" stroke="#0e0e0e" stroke-width="1.2"/>
+      <circle cx="210" cy="210" r="60" stroke="#0e0e0e" stroke-width="1.2"/>
+      <path d="M10 210 H410 M210 10 V410" stroke="#0e0e0e" stroke-width="1.2"/>
+      <path d="M210 210 L300 145" stroke="#54b53c" stroke-width="2"/>
+      <circle cx="300" cy="145" r="6" fill="#54b53c"/>
+    </svg>
+
+    <div class="top">
+      <img src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies" />
+      <span class="tag">// convocatoria · prácticas</span>
+    </div>
+
+    <div class="hero">
+      <span class="kicker">// únete al equipo</span>
+      <h1 class="title">Practicante de <b>Ingeniería</b><br><span class="u">y&nbsp;Proyectos</span>.</h1>
+      <p class="hook">En <b style="font-weight:600;color:var(--ink);">Aya Technologies</b> buscamos talento apasionado por la innovación y la ingeniería aplicada. Si te entusiasma transformar ideas en soluciones tangibles en un entorno dinámico y de alto impacto, esta es tu oportunidad.</p>
+    </div>
+
+    <div class="meta">
+      <div class="m"><span class="l">Área</span><span class="v">Diseño Mecánico &amp; Fabricación Digital</span></div>
+      <div class="m"><span class="l">Ubicación</span><span class="v">Yanahuara, Arequipa</span></div>
+      <div class="m"><span class="l">Modalidad</span><span class="v">Prácticas Pre-profesionales / Profesionales</span></div>
+    </div>
+
+    <div class="mision">
+      <span class="l">Misión del puesto</span>
+      <p>Colaborar en el ciclo completo de desarrollo de productos: de la conceptualización y el diseño CAD a la validación estructural y la fabricación digital avanzada.</p>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="sec-tag">// Responsabilidades</div>
+        <ul class="resp">
+          <li><span class="n">01</span><span>Apoyo en el diseño de piezas y sistemas mecánicos, gestionando el flujo de impresión 3D (FDM) y post-curado.</span></li>
+          <li><span class="n">02</span><span>Apoyo en la integración de componentes mecánicos con sistemas embebidos para el desarrollo de prototipos.</span></li>
+          <li><span class="n">03</span><span>Apoyo en el monitoreo de cronogramas y en la gestión de cotizaciones y compras con proveedores técnicos.</span></li>
+          <li><span class="n">04</span><span>Apoyo en la organización del archivo técnico: manuales, fichas de equipos y recursos del laboratorio.</span></li>
+          <li><span class="n">05</span><span>Apoyo como canal de comunicación técnica con los clientes en reuniones de avance.</span></li>
+        </ul>
+      </div>
+      <div>
+        <div class="sec-tag">// Requisitos</div>
+        <ul class="reqs">
+          <li><b>Egresado 2025-2 en adelante</b> de Ing. Mecánica, Mecánico-Eléctrica, Mecatrónica o afines.</li>
+          <li>Dominio <b>intermedio de CAD</b>, preferentemente SolidWorks.</li>
+          <li>Conocimiento de <b>impresión 3D</b> (deseable, no indispensable).</li>
+          <li>Familiaridad con fabricación digital y prototipado rápido.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="offer">
+      <div class="sec-tag">// Qué ofrecemos</div>
+      <ul class="offer-grid">
+        <li>Proyectos reales de ingeniería y desarrollo de alto impacto.</li>
+        <li>Acceso y capacitación constante en equipos de fabricación digital.</li>
+        <li>Ecosistema innovador que fomenta la creatividad y nuevas habilidades.</li>
+        <li>Flexibilidad y excelente ambiente orientado a objetivos.</li>
+      </ul>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="cta">
+      <div>
+        <span class="l">// ¿Cómo postular?</span>
+        <h3>Envíanos tu <b>CV actualizado</b> y súmate al equipo.</h3>
+      </div>
+      <div class="contact">
+        <div class="email">ken.qm@ayatech.com.pe</div>
+        <div class="phone">952 487 700</div>
+        <div class="subj">Asunto: Postulación – Practicante de Ingeniería y Proyectos</div>
+      </div>
+    </div>
+
+    <div class="accent-line" style="margin-top:14px;"></div>
+    <div class="pfoot"><span>Aya Technologies S.A.C.S. · Ingeniería aplicada</span><span>Yanahuara, Arequipa — Perú</span></div>
+  </div>
+
+</body>
+</html>
