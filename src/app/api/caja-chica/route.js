@@ -25,12 +25,15 @@ export async function POST(req) {
 
         data.createdAt = new Date().toISOString();
         data.updatedAt = new Date().toISOString();
+        if (!data.fechaConsumo) {
+            data.fechaConsumo = data.createdAt;
+        }
 
         // 1. Guardar en caja_chica
         const docRef = await getTenantCollection(empresaId, 'caja_chica').add(data);
 
         // 2. Guardar en purchases_ledger (Contabilidad)
-        const fechaEmision = data.ocrData?.fecha || new Date().toISOString().slice(0, 10);
+        const fechaEmision = data.ocrData?.fecha || data.fechaConsumo.slice(0, 10);
         const d = new Date(fechaEmision);
         const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         
@@ -261,6 +264,13 @@ export async function PUT(req) {
                 pendienteFactura: data.pendienteFactura || false,
                 updatedAt: new Date().toISOString(),
             };
+
+            if (data.fechaConsumo) {
+                const fechaEmision = data.ocrData?.fecha || data.fechaConsumo.slice(0, 10);
+                const d = new Date(fechaEmision);
+                purchaseUpdates.fechaEmision = fechaEmision;
+                purchaseUpdates.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            }
 
             await getTenantCollection(empresaId, 'purchases_ledger').doc(existingData.purchaseLedgerId).update(purchaseUpdates);
         }

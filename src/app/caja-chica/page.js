@@ -22,7 +22,8 @@ export default function CajaChicaPage() {
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(e => {
-            const expenseDate = e.createdAt ? e.createdAt.split('T')[0] : '';
+            const dateToUse = e.fechaConsumo || e.createdAt || '';
+            const expenseDate = dateToUse ? dateToUse.split('T')[0] : '';
             if (!expenseDate) return true;
             if (startDate && expenseDate < startDate) return false;
             if (endDate && expenseDate > endDate) return false;
@@ -114,7 +115,8 @@ export default function CajaChicaPage() {
         let countMonth = 0;
         
         expenses.forEach(e => {
-            if (e.createdAt?.startsWith(currentMonth)) {
+            const dateToUse = e.fechaConsumo || e.createdAt || '';
+            if (dateToUse.startsWith(currentMonth)) {
                 totalMonth += Number(e.totalAmount || 0);
                 countMonth++;
             }
@@ -146,7 +148,7 @@ export default function CajaChicaPage() {
 
         filteredExpenses.forEach(e => {
             const expenseData = [
-                e.createdAt ? new Date(e.createdAt).toLocaleDateString() : '-',
+                (e.fechaConsumo || e.createdAt) ? new Date(e.fechaConsumo || e.createdAt).toLocaleDateString() : '-',
                 e.category || '',
                 e.description || '',
                 e.declaredBy ? teamMembers.find(m => m.id === e.declaredBy)?.name || '-' : '-',
@@ -272,7 +274,7 @@ export default function CajaChicaPage() {
                                             <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos sustentados en este periodo.</td></tr>
                                         ) : filteredExpenses.filter(e => !e.pendienteFactura).map(expense => (
                                             <tr key={expense.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.createdAt).toLocaleDateString()}</td>
+                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.fechaConsumo || expense.createdAt).toLocaleDateString()}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>
                                                     <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '0.25rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600' }}>
                                                         {expense.category}
@@ -343,7 +345,7 @@ export default function CajaChicaPage() {
                                             <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>No hay gastos pendientes de factura en este periodo.</td></tr>
                                         ) : filteredExpenses.filter(e => e.pendienteFactura).map(expense => (
                                             <tr key={expense.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.createdAt).toLocaleDateString()}</td>
+                                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>{new Date(expense.fechaConsumo || expense.createdAt).toLocaleDateString()}</td>
                                                 <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#334155' }}>
                                                     <span style={{ background: '#fef3c7', color: '#b45309', padding: '0.25rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600' }}>
                                                         {expense.category}

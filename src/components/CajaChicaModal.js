@@ -19,6 +19,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
         fundingSourceId: '',
         pendienteFactura: false,
         declaredBy: '',
+        fechaConsumo: new Date().toISOString().slice(0, 10),
         receiptUrl: '',
         ocrData: null,
         items: [],
@@ -35,6 +36,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 fundingSourceId: expenseToEdit.fundingSourceId || '',
                 pendienteFactura: expenseToEdit.pendienteFactura || false,
                 declaredBy: expenseToEdit.declaredBy || '',
+                fechaConsumo: expenseToEdit.fechaConsumo || (expenseToEdit.createdAt ? expenseToEdit.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10)),
                 receiptUrl: expenseToEdit.receiptUrl || '',
                 ocrData: expenseToEdit.ocrData || null,
                 items: expenseToEdit.items || [],
@@ -50,6 +52,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                 fundingSourceId: '',
                 pendienteFactura: false,
                 declaredBy: '',
+                fechaConsumo: new Date().toISOString().slice(0, 10),
                 receiptUrl: '',
                 ocrData: null,
                 items: [],
@@ -166,6 +169,10 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                     
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Fecha del Consumo *</label>
+                            <input type="date" className="input" value={formData.fechaConsumo} onChange={e => setFormData({...formData, fechaConsumo: e.target.value})} required style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                        <div style={{ flex: 1.5 }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Categoría *</label>
                             <select className="input" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                                 <option value="">Selecciona una categoría...</option>
@@ -188,7 +195,7 @@ export default function CajaChicaModal({ isOpen, onClose, onSave, empresaId, exp
                                 {['Alquileres', 'Combustible', 'RH', 'Otros'].includes(formData.category) && 'Esta categoría no suma ítems al inventario físico.'}
                             </p>
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1.5 }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Descripción general</label>
                             <input type="text" className="input" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Ej. Compra de suministros" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                         </div>
