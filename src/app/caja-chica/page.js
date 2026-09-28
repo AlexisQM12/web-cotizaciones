@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CajaChicaModal from '@/components/CajaChicaModal';
 import { useRouter } from 'next/navigation';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function CajaChicaPage() {
     const { user } = useAuth();
@@ -158,7 +158,7 @@ export default function CajaChicaPage() {
             tableRows.push(expenseData);
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
             startY: 30,
@@ -169,7 +169,7 @@ export default function CajaChicaPage() {
         const totalSustentados = filteredExpenses.filter(e => !e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0);
         const totalNoSustentados = filteredExpenses.filter(e => e.pendienteFactura).reduce((sum, e) => sum + Number(e.totalAmount || 0), 0);
         
-        const finalY = doc.lastAutoTable.finalY + 10;
+        const finalY = (doc.lastAutoTable?.finalY || 30) + 10;
         doc.setFontSize(10);
         doc.text(`Total Sustentados: S/ ${totalSustentados.toFixed(2)}`, 14, finalY);
         doc.text(`Total No Sustentados: S/ ${totalNoSustentados.toFixed(2)}`, 14, finalY + 7);
