@@ -83,9 +83,41 @@ export async function POST(req) {
 
         const ahora = new Date().toISOString();
         const ref = getTenantCollection(empresaId, 'formatos').doc();
-        await guardarHtml(empresaId, ref.id, html);
+
+        // Generate sequential code: FMT-YYYY-NNNN
+        const currentYear = new Date().getFullYear();
+        const snapshot = await getTenantCollection(empresaId, 'formatos').get();
+        const yearStart = new Date(currentYear, 0, 1);
+        const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59);
+        const thisYearFormats = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            if (!data.creadoEn) return false;
+            const createdDate = new Date(data.creadoEn);
+            return createdDate >= yearStart && createdDate <= yearEnd;
+        });
+        const codeNumbers = thisYearFormats.map(doc => {
+            const data = doc.data();
+            if (data.code) {
+                const match = data.code.match(/FMT-\d{4}-(\d+)/);
+                return match ? parseInt(match[1], 10) : 0;
+            }
+            return 0;
+        });
+        const maxCodeNumber = codeNumbers.length > 0 ? Math.max(...codeNumbers) : 0;
+        const nextNumber = maxCodeNumber + 1;
+        const code = `FMT-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
+
+        // Inject the generated code into the HTML if there is a doc-ref
+        // This regex ensures we replace any previously injected FMT code to avoid chaining them if duplicated.
+        if (html) {
+            html = html.replace(
+                /<div class="doc-ref">([^<]*?)(?:\s*&bull;\s*FMT-\d{4}-\d+)?<\/div>/,
+                `<div class="doc-ref">$1 &bull; ${code}</div>`
+            );
+        }
 
         const ficha = {
+            code,
             nombre: limpiarNombre(body.nombre) || tituloDelHtml(html) || 'Formato sin nombre',
             tipo: tipoValido(tipo),
             origen,
@@ -99,6 +131,8 @@ export async function POST(req) {
             actualizadoEn: ahora,
             actualizadoPorEmail: sesion.email || null,
         };
+
+        await guardarHtml(empresaId, ref.id, html);
         await ref.set(ficha);
 
         return Response.json({ id: ref.id, ...ficha });

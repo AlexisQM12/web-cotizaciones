@@ -222,7 +222,10 @@ export default function FormatosPage() {
                                     <article key={f.id} className="formato-card">
                                         <span className="formato-chip" style={{ background: t.fondo, color: t.color }}>{t.nombre}</span>
                                         <h3>
-                                            <Link href={`/formatos/${f.id}`}>{f.nombre}</Link>
+                                            <Link href={`/formatos/${f.id}`}>
+                                                {f.code ? <span style={{ color: '#64748b', marginRight: '8px', fontSize: '0.9em' }}>{f.code}</span> : null}
+                                                {f.nombre}
+                                            </Link>
                                         </h3>
                                         <p className="formato-meta">
                                             {f.hojas ? `${f.hojas} hoja${f.hojas === 1 ? '' : 's'}` : 'Documento'}

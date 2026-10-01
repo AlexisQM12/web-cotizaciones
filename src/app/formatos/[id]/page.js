@@ -375,6 +375,7 @@ export default function EditorFormatoPage() {
                 <header className="formato-editor__barra">
                     <div className="formato-editor__izq">
                         <Link href="/formatos" className="btn btn-ghost btn-sm" onClick={volver}>← Formatos</Link>
+                        {formato?.code && <span style={{ color: '#64748b', fontWeight: 'bold', marginLeft: '0.5rem', marginRight: '0.5rem', display: 'flex', alignItems: 'center' }}>{formato.code}</span>}
                         <input
                             className="formato-editor__nombre"
                             value={nombre}
