@@ -5,6 +5,7 @@ import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
+import { authFetch } from '@/lib/authFetch';
 
 export default function Page() {
     return <Suspense fallback={<AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>}><ExportarSIRE /></Suspense>;
@@ -20,7 +21,7 @@ function ExportarSIRE() {
     const downloadFile = async (libro) => {
         setDownloading(libro);
         try {
-            const r = await fetch(`/api/accounting/sire-export?companyProfileId=${companyProfileId}&period=${period}&libro=${libro}`);
+            const r = await authFetch(`/api/accounting/sire-export?companyProfileId=${companyProfileId}&period=${period}&libro=${libro}`);
             if (!r.ok) {
                 const d = await r.json().catch(() => ({}));
                 alert(d.error || 'Error generando archivo');
@@ -38,7 +39,7 @@ function ExportarSIRE() {
     };
 
     const previewFile = async (libro) => {
-        const r = await fetch(`/api/accounting/sire-export?companyProfileId=${companyProfileId}&period=${period}&libro=${libro}`);
+        const r = await authFetch(`/api/accounting/sire-export?companyProfileId=${companyProfileId}&period=${period}&libro=${libro}`);
         if (!r.ok) return;
         const text     = await r.text();
         const filename = r.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || '';

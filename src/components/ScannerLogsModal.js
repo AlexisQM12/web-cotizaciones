@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PHASE_CONFIG = {
   idle:       { color: '#64748b', bg: '#f1f5f9', icon: '🕐', label: 'En espera' },
@@ -9,6 +10,7 @@ const PHASE_CONFIG = {
 };
 
 export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState({ phase: 'idle', message: 'Conectando al servidor...', current: 0, total: 0, currentFile: null, nextScanAt: null });
   const [countdown, setCountdown] = useState(null);
@@ -16,6 +18,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const [ocrProcessingId, setOcrProcessingId] = useState(null); // logId siendo procesado por OCR
   const [debugRow, setDebugRow] = useState(null); // logId con panel de debug expandido
   const [ocrToast, setOcrToast] = useState(null); // { type: 'success'|'warn'|'error', message }
+  const [searchTerm, setSearchTerm] = useState('');
   const ocrToastRef = useRef(null);
   const countdownRef = useRef(null);
 
@@ -35,67 +38,44 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   }, [status.nextScanAt]);
 
   useEffect(() => {
-    if (!isOpen || !socket) return;
+    if (!isOpen) return;
 
-    socket.emit('request_po_logs');
+    let unsubLogs = () => {};
+    let unsubStatus = () => {};
+    
+    // Importación dinámica para evitar problemas en SSR
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      import('@/lib/firestoreClient').then(({ clientDb }) => {
+        if (!clientDb) return;
+        
+        // Escuchar logs directamente desde Firestore
+        unsubLogs = onSnapshot(doc(clientDb, 'scanner_state', 'logs'), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data().entries || [];
+            const seen = new Set();
+            setLogs(data.filter(l => l.id && !seen.has(l.id) && seen.add(l.id)));
+          }
+        });
 
-    const handleLogsList  = (data) => {
-      const seen = new Set();
-      setLogs(data.filter(l => l.id && !seen.has(l.id) && seen.add(l.id)));
-    };
-    const showToast = (type, message) => {
-      clearTimeout(ocrToastRef.current);
-      setOcrToast({ type, message });
-      ocrToastRef.current = setTimeout(() => setOcrToast(null), 6000);
-    };
-
-    const handleLogAdded = (newLog) => {
-      setLogs(prev => {
-        const filtered = prev.filter(l => l.id !== newLog.id);
-        return [newLog, ...filtered];
+        // Escuchar estado (status)
+        unsubStatus = onSnapshot(doc(clientDb, 'scanner_state', 'status'), (snap) => {
+          if (snap.exists()) {
+            setStatus(snap.data());
+          }
+        });
       });
-    };
-
-    const handleOcrResult = ({ status, foundCode }) => {
-      setOcrProcessingId(null);
-      if (status === 'Factura - Completado') {
-        showToast('success', `✅ Asignado a ${foundCode || '—'}`);
-      } else if (status === 'Sin monto legible') {
-        showToast('warn', '⚠️ OCR completado pero no se encontraron montos legibles en el PDF.');
-      } else if (status === 'No Coincide') {
-        showToast('warn', `⚠️ Montos detectados (${foundCode || '—'}) pero ninguna OC coincide. Asigna manualmente.`);
-      } else if (status === 'Error Lectura') {
-        showToast('error', '❌ Error al leer el PDF. Revisa los logs del servidor.');
-      } else {
-        showToast('warn', `⚠️ Resultado: ${status}`);
-      }
-    };
-
-    const handleStatus   = (s) => setStatus(s);
-    const handleOcrError = ({ message }) => {
-      setOcrProcessingId(null);
-      showToast('error', `❌ ${message}`);
-    };
-
-    socket.on('po_logs_list', handleLogsList);
-    socket.on('po_scanner_log_added', handleLogAdded);
-    socket.on('scan_status', handleStatus);
-    socket.on('reprocess_ocr_result', handleOcrResult);
-    socket.on('reprocess_ocr_error', handleOcrError);
+    });
 
     return () => {
-      socket.off('po_logs_list', handleLogsList);
-      socket.off('po_scanner_log_added', handleLogAdded);
-      socket.off('scan_status', handleStatus);
-      socket.off('reprocess_ocr_result', handleOcrResult);
-      socket.off('reprocess_ocr_error', handleOcrError);
+      unsubLogs();
+      if (typeof unsubStatus === 'function') unsubStatus();
     };
-  }, [isOpen, socket]);
+  }, [isOpen]);
 
   const assignManually = async (logId, docId) => {
     if (!docId) return;
     try {
-      await fetch(`/api/quotations/${docId}`, {
+      await fetch(`/api/quotations/${docId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quotationStatus: 'aprobada' })
@@ -123,7 +103,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const assignInvoiceManually = async (logId, newDocId) => {
     if (!newDocId) return;
     try {
-      await fetch(`/api/quotations/${newDocId}`, {
+      await fetch(`/api/quotations/${newDocId}?empresaId=${encodeURIComponent(user.empresaId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quotationStatus: 'completado' }),
@@ -140,6 +120,25 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
     }
   };
 
+  const handleScannerAction = async (actionType) => {
+    try {
+      setOcrToast({ type: 'warn', message: 'Limpiando caché en la base de datos...' });
+      const res = await fetch('/api/scanner/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionType }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOcrToast({ type: 'success', message: data.message });
+      } else {
+        setOcrToast({ type: 'error', message: `Error: ${data.error}` });
+      }
+    } catch (err) {
+      setOcrToast({ type: 'error', message: `Error de red: ${err.message}` });
+    }
+  };
+
   if (!isOpen) return null;
 
   const phase = PHASE_CONFIG[status.phase] || PHASE_CONFIG.idle;
@@ -148,6 +147,17 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
   const pendingQuotations = quotations
     .filter(q => q.code)
     .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+  const filteredLogs = logs.filter(log => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (log.filename && log.filename.toLowerCase().includes(term)) ||
+      (log.foundCode && log.foundCode.toLowerCase().includes(term)) ||
+      (log.status && log.status.toLowerCase().includes(term)) ||
+      (log.source && log.source.toLowerCase().includes(term))
+    );
+  });
 
   // Cotizaciones con OC recibida (aprobada) — opciones para asignar facturas
   const ocOptions = quotations
@@ -189,12 +199,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
           <h2 style={{ fontSize: '1.4rem', color: '#1e293b', margin: 0 }}>📡 Monitor de Escaneo de Órdenes de Compra</h2>
           <div className="scanner-modal-actions">
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('⚠️ Esto revertirá TODOS los estados "OC Recibida" asignados automáticamente a "Pendiente", limpiará el historial y re-escaneará desde cero.\n\n¿Continuar?')) return;
-                socket.emit('reset_and_rescan');
-              }}
-              disabled={isActive}
+              onClick={() => handleScannerAction('force_rescan')}
               style={{
                 background: isActive ? '#e2e8f0' : '#fef2f2',
                 border: '1px solid #fecaca',
@@ -210,12 +215,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               ⚠️ Resetear y re-escanear
             </button>
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('¿Re-escanear solo la carpeta de enviados? Útil para detectar facturas ya enviadas que el scanner no procesó.')) return;
-                socket.emit('rescan_sent');
-              }}
-              disabled={isActive}
+              onClick={() => handleScannerAction('rescan_sent')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f0fdf4',
                 border: '1px solid #bbf7d0',
@@ -231,12 +231,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               📤 Re-escanear enviados
             </button>
             <button
-              onClick={() => {
-                if (!socket) return;
-                if (!confirm('¿Re-escanear todos los correos desde cero? Esto puede tardar varios minutos.')) return;
-                socket.emit('force_rescan');
-              }}
-              disabled={isActive}
+              onClick={() => handleScannerAction('force_rescan')}
               style={{
                 background: isActive ? '#e2e8f0' : '#f1f5f9',
                 border: '1px solid #e2e8f0',
@@ -285,6 +280,8 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
             </span>
           </div>
 
+
+
           {/* Progress bar */}
           {isActive && status.total > 0 && (
             <div>
@@ -320,10 +317,24 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
           Si el lector no detectó el código automáticamente (PDF con imagen), puedes emparejarlo manualmente con el selector.
         </p>
 
+        <div style={{ marginBottom: '1rem' }}>
+          <input 
+            type="text" 
+            placeholder="Buscar por archivo, código OC, estado o tipo (ej. Factura)..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '0.7rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+          />
+        </div>
+
         {/* Logs table */}
         {logs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>
             Aún no se han procesado PDFs. Aparecerán aquí cuando el escáner encuentre adjuntos.
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>
+            No se encontraron registros para la búsqueda: "{searchTerm}".
           </div>
         ) : (
           <div className="table-responsive">
@@ -339,7 +350,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => {
+              {filteredLogs.map((log) => {
                 const isOk  = log.status?.startsWith('Asignado') || log.status === 'Enviada' || log.status === 'Factura - Completado';
                 const isWarn = log.status === 'Sin monto legible';
                 const isErr = !isOk && !isWarn && (log.status === 'No Coincide' || log.status === 'No Existe' || log.status === 'Error Lectura');
@@ -377,10 +388,7 @@ export function ScannerLogsModal({ isOpen, onClose, socket, quotations }) {
                         {log.source === 'factura' && !log.docId && (
                           <button
                             onClick={() => {
-                              if (isOcrRunning) return;
-                              console.log('[OCR] Solicitando re-proceso para:', log.id, '| socket:', socket?.id);
-                              setOcrProcessingId(log.id);
-                              socket?.emit('reprocess_invoice_ocr', { logId: log.id });
+                              alert('El re-proceso de OCR manual está desactivado en Cloud Functions. El sistema lo reintentará automáticamente en el próximo ciclo si es necesario.');
                             }}
                             title={isOcrRunning ? 'Procesando OCR...' : 'Re-procesar con OCR para extraer montos y asignar automáticamente'}
                             disabled={isOcrRunning}

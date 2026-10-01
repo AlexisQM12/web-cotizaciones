@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AccountingShell from '@/components/AccountingShell';
 import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
+import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
 import { VOUCHER_TYPES, DOC_ID_TYPES } from '@/lib/accounting/sunatRules';
+import { authFetch } from '@/lib/authFetch';
 
 export default function Page() {
     return <Suspense fallback={<AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>}><RegistroCompras /></Suspense>;
@@ -13,6 +15,7 @@ export default function Page() {
 
 function RegistroCompras() {
     const searchParams = useSearchParams();
+    const { user } = useAuth();
     const { companyProfileId } = useAccountingConfig();
     const [period, setPeriod] = useState(searchParams.get('period') || getCurrentDeclarationPeriod());
     const [items, setItems]   = useState([]);
@@ -20,14 +23,37 @@ function RegistroCompras() {
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
+    const [loans, setLoans] = useState([]);
+    const [expandedRow, setExpandedRow] = useState(null);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [showBulkModal, setShowBulkModal] = useState(false);
+    const [bulkFundingSourceId, setBulkFundingSourceId] = useState('');
+    const [bulkLoading, setBulkLoading] = useState(false);
 
-    useEffect(() => { if (companyProfileId) load(); }, [companyProfileId, period]);
+    useEffect(() => { 
+        if (companyProfileId) {
+            load();
+            loadLoans();
+        } 
+    }, [companyProfileId, period]);
+
+    const loadLoans = async () => {
+        try {
+            const r = await fetch(`/api/loans?empresaId=${companyProfileId}`);
+            if (r.ok) {
+                const data = await r.json();
+                setLoans(data.filter(l => l.status === 'ACTIVE'));
+            }
+        } catch (e) {
+            console.error('[compras] fetch loans error:', e);
+        }
+    };
 
     const load = async () => {
         if (!companyProfileId) return;
         setLoading(true);
         try {
-            const r = await fetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
+            const r = await authFetch(`/api/accounting/purchases?companyProfileId=${companyProfileId}&period=${period}`);
             const data = await r.json();
             if (!r.ok) {
                 console.error('[compras] API error:', data.error);
@@ -40,13 +66,14 @@ function RegistroCompras() {
             setItems([]);
         } finally {
             setLoading(false);
+            setSelectedItems([]);
         }
     };
 
     const handleSave = async (entry) => {
         const method = entry.id ? 'PUT' : 'POST';
-        const body   = entry.id ? entry : { ...entry, companyProfileId };
-        const r = await fetch('/api/accounting/purchases', {
+        const body   = entry.id ? entry : { ...entry, companyProfileId, uploadedBy: user?.email };
+        const r = await authFetch('/api/accounting/purchases', {
             method, headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
@@ -57,12 +84,19 @@ function RegistroCompras() {
         }
         setEditing(null); setShowForm(false);
         load();
+        loadLoans(); // Refresh loans balance after editing a purchase
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('¿Eliminar esta compra?')) return;
-        await fetch(`/api/accounting/purchases?id=${id}`, { method: 'DELETE' });
+        if (!confirm('⚠️ ¿Estás seguro de eliminar esta compra?\n\nEsta acción quitará la compra del registro y restituirá el dinero al saldo del fondo/préstamo de forma permanente.')) return;
+        const r = await authFetch(`/api/accounting/purchases?id=${id}&companyProfileId=${companyProfileId}`, { method: 'DELETE' });
+        if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            alert(d.error || 'Error al eliminar');
+            return;
+        }
         load();
+        loadLoans(); // Refresh loans balance after deleting a purchase
     };
 
     const handleScan = async (file) => {
@@ -99,11 +133,63 @@ function RegistroCompras() {
 
     const totals = items.reduce((acc, s) => {
         const sign = s.tipoComprobante === '07' ? -1 : 1;
-        acc.base  += (s.aceptaCreditoFiscal ? (s.baseImponible || 0) : 0) * sign;
-        acc.igv   += (s.aceptaCreditoFiscal ? (s.igv || 0) : 0) * sign;
-        acc.total += (s.total || 0) * sign;
+        const tc = s.moneda === 'USD' ? (parseFloat(s.tipoCambio) || 1) : 1;
+        const base = (s.baseImponible || 0) * sign * tc;
+        const igv = (s.igv || 0) * sign * tc;
+        const total = (s.total || 0) * sign * tc;
+
+        acc.base  += s.aceptaCreditoFiscal ? base : 0;
+        acc.igv   += s.aceptaCreditoFiscal ? igv : 0;
+        acc.total += total;
         return acc;
     }, { base: 0, igv: 0, total: 0 });
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedItems(items.map(i => i.id));
+        } else {
+            setSelectedItems([]);
+        }
+    };
+
+    const handleSelectItem = (id) => {
+        if (selectedItems.includes(id)) {
+            setSelectedItems(selectedItems.filter(i => i !== id));
+        } else {
+            setSelectedItems([...selectedItems, id]);
+        }
+    };
+
+    const handleBulkUpdate = async () => {
+        if (selectedItems.length === 0) return;
+        setBulkLoading(true);
+        try {
+            const r = await authFetch('/api/accounting/bulk-funding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    companyProfileId,
+                    purchaseIds: selectedItems,
+                    fundingSourceId: bulkFundingSourceId
+                })
+            });
+            const d = await r.json();
+            if (!r.ok) {
+                alert(d.error || 'Error al actualizar masivamente');
+                return;
+            }
+            setShowBulkModal(false);
+            setSelectedItems([]);
+            load();
+            loadLoans();
+            alert(`Se actualizaron exitosamente ${d.count} compras.`);
+        } catch (e) {
+            console.error('Bulk update error', e);
+            alert('Error de conexión');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
 
     return (
         <AccountingShell>
@@ -121,6 +207,11 @@ function RegistroCompras() {
                     <select className="acc-select" style={{ width: 200 }} value={period} onChange={e => setPeriod(e.target.value)}>
                         {listAvailablePeriods().map(p => <option key={p} value={p}>{formatPeriod(p)}</option>)}
                     </select>
+                    {selectedItems.length > 0 && (
+                        <button className="btn btn-secondary" style={{ borderColor: '#3b82f6', color: '#3b82f6' }} onClick={() => setShowBulkModal(true)}>
+                            Cambiar Fondo ({selectedItems.length})
+                        </button>
+                    )}
                     <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                         <Icon name="camera" size={15} className={scanLoading ? 'spin' : ''} />
                         <span style={{ marginLeft: '0.45rem' }}>{scanLoading ? 'Escaneando...' : 'Escanear factura'}</span>
@@ -135,9 +226,9 @@ function RegistroCompras() {
             </div>
 
             <div className="acc-grid acc-grid-3" style={{ marginBottom: '1.25rem' }}>
-                <KpiSmall label="Base con Crédito" value={fmt(totals.base)} />
-                <KpiSmall label="IGV Crédito Fiscal" value={fmt(totals.igv)} accent="success" />
-                <KpiSmall label="Total Comprobantes" value={fmt(totals.total)} />
+                <KpiSmall label="Base con Crédito (S/ eq)" value={fmt(totals.base, 'PEN')} />
+                <KpiSmall label="IGV Crédito Fiscal (S/ eq)" value={fmt(totals.igv, 'PEN')} accent="success" />
+                <KpiSmall label="Total Comprobantes (S/ eq)" value={fmt(totals.total, 'PEN')} />
             </div>
 
             <div className="acc-table-wrap">
@@ -145,6 +236,9 @@ function RegistroCompras() {
                     <table className="acc-table">
                         <thead>
                             <tr>
+                                <th style={{ width: 40, textAlign: 'center' }}>
+                                    <input type="checkbox" checked={selectedItems.length === items.length && items.length > 0} onChange={handleSelectAll} style={{ cursor: 'pointer' }} />
+                                </th>
                                 <th>Fecha</th>
                                 <th>Tipo</th>
                                 <th>Serie-Núm</th>
@@ -164,15 +258,19 @@ function RegistroCompras() {
                                 </td></tr>
                             )}
                             {items.map(s => (
-                                <tr key={s.id} style={{ opacity: s.anulado ? 0.5 : 1 }}>
+                                <React.Fragment key={s.id}>
+                                <tr style={{ opacity: s.anulado ? 0.5 : 1 }}>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <input type="checkbox" checked={selectedItems.includes(s.id)} onChange={() => handleSelectItem(s.id)} style={{ cursor: 'pointer' }} />
+                                    </td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.fechaEmision)}</td>
                                     <td>{VOUCHER_TYPES[s.tipoComprobante]?.name || s.tipoComprobante}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}><strong>{s.serie}</strong>-{s.numero}</td>
                                     <td>{s.proveedorName}</td>
                                     <td>{s.numeroDocProveedor}</td>
-                                    <td style={{ textAlign: 'right' }}>{fmt(s.baseImponible)}</td>
-                                    <td style={{ textAlign: 'right' }}>{fmt(s.igv)}</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(s.total)}</td>
+                                    <td style={{ textAlign: 'right' }}>{fmt(s.baseImponible, s.moneda)}</td>
+                                    <td style={{ textAlign: 'right' }}>{fmt(s.igv, s.moneda)}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(s.total, s.moneda)}</td>
                                     <td>
                                         {s.aceptaCreditoFiscal
                                             ? <span className="acc-badge acc-badge-success">Sí</span>
@@ -180,6 +278,13 @@ function RegistroCompras() {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                            <button 
+                                                className={`acc-icon-btn ${expandedRow === s.id ? 'active' : ''}`} 
+                                                title="Detalles adicionales" 
+                                                onClick={() => setExpandedRow(expandedRow === s.id ? null : s.id)}
+                                            >
+                                                <Icon name="eye" size={14} />
+                                            </button>
                                             {s.pdfUrl && (
                                                 <a
                                                     href={s.pdfUrl}
@@ -197,6 +302,23 @@ function RegistroCompras() {
                                         </div>
                                     </td>
                                 </tr>
+                                {expandedRow === s.id && (
+                                    <tr key={`${s.id}-details`} style={{ backgroundColor: '#f8fafc' }}>
+                                        <td colSpan={11} style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', gap: '2rem' }}>
+                                                <div><strong>Subido por:</strong> {s.uploadedBy || 'Desconocido'}</div>
+                                                <div><strong>Fecha de subida:</strong> {s.createdAt ? new Date(s.createdAt).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }) : 'Desconocido'}</div>
+                                                {s.sourceQuotationNumber && <div><strong>Cotización N°:</strong> {s.sourceQuotationNumber}</div>}
+                                                <div>
+                                                    <strong>Fondo de Financiamiento:</strong> {
+                                                        s.fundingSourceId ? (loans.find(l => l.id === s.fundingSourceId)?.entity || s.fundingSourceId) : 'Fondos de la Empresa'
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
@@ -204,7 +326,45 @@ function RegistroCompras() {
             </div>
 
             {showForm && (
-                <PurchaseFormModal purchase={editing} onClose={() => { setShowForm(false); setEditing(null); }} onSave={handleSave} />
+                <PurchaseFormModal 
+                    purchase={editing} 
+                    loans={loans}
+                    onClose={() => { setShowForm(false); setEditing(null); }} 
+                    onSave={handleSave} 
+                />
+            )}
+            {showBulkModal && (
+                <div className="acc-modal-overlay">
+                    <div className="acc-modal-content" style={{ maxWidth: '400px' }}>
+                        <div className="acc-modal-header">
+                            <h2>Cambio Masivo de Fondo</h2>
+                            <button className="acc-close" onClick={() => setShowBulkModal(false)}><Icon name="x" size={24} /></button>
+                        </div>
+                        <div className="acc-modal-body">
+                            <p style={{ marginBottom: '1rem', color: '#475569', fontSize: '0.9rem' }}>
+                                Has seleccionado <strong>{selectedItems.length}</strong> compras. 
+                                Elige el nuevo fondo de financiamiento para todas ellas. Este cambio afectará también a Caja Chica o Mis Pendientes si la compra se originó allí.
+                            </p>
+                            <label className="acc-label">Nuevo Fondo</label>
+                            <select 
+                                className="acc-input" 
+                                value={bulkFundingSourceId} 
+                                onChange={e => setBulkFundingSourceId(e.target.value)}
+                            >
+                                <option value="">Fondos de la Empresa</option>
+                                {loans.map(l => (
+                                    <option key={l.id} value={l.id}>Préstamo: {l.entity} ({fmt(l.availableBalance, l.currency)})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="acc-modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setShowBulkModal(false)}>Cancelar</button>
+                            <button className="btn btn-primary" onClick={handleBulkUpdate} disabled={bulkLoading}>
+                                {bulkLoading ? 'Aplicando...' : 'Aplicar Cambio'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </AccountingShell>
     );
@@ -219,12 +379,12 @@ function emptyPurchase(period) {
         tipoDocProveedor: '6', numeroDocProveedor: '',
         proveedorName: '',
         baseImponible: 0, igv: 0, noGravadas: 0, isc: 0, otrosTributos: 0, total: 0,
-        moneda: 'PEN', tipoGasto: 'SERVICIO',
-        aceptaCreditoFiscal: true, anulado: false,
+        moneda: 'PEN', tipoCambio: '', tipoGasto: 'SERVICIO',
+        aceptaCreditoFiscal: true, anulado: false, fundingSourceId: ''
     };
 }
 
-function PurchaseFormModal({ purchase, onClose, onSave }) {
+function PurchaseFormModal({ purchase, loans, onClose, onSave }) {
     const [f, setF] = useState(purchase);
     const u = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
@@ -277,9 +437,33 @@ function PurchaseFormModal({ purchase, onClose, onSave }) {
                             <option value="OTRO">Otros gastos (65)</option>
                         </select>
                     </Field>
+                    
+                    <Field label="Moneda">
+                        <select className="acc-select" value={f.moneda || 'PEN'} onChange={e => u('moneda', e.target.value)}>
+                            <option value="PEN">Soles (S/)</option>
+                            <option value="USD">Dólares ($)</option>
+                        </select>
+                    </Field>
+
+                    {f.moneda === 'USD' && (
+                        <Field label="Tipo de Cambio (S/)">
+                            <input type="number" step="0.001" className="acc-input" value={f.tipoCambio || ''} onChange={e => u('tipoCambio', e.target.value)} placeholder="Ej: 3.80" required />
+                        </Field>
+                    )}
+
                     <Field label="Base imponible"><input type="number" step="0.01" className="acc-input" value={f.baseImponible} onChange={e => u('baseImponible', e.target.value)} /></Field>
                     <Field label="IGV"><input type="number" step="0.01" className="acc-input" value={f.igv} onChange={e => u('igv', e.target.value)} /></Field>
                     <Field label="Total"><input type="number" step="0.01" className="acc-input" value={f.total} onChange={e => u('total', e.target.value)} /></Field>
+                    
+                    <Field label="Fuente de Financiamiento" full>
+                        <select className="acc-select" value={f.fundingSourceId || ''} onChange={e => u('fundingSourceId', e.target.value)}>
+                            <option value="">Fondos Propios de la Empresa</option>
+                            {loans?.map(l => (
+                                <option key={l.id} value={l.id}>Préstamo: {l.entity} (Queda {new Intl.NumberFormat('es-PE', { style: 'currency', currency: l.currency || 'PEN' }).format(l.availableBalance)})</option>
+                            ))}
+                        </select>
+                    </Field>
+
                     <div style={{ gridColumn: 'span 3', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                         <label className="acc-check-row">
                             <input type="checkbox" checked={!!f.aceptaCreditoFiscal} onChange={e => u('aceptaCreditoFiscal', e.target.checked)} />
@@ -322,7 +506,10 @@ function KpiSmall({ label, value, accent }) {
     );
 }
 
-function fmt(n) { return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0); }
+function fmt(n, c) { 
+    if (c) return new Intl.NumberFormat('es-PE', { style: 'currency', currency: c }).format(n || 0);
+    return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0); 
+}
 function fmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);

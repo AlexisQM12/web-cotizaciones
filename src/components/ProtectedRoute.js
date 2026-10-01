@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export function ProtectedRoute({ children }) {
+export function ProtectedRoute({ children, allowedModule, adminOnly }) {
     const { user, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
@@ -12,11 +12,28 @@ export function ProtectedRoute({ children }) {
         if (!loading) {
             if (!user) {
                 router.push('/login');
-            } else if (!user.empresaId && pathname !== '/onboarding') {
+                return;
+            } 
+            if (!user.empresaId && pathname !== '/onboarding') {
                 router.push('/onboarding');
+                return;
+            }
+
+            // RBAC checks
+            if (user.role !== 'admin') {
+                if (adminOnly) {
+                    alert('Acceso Denegado. Se requieren permisos de administrador.');
+                    router.push('/');
+                    return;
+                }
+                if (allowedModule && (!user.modules || !user.modules.includes(allowedModule))) {
+                    alert('Acceso Denegado. No tienes permisos para este módulo.');
+                    router.push('/');
+                    return;
+                }
             }
         }
-    }, [user, loading, router, pathname]);
+    }, [user, loading, router, pathname, allowedModule, adminOnly]);
 
     if (loading) {
         return (

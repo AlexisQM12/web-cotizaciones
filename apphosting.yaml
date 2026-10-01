@@ -4,59 +4,59 @@ runConfig:
   maxInstances: 4
   concurrency: 80
   cpu: 1
-  memoryMiB: 512
+  memoryMiB: 1024
 
 env:
   - variable: FIREBASE_PROJECT_ID
-    value: web-cot-aya
+    value: zenlogic-8a575
     availability:
       - BUILD
       - RUNTIME
 
   - variable: FIREBASE_CLIENT_EMAIL
-    value: firebase-adminsdk-fbsvc@web-cot-aya.iam.gserviceaccount.com
+    value: firebase-adminsdk-fbsvc@zenlogic-8a575.iam.gserviceaccount.com
     availability:
       - BUILD
       - RUNTIME
 
   - variable: FIREBASE_PRIVATE_KEY
-    value: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1Ox7nKseXq44P\nHziz04lcpZPIs4QgDwS0A376CIuG7TQ15ebQT7iDnXE6xdB0p/SlrR5MTQ2fJClo\nHY34qtVUwPe2zAdLDZGNoPzQXy3gtPb3i8zHCyRDIEj/CfgO4owK+Dhu0le9Npe7\nDu1IySBOA17jZ2/CAldpEbWrS007LzsCj0hRlN1SDrFa+IR8SoErU4AL+Ew8zibw\n9Ri9Hli4B+jN62CGSXkx7waHHPwfyPt7PPWkAbrbB/Dsf54Nw53wotP66bLJyCYZ\n9IEblu6KkG7J2gnZk5TtssepykURjLVWNoXLNPvEvn8mv3VbFEITqcf1q9QEIIkG\nnYOeu3z7AgMBAAECggEAHhZQv5UBFM4qOUV4KZaSr+Wx6WMwKg2u518gi0xe3vQY\ns7gAFTue84QbDQ7+gqzIN2HMbWNqFwOvDMtsoJ4P6PsDmlPjWWjzw1Jjll5Zefw2\nd2C8tZtvwOXREzzpneMA1+i0nxAJo+6Lyxt5IO55uqnhl27lMA1+ddbhqldH3O1m\nht0t1YMS69cjXWTEO5Q7XGaPeuAqGToaHauPKbVqSAUvKuwp+xvVKz2pA7s4IIbj\nsf1C8guTgftRv8vjRUbf59N5tFiFZeXl7pElUKr25AG+sYtHr18zvsQS5xr0uKPG\nD740oND1m3ekJqUICEEWcfLLECR9WbXt6LNVLcWpQQKBgQD7WxIVnEzNzl+rIhdh\niFHtRIt8BHbnOmXk17XNqtHSOI1nxpDhGRn/nfvQn88T8AZmGDgRL0zrNHopmngI\nB8X9FaY1uU1MOlVU0jqkenzdTaz3xI0RxX1XylcyJ+91ODUBNai2zhbggieisg/p\n3MQZZt85rgsVmIE8qSFWFo6uwQKBgQC4lFrnXBTC0Mx7VVezS60nIaQd/L7PVvlK\ngf2TnPMqjEZ1Dsnp/LGKeFW6gQmjCGZHG8YvYoCMRhe7WWkdxTg9JHWEgAc4gA20\nlVm3kU2nRYI8+L6e6VtaR5O/cIxrzh2M/nlCStb/48PqoBWuKyOXFY16Xy7kDehF\nVbP51g1WuwKBgB0bNaPk/ovSeweRIg38QChuiIxq4+3wuD3gsL/JKRTj0ZQTzVET\nnAwamj9VUiBn6gXGhi+PP6P45rCMn5umcsnUyPNtqsLJ+nmhAoNrX6wsw3vJeeB1\n8wbIeoJnV3ZGdPTX5tqMUN/ckoRnhCo7k0WxwOWn/saYa1a/6wlSAWHBAoGAUkXu\nbwngRyYCv0a/HLAysiqQmL073/eIjul6Of3Pdbuo/CxnW+DC0lHpBITX4s+vpyp+\nIEjru5rSoTOtYxOxia9ionjevxR1B3U61FP0JQcakkrdzL9/dLJK7R4huTvaeCpF\nqoLpao3/melZQJUB/CojMdSTdhus2Jrm6gm7UFkCgYEAyh9tzSz8Q8I12+IEI/Ya\nRM7YSHtLUNfkF+JS1p8A0LnYeee/2QPPvOjMf0heFq7eqCzNviFrU+vWKXG76oTm\nPP8yT/qCLOKvhXA07GWW1fD/mw2pLNk232QwUNMIBdea/Ihcwu2tC7N5YRV0CByt\nOK7dFiaZJHPkcGIHca5BU58=\n-----END PRIVATE KEY-----"
+    value: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC0ph2G/EYk32zg\nnxH71f/FDvmkLu4uvBl2szpiKy494a9ZAeSVfIwbwuDqyTNpmilYjJLvkP5z36WE\nxJUaRbm2aSMgKCB7Uu6lozPBqv6doBqU1LzzpBtycBY6Raq/IfQzAVB+RqMf2n10\nXrChg3IpLM8SLCopnkTHu2o6BpH1Ev+0vI+T7Mwh4qMyBX4ehv3ZWaIS4GXqWXrA\ncdFbZctObeanPnqzV7/PLL0x6KP75yLQIT8bVDO4sSXMF0dJK7pMuqBHfrd0ejAR\nScabrklDdrYDnUKqAweUWuBjLJPRIzXEr1CFmTrY0WF4jDXAMjbvve9mgB6YtNzQ\n84Zf+lAPAgMBAAECggEASvRb7wzQq+76dY76/sOx3tlSUsHYORL5+8rs8BubkbiJ\nMYS8DByD4+btvO1jxC7fderJ8tX2Bi0nN9n7Rc3lex7PoMGVjKYB+D8ps/NXtx5d\nuSA2EF+otch1KJOMf8a+VMV4WRTFDWvyPu0lG7b3EMeTWaZyjhcp0bfdIRtlx0n5\n7sAUUwkxQ2g/yow80qKNFLug0o7M7V2bvdm7qs4nNGx4qQgrMCXEua1TiYMu2KM/\n9ARDQnrjdXzGd7d3iLEJX2XNSQsv40dU3l8WGF3dPX6BZeI9j5FT4v8T5t//oV1a\niIudIUMdlaBwznGwA44M5slzOEJlaI/CZhogbzzzVQKBgQDtpRreFojYk1gazx58\nHSv16PO9b3j+M/AmhrgiKNSJu13edn2JJISrfG/V/8VB2QwWLqcYZJTNXqTRdr69\nbLL9T8Zb9+zjNF/gWa1qbHtXvT7F1rtrSDbvjeMC0D2DARPO9i1gN9iPhEZgAA10\nBfTRNp2X22qSL0tmS1l9EFyTtQKBgQDCmgqbM0HD2T1Ay/dj2ZX3s4lzXOreDeAO\npPNPO1yzTJlkNNTrNavC8itrxTiuEcIeh5hUwKQIaDIcE/ROYTpCXKnjD9p/y2QR\nGui/n75Ma9i47GlOGobhQRF4n8ysyoi5tK2KJlBEmABY0qp7bZ2hoNV/a6mjtnPr\nAc9RDLk3MwKBgQCJ6YQjGK7ICRJbVJGbc458gnlZGWT9GQUoRox7fniBidPa86a8\nvQ2lO2znoyxFn4FNKjvcgxp76I375U6iPX/OU8qIuuOlo1J0r3ZdSaF29KOGSqyv\ngNQox43Tpyfba/ej5ufEbARonVn+AmnMSFygQXLJmxNIzNuT/OxtEN649QKBgBe3\nVEGT3pjyub9S3ESD+P3mGINBuLH1OPAv9CMc1fBYDn2i3qwHr3Yjs1z//SdhrKmx\n1sPFcng/0pOPbv+6Y7JAvseYYAWhEQHwqJrp6fRAVHo8/ZxyKSv8lReBSh1o1X7k\nYR3sC25ApBIvIm3GbyaKhlpwEY2NJ9VlNBHpngz3AoGBAOEx/ofzwFjvHhGQw8JT\nJLzb5Js3s2UV5RYCBLI5V/Akp2mRd5tNwZ3nwwW3IiBkjW2IynpW5L+lkjYjV6r5\nJv/XE8I7wHZbc9/SaVmEObXktTkgJkavug97P9NHKW9cv4h9fi8aA/LnqLQP3VvK\nByAvDz9wf0ZsRU7GqtjsghA8\n-----END PRIVATE KEY-----"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: web-cot-aya.firebasestorage.app
+    value: zenlogic-8a575.firebasestorage.app
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyAZ4t2IgeCSBCA_7Di9HvE3KC1WzrsH3q0
+    value: AIzaSyBo3gGsIr5f5KDttAr25hC9g_YgInGpLi8
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: web-cot-aya.firebaseapp.com
+    value: zenlogic-8a575.firebaseapp.com
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: web-cot-aya
+    value: zenlogic-8a575
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "58467911514"
+    value: "502867861506"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:58467911514:web:1c96e90359f42befac5563
+    value: 1:502867861506:web:dcb0847df09d8104c3871b
     availability:
       - BUILD
       - RUNTIME

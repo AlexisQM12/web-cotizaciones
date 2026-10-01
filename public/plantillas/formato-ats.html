@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Formato ATS — Análisis de Trabajo Seguro · Aya Technologies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--green:#54B53C;--ink:#0e0e0e;--ink-soft:#444;--ink-muted:#888;--line:#d8d8d8;--surface:#f6f6f6;--font:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);font-size:9pt;color:var(--ink);background:#ccc;line-height:1.4;}
+/* Hoja A4 exacta: 210 x 297 mm. Formato de una sola cara: margenes reducidos
+   respecto de las fichas tecnicas para ganar area util de escritura. */
+.page{width:210mm;height:297mm;overflow:hidden;background:#fff;margin:12mm auto;padding:11mm 13mm 15mm;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.18);}
+/* ── ENCABEZADO SIMPLIFICADO ──
+   Sin banda de portada: el logotipo y el codigo del formato comparten una sola
+   linea, y el titulo vive en una franja delgada que conserva la identidad. */
+.page-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:2px solid var(--ink);}
+.logo-img{height:11mm;width:auto;display:block;flex-shrink:0;}
+.doc-meta{text-align:right;}
+.doc-meta .doc-title{font-size:7.5pt;font-weight:500;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;}
+.doc-meta .doc-ref{font-family:var(--mono);font-size:6.5pt;color:var(--ink-muted);margin-top:1px;}
+.titlebar{background:var(--ink);color:#fff;margin:0 -13mm;padding:8px 13mm;display:flex;align-items:baseline;justify-content:space-between;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+.titlebar h1{font-size:15pt;font-weight:300;letter-spacing:-.02em;line-height:1.1;}
+.titlebar h1 strong{font-weight:700;}
+.titlebar .tag{font-family:var(--mono);font-size:6.5pt;color:var(--green);text-transform:uppercase;letter-spacing:.08em;}
+/* ── BLOQUE DE IDENTIFICACION ──
+   Numero, fecha, horas, datos generales y descripcion en una sola rejilla
+   con divisiones internas: ocupa el espacio de tres secciones sueltas. */
+.idblock{border:1px solid var(--ink);border-radius:4px;display:grid;grid-template-columns:repeat(4,1fr);margin:8px 0 0;overflow:hidden;}
+.idcell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 7px 3px;}
+.idcell:nth-child(4n){border-right:none;}
+.idcell.full{grid-column:1 / -1;border-right:none;border-bottom:none;}
+.idlabel{font-family:var(--mono);font-size:6pt;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;}
+.idspace{min-height:15px; height:auto;}
+.idspace.tall{min-height:32px; height:auto;}
+/* ── TITULOS DE SECCION COMPACTOS ── */
+.st{display:flex;align-items:center;gap:8px;margin:8px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--ink);}
+.st .n{font-family:var(--mono);font-size:6.5pt;color:var(--green);flex-shrink:0;}
+.st h2{font-size:9pt;font-weight:500;letter-spacing:-.01em;color:var(--ink);text-transform:uppercase;}
+.st .hint{margin-left:auto;font-family:var(--mono);font-size:6pt;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.04em;}
+/* ── CASILLAS ── */
+.chkgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px 10px;margin:4px 0 0;}
+.chkgrid.c3{grid-template-columns:repeat(3,1fr);}
+.chk{display:flex;align-items:center;gap:5px;font-size:7.5pt;color:var(--ink-soft);line-height:1.25;}
+.chk::before{content:"";width:9px;height:9px;border:1px solid var(--ink);border-radius:2px;flex-shrink:0;}
+.chk.checked::before{content:"✔";display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;}
+.chk .otro{border-bottom:1px solid var(--line);flex:1;}
+/* ── TABLAS PARA RELLENAR A MANO ── */
+table{width:100%;border-collapse:collapse;font-size:8pt;margin:4px 0 0;}
+th{background:var(--ink);color:#fff;font-weight:500;text-align:left;padding:3px 7px;font-size:6.5pt;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--ink);}
+td{border:1px solid var(--line);height:23px;padding:2px 7px;vertical-align:top;}
+td.num{text-align:center;font-family:var(--mono);font-size:7pt;color:var(--ink-muted);}
+.legend{font-family:var(--mono);font-size:6pt;color:var(--ink-muted);margin-top:3px;}
+/* ── PIE: ADVERTENCIA, FIRMAS Y NOTA LEGAL ── */
+.stopnote{border-left:3px solid #E8612A;background:#fff6f2;padding:5px 9px;font-size:7pt;color:var(--ink-soft);margin-top:7px;border-radius:0 3px 3px 0;line-height:1.4;}
+.sign-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:12px;}
+.sign-space{height:26px;}
+.sign-line{border-top:1px solid var(--ink);padding-top:4px;font-family:var(--mono);font-size:6pt;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;}
+.legalnote{font-family:var(--mono);font-size:6pt;color:var(--ink-muted);line-height:1.5;margin-top:12px;text-align:center;}
+.page-footer{position:absolute;bottom:6mm;left:13mm;right:13mm;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:4px;}
+.f-left{font-family:var(--mono);font-size:6.5pt;color:var(--ink-muted);white-space:nowrap;}
+.f-center{font-size:6.5pt;color:var(--ink-muted);text-align:center;white-space:nowrap;}
+.f-right{font-family:var(--mono);font-size:6.5pt;color:var(--ink-muted);white-space:nowrap;}
+
+/* boton flotante de impresion (no se imprime) */
+.pdf-btn{position:fixed;right:20px;bottom:20px;z-index:99;display:inline-flex;align-items:center;gap:8px;
+  padding:12px 20px;border:none;border-radius:999px;cursor:pointer;
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+  background:var(--ink);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.28);
+  transition:background .18s ease,transform .18s ease;}
+.pdf-btn:hover{background:var(--green);transform:translateY(-2px);}
+.pdf-btn svg{width:15px;height:15px;}
+
+/* ── IMPRESION: A4 exacto, 1 div = 1 hoja ── */
+@page{size:A4;margin:0;}
+@media print{
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  body{background:#fff;}
+  .page{margin:0;box-shadow:none;width:210mm;height:297mm;padding:11mm 13mm 15mm;}
+  .page-footer{position:absolute;}
+  .pdf-btn{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+<header class="page-header">
+  <img class="logo-img" src="https://firebasestorage.googleapis.com/v0/b/aya-web-822dd.firebasestorage.app/o/Logo%2Flgo%204.png?alt=media&token=d9ff5f3b-3842-4d94-a9ce-606ff04bc758" alt="Aya Technologies">
+  <div class="doc-meta"><div class="doc-title">Seguridad y Salud en el Trabajo</div><div class="doc-ref">SSO-FR-ATS-01 · Rev. 2.0 · Arequipa, Perú</div></div>
+</header>
+<div class="titlebar">
+  <h1>Análisis de <strong>Trabajo Seguro</strong></h1>
+  <span class="tag">// Completar antes de iniciar la tarea</span>
+</div>
+
+<div class="idblock">
+  <div class="idcell"><div class="idlabel">N.° de ATS</div><div class="idspace">1003</div></div>
+  <div class="idcell"><div class="idlabel">Fecha</div><div class="idspace">22 / 09 / 2026</div></div>
+  <div class="idcell"><div class="idlabel">Hora de inicio</div><div class="idspace">01:00 p. m.</div></div>
+  <div class="idcell"><div class="idlabel">Hora de término</div><div class="idspace">06:30 p. m.</div></div>
+  <div class="idcell"><div class="idlabel">Área o proyecto</div><div class="idspace">U. Católica San Pablo — servicio de desmontaje</div></div>
+  <div class="idcell"><div class="idlabel">Ubicación exacta</div><div class="idspace">Laboratorio P-305</div></div>
+  <div class="idcell"><div class="idlabel">Supervisor responsable</div><div class="idspace">Ken A. Quispe Mamani</div></div>
+  <div class="idcell"><div class="idlabel">N.° de personas</div><div class="idspace">1</div></div>
+  <div class="idcell full"><div class="idlabel">Descripción de la tarea</div><div class="idspace tall" style="font-size:7.5pt; line-height:1.2; padding-top:2px; padding-bottom:5px;">Montaje de componentes mecánicos del sistema de triturado, sin intervención de motores ni de la transmisión: instalación de patas antivibratorias y nivelación del equipo, armado de la caja metálica y montaje de las tapas metálicas. Detalle de pasos en la sección 04.</div></div>
+</div>
+
+<div class="st"><span class="n">// 01</span><h2>Equipo de protección personal</h2><span class="hint">Marcar lo requerido</span></div>
+<div class="chkgrid">
+  <div class="chk">Casco de seguridad</div>
+  <div class="chk checked">Lentes de seguridad</div>
+  <div class="chk checked">Guantes (anticorte)</div>
+  <div class="chk checked">Calzado punta de acero</div>
+  <div class="chk">Protección auditiva</div>
+  <div class="chk">Respirador o mascarilla</div>
+  <div class="chk">Careta facial</div>
+  <div class="chk">Careta de soldar</div>
+  <div class="chk">Mandil de cuero</div>
+  <div class="chk">Arnés y línea de vida</div>
+  <div class="chk">Guantes dieléctricos</div>
+  <div class="chk">Otro: <span class="otro"></span></div>
+</div>
+
+<div class="st"><span class="n">// 02</span><h2>Trabajos de alto riesgo</h2><span class="hint">Exigen permiso escrito adjunto</span></div>
+<div class="chkgrid c3">
+  <div class="chk">Trabajo en altura</div>
+  <div class="chk">Trabajo en caliente</div>
+  <div class="chk">Trabajo eléctrico</div>
+  <div class="chk">Espacios confinados</div>
+  <div class="chk">Izaje de cargas</div>
+  <div class="chk">Sustancias químicas</div>
+  <div class="chk">Equipos a presión</div>
+  <div class="chk">Máquinas en movimiento</div>
+  <div class="chk checked">Ninguno de los anteriores</div>
+</div>
+
+<div class="st"><span class="n">// 03</span><h2>Verificación de condiciones previas</h2><span class="hint">Todas deben quedar marcadas</span></div>
+<div class="chkgrid c3">
+  <div class="chk">Personal informado y firmante del ATS</div>
+  <div class="chk">EPP completo y en buen estado</div>
+  <div class="chk">Herramientas y equipos inspeccionados</div>
+  <div class="chk">Área delimitada, señalizada y ordenada</div>
+  <div class="chk">Energías bloqueadas y rotuladas (LOTO)</div>
+  <div class="chk">Ruta de evacuación, botiquín y extintor ubicados</div>
+</div>
+
+<div class="st"><span class="n">// 04</span><h2>Desarrollo del análisis</h2><span class="hint">Paso → peligro → riesgo → control</span></div>
+<table>
+<thead><tr><th style="width:20px;text-align:center;">#</th><th style="width:22%;">Pasos de la tarea</th><th style="width:22%;">Peligros identificados</th><th style="width:22%;">Riesgos identificados</th><th>Medidas de control</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>Preparación del área y recepción de componentes</td><td>Planchas y tapas con aristas vivas, piezas apiladas sin calzar, piso obstruido</td><td>Cortes en manos y antebrazos, golpes, caídas al mismo nivel</td><td>Delimitar área y despejar ruta. Confirmar bloqueo de energía (LOTO). Apoyar piezas en caballetes, nunca contra el muro. Usar guantes anticorte. Carga entre dos personas si excede límite individual.</td></tr>
+<tr><td class="num">2</td><td>Montaje de patas antivibratorias y nivelación</td><td>Masa del equipo descansando sobre los puntos de apoyo, equipo inclinado durante el calce, herramienta manual</td><td>Aplastamiento de manos y pies, vuelco del equipo, sobreesfuerzo</td><td>Usar tacos de madera al liberar esquinas. No meter manos bajo bases sin calce. Levantar mínimo necesario por esquina. Apretar patas de forma alternada hasta nivelar.</td></tr>
+<tr><td class="num">3</td><td>Armado de la caja metálica</td><td>Paneles de gran superficie y poca rigidez, cantos sin desbarbar, herramienta de fijación, panel que puede volcarse</td><td>Cortes, golpes por caída de panel, atrapamiento de dedos entre paneles, proyección de partículas</td><td>Desbarbar cantos. Sujetar paneles con prensas o entre dos personas hasta fijar al menos 2 puntos. Mantener manos fuera de la línea de unión. Usar lentes al taladrar.</td></tr>
+<tr><td class="num">4</td><td>Montaje de tapas metálicas y verificación final</td><td>Tapas con peso propio, bisagras y puntos de pellizco, recortes y herramienta dentro del equipo</td><td>Golpes por caída de tapa, atrapamiento de dedos, cortes</td><td>Sostener tapas firmemente hasta fijar el primer punto. Mantener dedos lejos de bisagras. Retirar herramientas y recortes del interior antes de cerrar.</td></tr>
+</tbody>
+</table>
+<div class="legend">PELIGRO: la fuente de daño (p. ej. cuchilla expuesta) · RIESGO: el daño que puede ocasionar (p. ej. corte en la mano)</div>
+
+<div class="st"><span class="n">// 05</span><h2>Personal participante</h2><span class="hint">Firmar declara conocer los riesgos y aplicar los controles</span></div>
+<table>
+<thead><tr><th style="width:22px;text-align:center;">#</th><th style="width:34%;">Apellidos y nombres</th><th style="width:16%;">DNI</th><th>Cargo</th><th style="width:24%;">Firma</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>Ken Alexis Quispe Mamani</td><td>77056669</td><td>Jefe de Mantenimiento</td><td></td></tr>
+</tbody>
+</table>
+
+<div class="stopnote"><strong>El trabajo se detiene si:</strong> alguna condición de la sección 03 no puede marcarse, se marcó un trabajo de alto riesgo sin su permiso escrito adjunto, o cambian las condiciones durante la jornada. En ese último caso se levanta un ATS nuevo.</div>
+
+<div class="sign-grid">
+  <div><div class="sign-space"></div><div class="sign-line">KEN A. QUISPE MAMANI - JEFE DE MANTENIMIENTO</div></div>
+  <div><div class="sign-space"></div><div class="sign-line" style="visibility:hidden">Responsable de SSO</div></div>
+  <div><div class="sign-space"></div><div class="sign-line">U. CATÓLICA SAN PABLO - TITULAR DEL ÁREA</div></div>
+</div>
+
+<div class="legalnote">Complementa la matriz IPERC del área; no la sustituye. Emitido conforme a la Ley N.° 29783 y su Reglamento D.S. N.° 005-2012-TR. Conservar el original firmado en el archivo de SSO.</div>
+
+<div class="page-footer">
+  <div class="f-left">SSO-FR-ATS-01 · Rev. 2.0</div>
+  <div class="f-center">Aya Technologies — Ingeniería Aplicada · Arequipa, Perú</div>
+  <div class="f-right">Pág. 1 / 1</div>
+</div>
+</div>
+
+<button class="pdf-btn" onclick="window.print()" title="Imprimir el formato (A4, 1 página)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Imprimir formato
+</button>
+</body>
+</html>

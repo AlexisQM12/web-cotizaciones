@@ -1,87 +1,67 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { numberToSpanishWords, formatAmount } from '@/lib/numberToWords';
+import { aBloques, aTextoPlano, tieneContenido } from '@/lib/richText';
 
-// Helper function to parse and render formatted text
-// Supports: **bold**, • bullets, and newlines
-const renderFormattedText = (text, baseStyle = {}) => {
-    if (!text) return null;
+// Pinta el texto con formato de un ítem.
+//
+// Antes vivía aquí un parser de "**negrita**" que NUNCA se llamaba: el documento
+// imprimía item.details en crudo, así que los asteriscos salían literales en el
+// PDF. Ahora el formato se normaliza en src/lib/richText.js, que entiende tanto
+// el HTML del editor visual como el texto con marcadores de las cotizaciones
+// antiguas, y aquí sólo se dibujan los bloques resultantes.
+const renderTextoConFormato = (valor, baseStyle = {}) => {
+    const bloques = aBloques(valor);
+    if (!bloques.length) return null;
+
+    return bloques.map((bloque, i) => (
+        <Text key={`b-${i}`} style={{ ...baseStyle, marginBottom: 2 }}>
+            {bloque.tipo === 'vineta' && <Text>• </Text>}
+            {bloque.partes.map((parte, j) => (
+                <Text
+                    key={j}
+                    style={{
+                        ...baseStyle,
+                        // Helvetica es una de las fuentes estándar del PDF: trae
+                        // negrita y cursiva sin registrar nada.
+                        ...(parte.negrita   ? { fontWeight: 'bold' }        : {}),
+                        ...(parte.cursiva   ? { fontStyle: 'italic' }       : {}),
+                        ...(parte.subrayado ? { textDecoration: 'underline' } : {}),
+                    }}
+                >
+                    {parte.texto}
+                </Text>
+            ))}
+        </Text>
+    ));
+};
+
+const getProxiedImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('data:') || url.startsWith('blob:') || !url.startsWith('http')) {
+        return url;
+    }
     
-    const lines = text.split('\n');
-    const elements = [];
-    
-    lines.forEach((line, lineIndex) => {
-        if (!line.trim()) {
-            // Empty line - add a small spacer
-            elements.push(
-                <Text key={`empty-${lineIndex}`} style={{ ...baseStyle, height: 4 }}> </Text>
-            );
-            return;
-        }
-        
-        // Check if line starts with bullet
-        const hasBullet = line.startsWith('•');
-        let lineContent = hasBullet ? line.substring(1) : line;
-        
-        // Check for bold text (**text**)
-        const boldRegex = /\*\*(.+?)\*\*/g;
-        const boldMatches = [];
-        let match;
-        while ((match = boldRegex.exec(lineContent)) !== null) {
-            boldMatches.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                text: match[1]
-            });
-        }
-        
-        if (boldMatches.length > 0) {
-            // Line has bold text - build array of parts
-            const parts = [];
-            let currentIndex = 0;
-            
-            boldMatches.forEach((bold) => {
-                // Add text before bold
-                if (bold.start > currentIndex) {
-                    const beforeText = lineContent.substring(currentIndex, bold.start);
-                    parts.push({ text: beforeText, bold: false });
-                }
-                // Add bold text
-                parts.push({ text: bold.text, bold: true });
-                currentIndex = bold.end;
-            });
-            
-            // Add remaining text after last bold
-            if (currentIndex < lineContent.length) {
-                parts.push({ text: lineContent.substring(currentIndex), bold: false });
+    let ext = 'jpg';
+    try {
+        const urlObj = new URL(url);
+        const match = urlObj.pathname.match(/\.([a-zA-Z0-9]+)$/);
+        if (match) {
+            ext = match[1].toLowerCase();
+            // @react-pdf/renderer supports mainly jpg and png
+            if (ext !== 'jpg' && ext !== 'jpeg' && ext !== 'png') {
+                ext = 'jpg'; // fallback
             }
-            
-            // Render the line with bullet prefix if applicable
-            elements.push(
-                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
-                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
-                    {parts.map((part, partIndex) => (
-                        <Text
-                            key={partIndex}
-                            style={part.bold ? { ...baseStyle, fontWeight: 'bold' } : baseStyle}
-                        >
-                            {part.text}
-                        </Text>
-                    ))}
-                </Text>
-            );
-        } else {
-            // No bold text - render simply
-            elements.push(
-                <Text key={`line-${lineIndex}`} style={{ ...baseStyle, marginBottom: 2 }}>
-                    {hasBullet && <Text style={{ ...baseStyle }}>• </Text>}
-                    <Text style={{ ...baseStyle }}>{lineContent}</Text>
-                </Text>
-            );
         }
-    });
+    } catch (e) {
+        console.error('Error parsing image url:', e);
+    }
     
-    return elements;
+    const proxyUrl = `/api/proxy-image/image.${ext}?url=${encodeURIComponent(url)}`;
+    if (typeof window !== 'undefined') {
+        return `${window.location.origin}${proxyUrl}`;
+    }
+    return proxyUrl;
 };
 
 // Register fonts if needed (we'll stick to standard ones for now to ensure speed)
@@ -205,6 +185,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     tableHeader: {
+        position: 'relative', // el encabezado reutiliza colCode (absolute): necesita este ancla igual que tableRow
         flexDirection: 'row',
         backgroundColor: '#f9fafb',
         borderBottomWidth: 1,
@@ -218,6 +199,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     tableRow: {
+        position: 'relative', // ancla para el número de ítem (position: absolute)
         flexDirection: 'row',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -227,8 +209,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     // Columns (Flexible widths)
-    colCode: { width: '8%' },
-    colDesc: { width: '62%' }, // Increased width
+    //
+    // El número de ítem (colCode) va con position:'absolute' a propósito: con
+    // flexDirection:'row', cuando la descripción de un ítem es tan larga que
+    // react-pdf tiene que partirla entre páginas, el fragmento que continúa en
+    // la página siguiente perdía la sangría — porque esa posición dependía de
+    // venir "después" del número en el flujo, y el corte de página no
+    // preserva ese flujo entre columnas. Al sacar el número del flujo y darle
+    // a colDesc su propio paddingLeft (equivalente al ancho que ocupaba
+    // colCode), la sangría queda en el estilo de la propia columna: sobrevive
+    // el corte, y el número simplemente no se repite en la continuación —que
+    // es el comportamiento esperado, igual que una lista numerada.
+    colCode: {
+        position: 'absolute',
+        left: 0,
+        top: 4, // alinea con la primera línea del título, en vez de centrarse en toda la altura de la fila
+    },
+    // paddingLeft en PUNTOS FIJOS, no en '%': medido con pdftotext -layout,
+    // un padding porcentual se reducía a la mitad en el fragmento que continúa
+    // en la página siguiente (probablemente el huérfano recalcula el % contra
+    // otra base) — pasaba de 6 a 3 espacios de sangría entre página 1 y 2. Un
+    // valor fijo no depende de ningún cálculo relativo al contenedor, así que
+    // no tiene esa base que recalcular. 40pt equivale al 8% de esta tabla en A4.
+    colDesc: { width: '70%', paddingLeft: 40 }, // 62% + 8% del número, reservados como padding propio
+    // Con "precio general" se ocultan CANT/PRECIO.U/SUBTOTAL (32% liberado):
+    // la descripción ocupa el resto de la fila en vez de dejarlo en blanco.
+    colDescAncho: { width: '100%' },
     // colUnit removed
     colQty: { width: '10%', textAlign: 'center' },
     // colVal removed
@@ -339,10 +345,25 @@ export const QuotationDocument = ({ data }) => {
         currency = 'Soles', // Default currency
         notes = '', // Default notes
         serviceDescription = '', // Default service description
+        usarPrecioGeneral = false, // Precio único para toda la cotización, sin desglose por ítem
+        precioGeneralMonto = 0,
+        garantiaHabilitada = false, // No todo servicio lleva garantía; se activa por cotización
+        garantiaTexto = '',
     } = data;
 
+    // La sección de Garantía es opcional: si no está activa (o está activa pero
+    // vacía), "Condiciones de Pago" recupera el número que tendría sin ella, en
+    // vez de dejar un hueco fijo en la numeración del documento.
+    const mostrarGarantia = !!garantiaHabilitada && tieneContenido(garantiaTexto);
+    const numCondicionesPago = mostrarGarantia ? 6 : 5;
+
     // Calculate totals
-    const subtotal = items.reduce((acc, item) => acc + (parseFloat(item.price || 0) * parseFloat(item.quantity || 1)), 0);
+    // Con "precio general" el monto no sale de sumar los ítems: se fija a mano
+    // en el paso Datos y los ítems se imprimen sólo como descripción (ver la
+    // tabla más abajo, que omite las columnas de precio en ese caso).
+    const subtotal = usarPrecioGeneral
+        ? (parseFloat(precioGeneralMonto) || 0)
+        : items.reduce((acc, item) => acc + (parseFloat(item.price || 0) * parseFloat(item.quantity || 1)), 0);
     const igvRate = 0.18;
     // Assuming the input price is the UNIT PRICE (Inc IGV) or UNIT VALUE (Ex IGV)? 
     // Usually in these systems, you simplify. Let's assume input price is "Valor U" (Ex IGV) for the calculation flow:
@@ -363,7 +384,7 @@ export const QuotationDocument = ({ data }) => {
                 <View style={styles.headerContainer}>
                     <View style={styles.companyColumn}>
                         {company.logoUrl && (
-                            <Image src={company.logoUrl} style={styles.logo} />
+                            <Image src={getProxiedImageUrl(company.logoUrl)} style={styles.logo} />
                         )}
                         <Text style={styles.companyName}>{company.name || 'MI EMPRESA S.A.C.'}</Text>
                         <View style={{ height: 5 }} />
@@ -436,10 +457,14 @@ export const QuotationDocument = ({ data }) => {
                     {/* Header */}
                     <View style={styles.tableHeader}>
                         <Text style={[styles.th, styles.colCode]}>ITEM</Text>
-                        <Text style={[styles.th, styles.colDesc]}>DESCRIPCIÓN</Text>
-                        <Text style={[styles.th, styles.colQty]}>CANT</Text>
-                        <Text style={[styles.th, styles.colPrice]}>PRECIO.U</Text>
-                        <Text style={[styles.th, styles.colTotal]}>SUBTOTAL</Text>
+                        <Text style={[styles.th, styles.colDesc, usarPrecioGeneral && styles.colDescAncho]}>DESCRIPCIÓN</Text>
+                        {!usarPrecioGeneral && (
+                            <>
+                                <Text style={[styles.th, styles.colQty]}>CANT</Text>
+                                <Text style={[styles.th, styles.colPrice]}>PRECIO.U</Text>
+                                <Text style={[styles.th, styles.colTotal]}>SUBTOTAL</Text>
+                            </>
+                        )}
                     </View>
 
                     {/* Body */}
@@ -454,26 +479,27 @@ export const QuotationDocument = ({ data }) => {
                             <View key={index} style={styles.tableRow}>
                                 <Text style={[styles.colCode, { fontSize: 8 }]}>{index + 1}</Text>
 
-                                <View style={styles.colDesc}>
+                                <View style={[styles.colDesc, usarPrecioGeneral && styles.colDescAncho]}>
                                     <View style={styles.descContainer}>
-                                        {/* Placeholder for item image if we ever implement it in data */}
                                         {item.imageUrl && (
-                                            <Image src={item.imageUrl} style={styles.itemImage} />
+                                            <Image src={getProxiedImageUrl(item.imageUrl)} style={styles.itemImage} />
                                         )}
                                         <View style={styles.itemTextContainer}>
                                             <Text style={styles.itemTitle}>{item.name || item.description}</Text>
-                                            {item.details && item.details !== (item.name || item.description) && (
-                                                <Text style={styles.itemDescText}>
-                                                    {item.details}
-                                                </Text>
+                                            {item.details && aTextoPlano(item.details) !== (item.name || item.description) && (
+                                                <View>{renderTextoConFormato(item.details, styles.itemDescText)}</View>
                                             )}
                                         </View>
                                     </View>
                                 </View>
 
-                                <Text style={[styles.colQty, { fontSize: 8 }]}>{formatAmount(itemQty)}</Text>
-                                <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {formatAmount(itemPrecioU)}</Text>
-                                <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {formatAmount(itemSubtotal)}</Text>
+                                {!usarPrecioGeneral && (
+                                    <>
+                                        <Text style={[styles.colQty, { fontSize: 8 }]}>{formatAmount(itemQty)}</Text>
+                                        <Text style={[styles.colPrice, { fontSize: 8 }]}>S/ {formatAmount(itemPrecioU)}</Text>
+                                        <Text style={[styles.colTotal, { fontSize: 8 }]}>S/ {formatAmount(itemSubtotal)}</Text>
+                                    </>
+                                )}
                             </View>
                         );
                     })}
@@ -501,11 +527,21 @@ export const QuotationDocument = ({ data }) => {
                 {/* 6. Notes */}
                 <Text style={[styles.sectionHeader, { marginTop: 10 }]}>4. NOTAS</Text>
                 <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 5 }}>
-                    <Text style={styles.notesText}>{notes}</Text>
+                    {renderTextoConFormato(notes, styles.notesText)}
                 </View>
 
+                {/* 6.5. Warranty terms — opcional, según el tipo de servicio */}
+                {mostrarGarantia && (
+                    <View style={{ marginTop: 6 }}>
+                        <Text style={styles.sectionHeader}>5. TÉRMINOS DE GARANTÍA DEL SERVICIO</Text>
+                        <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 5 }}>
+                            {renderTextoConFormato(garantiaTexto, styles.notesText)}
+                        </View>
+                    </View>
+                )}
+
                 {/* 7. Conditions */}
-                <Text style={styles.sectionHeader}>5. CONDICIONES DE PAGO</Text>
+                <Text style={styles.sectionHeader}>{numCondicionesPago}. CONDICIONES DE PAGO</Text>
                 <View style={styles.paymentContainer}>
                     <View style={styles.paymentRow}>
                         <Text style={styles.paymentLabel}>CUENTAS BANCARIAS:</Text>

@@ -43,7 +43,7 @@ export async function POST(req) {
             createdAt: new Date().toISOString()
         };
         
-        const companyRef = firestore.collection('company_profiles').doc();
+        const companyRef = getTenantDoc();
         await companyRef.set(companyData);
         const companyId = companyRef.id;
 
@@ -64,7 +64,7 @@ export async function POST(req) {
             updatedAt: new Date().toISOString()
         };
 
-        await firestore.collection('accounting_config').doc(companyId).set(accountingData);
+        await getTenantCollection(empresaId, 'accounting_config').doc(companyId).set(accountingData);
 
         // 4. Update the user to link them to this company
         await firestore.collection('users').doc(userId).update({

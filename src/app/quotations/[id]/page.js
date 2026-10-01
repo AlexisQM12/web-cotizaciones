@@ -8,6 +8,16 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserSidebar } from '@/components/UserSidebar';
 import { useRealtimeQuotation } from '@/hooks/useRealtimeQuotation';
 import { SubItemsModal } from '@/components/SubItemsModal';
+import ItemsEditor from '@/components/ItemsEditor';
+import RichTextEditor from '@/components/RichTextEditor';
+import { paraEditorVisual } from '@/lib/richText';
+import Icon from '@/components/icons/Icon';
+
+const PASOS = [
+    { n: 1, titulo: 'Datos' },
+    { n: 2, titulo: 'Ítems' },
+    { n: 3, titulo: 'Cierre' },
+];
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -39,6 +49,18 @@ const PdfPreview = memo(function PdfPreview({ dataForPdf }) {
     );
 });
 
+// Total de la cotización. Si "usarPrecioGeneral" está activo, el monto se
+// fija a mano en vez de sumar precio × cantidad de cada ítem — para
+// cotizaciones donde no se quiere desglosar precio por ítem.
+function calcularTotalCotizacion(d) {
+    if (!d) return 0;
+    if (d.usarPrecioGeneral) return parseFloat(d.precioGeneralMonto) || 0;
+    return (d.items || []).reduce(
+        (acc, item) => acc + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0),
+        0
+    );
+}
+
 export default function QuotationEditor() {
     const params = useParams();
     const router = useRouter();
@@ -46,7 +68,7 @@ export default function QuotationEditor() {
     const { user } = useAuth();
 
     // Use Firestore realtime hook
-    const { quotation, companyProfiles, clientProfiles, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
+    const { quotation, companyProfiles, clientProfiles, crmClients, activeUsers: realtimeUsers, loading, error, updateQuotation } = useRealtimeQuotation(id);
 
     const [data, setData] = useState({
         clientName: '',
@@ -57,9 +79,12 @@ export default function QuotationEditor() {
         globalProfitPercentage: '',
         globalOtherCosts: '',
         companyProfiles: [],
-        clientProfiles: []
+        clientProfiles: [],
+        crmClients: []
     });
     const [saving, setSaving] = useState(false);
+    const [downloadingPreview, setDownloadingPreview] = useState(false)
+    const [assigningCode, setAssigningCode] = useState(false)
     const [activeUsers, setActiveUsers] = useState([]);
     const [remoteFocus, setRemoteFocus] = useState({}); // { fieldName: userObject }
     const isRemoteUpdate = useRef(false);
@@ -68,6 +93,8 @@ export default function QuotationEditor() {
     const [pdfData, setPdfData] = useState(null);
     const pdfInitialized = useRef(false); // tracks if PDF was loaded at least once
     const [subItemsModalData, setSubItemsModalData] = useState(null);
+    const [itemSeleccionado, setItemSeleccionado] = useState(0);
+    const [paso, setPaso] = useState(1);
     const [uploadingItem, setUploadingItem] = useState({}); // { [index]: true }
 
     const uploadItemImage = async (index, file) => {
@@ -107,7 +134,7 @@ export default function QuotationEditor() {
 
     // Update local data when Firestore quotation changes
     useEffect(() => {
-        if (quotation && companyProfiles && clientProfiles) {
+        if (quotation && companyProfiles && clientProfiles && crmClients) {
             isRemoteUpdate.current = true;
 
             // Auto-select default company profile if none is selected
@@ -118,19 +145,30 @@ export default function QuotationEditor() {
             const selectedClientProfileId = quotation.clientProfileId ||
                 clientProfiles.find(cp => cp.isDefault)?.id || null;
 
-            const newData = (prevData) => ({
-                ...quotation,
-                companyProfiles,
-                clientProfiles,
-                companyProfileId: selectedCompanyProfileId,
-                clientProfileId: selectedClientProfileId,
-                clientName: quotation.clientName || prevData.clientName || '',
-                clientRuc: quotation.clientRuc || prevData.clientRuc || '',
-                clientAddress: quotation.clientAddress || prevData.clientAddress || '',
-                items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
-                globalProfitPercentage: quotation.globalProfitPercentage || '',
-                globalOtherCosts: quotation.globalOtherCosts || ''
-            });
+            const newData = (prevData) => {
+                const selectedCompany = companyProfiles.find(p => String(p.id) === String(selectedCompanyProfileId)) ||
+                    companyProfiles.find(p => p.isDefault) || {};
+                
+                return {
+                    ...quotation,
+                    companyProfiles,
+                    clientProfiles,
+                    crmClients,
+                    companyProfileId: selectedCompanyProfileId,
+                    clientProfileId: selectedClientProfileId,
+                    crmCompanyId: quotation.crmCompanyId || prevData.crmCompanyId || '',
+                    crmContactId: quotation.crmContactId || prevData.crmContactId || '',
+                    clientName: quotation.clientName || prevData.clientName || '',
+                    clientRuc: quotation.clientRuc || prevData.clientRuc || '',
+                    clientAddress: quotation.clientAddress || prevData.clientAddress || '',
+                    items: quotation.items && quotation.items.length > 0 ? quotation.items : [{ description: '', quantity: 1, price: 0 }],
+                    globalProfitPercentage: quotation.globalProfitPercentage || '',
+                    globalOtherCosts: quotation.globalOtherCosts || '',
+                    notes: (quotation.notes !== undefined && quotation.notes !== null && quotation.notes !== '')
+                        ? quotation.notes
+                        : (selectedCompany?.conditions || '')
+                };
+            };
 
             setData(newData);
             // Only initialize pdfData once companyProfiles has actual data loaded
@@ -140,7 +178,7 @@ export default function QuotationEditor() {
                 setPdfData(newData({ clientName: '', clientRuc: '', clientAddress: '' }));
             }
         }
-    }, [quotation, companyProfiles, clientProfiles]);
+    }, [quotation, companyProfiles, clientProfiles, crmClients]);
 
 
     const handleFocus = (field) => {
@@ -149,6 +187,30 @@ export default function QuotationEditor() {
 
     const handleBlur = (field) => {
         // Blur tracking removed - not needed with Firestore
+    };
+
+    const handleAssignLatestCode = async () => {
+        if (!confirm('¿Estás seguro de que quieres asignar la última numeración a esta cotización? Esto cambiará su código actual.')) return;
+        setAssigningCode(true);
+        try {
+            const res = await fetch(`/api/quotations/${id}/assign-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empresaId: user?.empresaId })
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                setData(prev => ({ ...prev, code: result.code }));
+                alert(`Nueva numeración asignada: ${result.code}`);
+            } else {
+                alert('Error al asignar nueva numeración: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error assigning code:', error);
+            alert('Error al procesar la solicitud.');
+        } finally {
+            setAssigningCode(false);
+        }
     };
 
     const getInputStyle = (field, baseStyle = {}) => {
@@ -221,6 +283,58 @@ export default function QuotationEditor() {
             clientAddress: newData.clientAddress
         });
 
+        setData(newData);
+    };
+
+    const handleCrmCompanyChange = async (companyId) => {
+        const selectedCompany = data.crmClients?.find(c => String(c.id) === String(companyId));
+        
+        const newData = {
+            ...data,
+            crmCompanyId: companyId,
+            crmContactId: '', // Reset contact when company changes
+            clientName: selectedCompany ? selectedCompany.companyName || '' : '',
+            clientRuc: selectedCompany ? selectedCompany.ruc || '' : '',
+            clientAddress: selectedCompany ? selectedCompany.address || '' : '',
+            clientData: {
+                ...(data.clientData || {}),
+                email: '',
+                name: ''
+            }
+        };
+        setData(newData);
+    };
+
+    const handleToggleCrmContact = async (contactId) => {
+        const selectedCompany = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId));
+        if (!selectedCompany) return;
+
+        const currentIds = data.crmContactIds || (data.crmContactId ? [data.crmContactId] : []);
+        const newIds = currentIds.includes(String(contactId)) 
+            ? currentIds.filter(id => id !== String(contactId)) 
+            : [...currentIds, String(contactId)];
+
+        const selectedContacts = selectedCompany.contacts?.filter(c => newIds.includes(String(c.id))) || [];
+        const emails = selectedContacts.map(c => c.email).filter(Boolean);
+        const names = selectedContacts.map(c => c.name).filter(Boolean);
+        const whatsapps = selectedContacts.map(c => c.whatsapp).filter(Boolean);
+
+        const newData = {
+            ...data,
+            crmContactId: newIds.length > 0 ? newIds[0] : '', // Compatibilidad hacia atrás
+            crmContactIds: newIds,
+            clientData: {
+                ...(data.clientData || {}),
+                email: emails.length > 0 ? emails[0] : '',
+                emails: emails,
+                name: names.length > 0 ? names[0] : '',
+                names: names,
+                whatsapp: whatsapps.length > 0 ? whatsapps[0] : '',
+                whatsapps: whatsapps,
+                contactId: newIds.length > 0 ? newIds[0] : '',
+                contactIds: newIds
+            }
+        };
         setData(newData);
     };
 
@@ -306,9 +420,38 @@ export default function QuotationEditor() {
     const saveQuotation = async () => {
         setSaving(true);
         try {
+            let finalData = { ...data };
+
+            try {
+                // Generate and upload PDF automatically
+                const pdfTotal = calcularTotalCotizacion(data);
+                const pdfCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) || data.companyProfiles?.find(p => p.isDefault) || {};
+                const pdfClient = data.clientProfiles?.find(p => String(p.id) === String(data.clientProfileId)) || data.clientProfiles?.find(p => p.isDefault) || {};
+                const localDataForPdf = {
+                    ...data,
+                    total: pdfTotal,
+                    company: pdfCompany,
+                    clientName: pdfClient.name || data.clientName || '',
+                    clientRuc: pdfClient.ruc || data.clientRuc || '',
+                    clientAddress: pdfClient.address || data.clientAddress || '',
+                    notes: (data.notes !== undefined && data.notes !== null && data.notes !== '')
+                        ? data.notes : (pdfCompany?.conditions || data.generalConditions?.text || '')
+                };
+
+                const { pdf } = await import('@react-pdf/renderer');
+                const blob = await pdf(<QuotationDocument data={localDataForPdf} />).toBlob();
+                const storagePath = `quotations/${user?.empresaId || '6'}/${id}.pdf`;
+                const fileRef = ref(storage, storagePath);
+                await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
+                const downloadUrl = await getDownloadURL(fileRef);
+                finalData.pdfUrl = downloadUrl;
+            } catch (pdfErr) {
+                console.error("Error al generar/subir PDF automático:", pdfErr);
+            }
+
             // First update the quotation data
             if (updateQuotation) {
-                await updateQuotation(data);
+                await updateQuotation(finalData);
             }
 
             // If not published, publish it and assign code
@@ -316,7 +459,10 @@ export default function QuotationEditor() {
                 const res = await fetch('/api/quotations/publish', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quotationId: id })
+                    body: JSON.stringify({ 
+                        quotationId: id,
+                        empresaId: user?.empresaId || '6'
+                    })
                 });
                 const result = await res.json();
 
@@ -333,7 +479,7 @@ export default function QuotationEditor() {
         }
     }
 
-    const total = data.items ? data.items.reduce((acc, item) => acc + (item.quantity * item.price), 0) : 0;
+    const total = calcularTotalCotizacion(data);
 
     // Find the selected company profile data
     const selectedCompany = data.companyProfiles?.find(p => String(p.id) === String(data.companyProfileId)) ||
@@ -347,9 +493,7 @@ export default function QuotationEditor() {
     // This prevents PDFViewer from re-rendering on every keystroke
     const dataForPdf = useMemo(() => {
         const safePdfData = pdfData || {};
-        const pdfTotal = safePdfData.items
-            ? safePdfData.items.reduce((acc, item) => acc + (item.quantity * item.price), 0)
-            : 0;
+        const pdfTotal = calcularTotalCotizacion(safePdfData);
         const pdfSelectedCompany =
             safePdfData.companyProfiles?.find(p => String(p.id) === String(safePdfData.companyProfileId)) ||
             safePdfData.companyProfiles?.find(p => p.isDefault) || {};
@@ -363,7 +507,9 @@ export default function QuotationEditor() {
             clientName: pdfSelectedClient.name || safePdfData.clientName || '',
             clientRuc: pdfSelectedClient.ruc || safePdfData.clientRuc || '',
             clientAddress: pdfSelectedClient.address || safePdfData.clientAddress || '',
-            notes: safePdfData.notes !== undefined ? safePdfData.notes : (safePdfData.generalConditions?.text || '')
+            notes: (safePdfData.notes !== undefined && safePdfData.notes !== null && safePdfData.notes !== '')
+                ? safePdfData.notes
+                : (pdfSelectedCompany?.conditions || safePdfData.generalConditions?.text || '')
         };
     }, [pdfData]); // ONLY recomputes when user presses the refresh button
 
@@ -405,19 +551,52 @@ export default function QuotationEditor() {
                 {/* Left: Editor Form */}
                 <div className="editor-left">
                     <div className="editor-header">
-                        <h1 style={{ color: '#1e293b', fontSize: '1.4rem' }}>Editor de Cotización</h1>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <button className="btn" style={{ background: '#64748b', color: 'white', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => router.push('/quotations')}>
-                                ← Menú Principal
+                        <div>
+                            <h1 style={{ color: '#1e293b', fontSize: '1.4rem', marginBottom: '0.2rem' }}>Editor de Cotización</h1>
+                            {data.code && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'bold' }}>{data.code}</span>
+                                    <button onClick={handleAssignLatestCode} disabled={assigningCode} className="accion accion--mini" title="Asignar el siguiente número correlativo">
+                                        <Icon name="refresh" size={13} />
+                                        <span>{assigningCode ? 'Actualizando…' : 'Actualizar Nro.'}</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="acciones-cabecera">
+                            <button className="accion accion--suave" onClick={() => router.push('/quotations')} title="Volver al listado de cotizaciones">
+                                <Icon name="arrow-left" size={15} />
+                                <span>Menú</span>
                             </button>
-                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={saveQuotation} disabled={saving}>
-                                {saving ? 'Guardando...' : 'Guardar Cambios'}
+                            <button className="accion accion--principal" onClick={saveQuotation} disabled={saving} title="Guardar los cambios de esta cotización">
+                                <Icon name={saving ? 'refresh' : 'check'} size={15} />
+                                <span>{saving ? 'Guardando…' : 'Guardar'}</span>
                             </button>
                         </div>
                     </div>
 
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-2-col">
+
+                    {/* Los datos de empresa y cliente ya no compiten por espacio
+                        con los ítems: cada bloque vive en su propio paso. */}
+                    <nav className="pasos">
+                        {PASOS.map((p) => (
+                            <button
+                                key={p.n}
+                                type="button"
+                                onClick={() => setPaso(p.n)}
+                                className={`pasos__boton${paso === p.n ? ' pasos__boton--activo' : ''}`}
+                            >
+                                <span className="pasos__numero">{p.n}</span>
+                                {p.titulo}
+                            </button>
+                        ))}
+                    </nav>
+
+                    {paso === 1 && (<>
+                    <div className="paso1-tarjetas">
+                    <section className="seccion seccion--emisor">
+                        <h3 className="seccion__titulo">Emisor</h3>
+                        <div style={{ maxWidth: 420 }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Empresa Emisora</label>
                                 {renderRemoteCursorLabel('companyProfileId')}
@@ -434,27 +613,31 @@ export default function QuotationEditor() {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="seccion seccion--cliente">
+                        <h3 className="seccion__titulo">Cliente</h3>
+                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Perfil de Cliente</label>
-                                {renderRemoteCursorLabel('clientProfileId')}
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
+                                    Empresa Cliente (CRM) 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Para portal de seguimiento</span>
+                                </label>
+                                {renderRemoteCursorLabel('crmCompanyId')}
                                 <select
-                                    value={data.clientProfileId || ''}
-                                    onChange={(e) => handleClientProfileChange(e.target.value)}
-                                    onFocus={() => handleFocus('clientProfileId')}
-                                    onBlur={() => handleBlur('clientProfileId')}
-                                    style={getInputStyle('clientProfileId')}
+                                    value={data.crmCompanyId || ''}
+                                    onChange={(e) => handleCrmCompanyChange(e.target.value)}
+                                    onFocus={() => handleFocus('crmCompanyId')}
+                                    onBlur={() => handleBlur('crmCompanyId')}
+                                    style={getInputStyle('crmCompanyId')}
                                 >
-                                    <option value="">Seleccionar Cliente...</option>
-                                    {data.clientProfiles && data.clientProfiles.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Predeterminado)' : ''}</option>
+                                    <option value="">(No vinculado a CRM)</option>
+                                    {data.crmClients && data.crmClients.map(c => (
+                                        <option key={c.id} value={c.id}>{c.companyName}</option>
                                     ))}
                                 </select>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="card-editor" style={{ marginBottom: '1rem' }}>
-                        <div className="grid-3-col">
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Nombre de Cliente</label>
                                 {renderRemoteCursorLabel('clientName')}
@@ -465,8 +648,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientName')}
                                     onBlur={() => handleBlur('clientName')}
                                     style={getInputStyle('clientName')}
-                                    placeholder="Juan Pérez"
-                                />
+                                                                    />
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>RUC</label>
@@ -478,8 +660,7 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientRuc')}
                                     onBlur={() => handleBlur('clientRuc')}
                                     style={getInputStyle('clientRuc')}
-                                    placeholder="12345678901"
-                                />
+                                                                    />
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Dirección</label>
@@ -491,27 +672,93 @@ export default function QuotationEditor() {
                                     onFocus={() => handleFocus('clientAddress')}
                                     onBlur={() => handleBlur('clientAddress')}
                                     style={getInputStyle('clientAddress')}
-                                    placeholder="Calle Falsa 123"
-                                />
+                                                                    />
                             </div>
-                            <div style={{ gridColumn: 'span 3', marginTop: '0.6rem', position: 'relative' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>2. Descripción del Servicio o Producto</label>
+                            <div style={{ position: 'relative', gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>
+                                    Personas de Contacto 
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>- Recibirán acceso</span>
+                                </label>
+                                {renderRemoteCursorLabel('crmContactId')}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', border: '1px solid #cbd5e1', padding: '0.3rem 0.4rem', borderRadius: '4px', minHeight: '38px', alignItems: 'center', background: '#f8fafc', opacity: !data.crmCompanyId ? 0.6 : 1 }}>
+                                    {(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).map(id => {
+                                        const contact = data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.find(c => String(c.id) === String(id));
+                                        if (!contact) return null;
+                                        return (
+                                            <span key={id} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #cbd5e1', color: '#334155' }}>
+                                                {contact.name}
+                                                <button onClick={() => handleToggleCrmContact(id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.8rem', padding: 0, display: 'flex', alignItems: 'center' }}>✕</button>
+                                            </span>
+                                        );
+                                    })}
+                                    <select
+                                        value=""
+                                        onChange={(e) => { if(e.target.value) handleToggleCrmContact(e.target.value); }}
+                                        style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, minWidth: '150px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer', padding: 0 }}
+                                        disabled={!data.crmCompanyId}
+                                        onFocus={() => handleFocus('crmContactId')}
+                                        onBlur={() => handleBlur('crmContactId')}
+                                    >
+                                        <option value="" disabled>+ Añadir contacto...</option>
+                                        {data.crmCompanyId && data.crmClients?.find(c => String(c.id) === String(data.crmCompanyId))?.contacts?.filter(c => !(data.crmContactIds || (data.crmContactId ? [data.crmContactId] : [])).includes(String(c.id))).map(contact => (
+                                            <option key={contact.id} value={contact.id}>{contact.name} {contact.email ? `(${contact.email})` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="seccion seccion--objeto">
+                        <h3 className="seccion__titulo">Objeto de la cotización</h3>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>Descripción del servicio o producto</label>
                                 {renderRemoteCursorLabel('serviceDescription')}
                                 <textarea
                                     value={data.serviceDescription || ''}
                                     onChange={(e) => handleChange('serviceDescription', e.target.value)}
                                     onFocus={() => handleFocus('serviceDescription')}
                                     onBlur={() => handleBlur('serviceDescription')}
-                                    style={getInputStyle('serviceDescription', { minHeight: '60px' })}
-                                    placeholder="Describa brevemente el servicio o producto a cotizar..."
-                                />
+                                    style={getInputStyle('serviceDescription', { minHeight: '110px' })}
+                                                                    />
                             </div>
-                        </div>
-                    </div>
+                    </section>
 
-                    <h3 style={{ color: '#1e293b', fontSize: '1.1rem', marginBottom: '0.5rem' }}>Configuración Global de Precios (Interno)</h3>
-                    <div className="card-editor" style={{ marginBottom: '1rem', backgroundColor: '#fff', border: '1px solid #e2e8f0' }}>
-                        <div className="grid-3-col" style={{ alignItems: 'flex-end' }}>
+
+                    <section className="seccion seccion--precios">
+                        <h3 className="seccion__titulo">Precios globales <span className="paso1__nota">interno, no sale en el PDF</span></h3>
+
+                        <label className="switch-simple">
+                            <input
+                                type="checkbox"
+                                checked={!!data.usarPrecioGeneral}
+                                onChange={(e) => handleChange('usarPrecioGeneral', e.target.checked)}
+                            />
+                            <span>Precio general para todos los ítems <em>(en vez de precio por ítem)</em></span>
+                        </label>
+
+                        {data.usarPrecioGeneral ? (
+                            <div style={{ marginTop: '0.9rem', position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.35rem', color: '#1e293b' }}>
+                                    Precio total (S/) — antes de IGV
+                                </label>
+                                {renderRemoteCursorLabel('precioGeneralMonto')}
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={data.precioGeneralMonto ?? ''}
+                                    onChange={(e) => handleChange('precioGeneralMonto', e.target.value)}
+                                    onFocus={() => handleFocus('precioGeneralMonto')}
+                                    onBlur={() => handleBlur('precioGeneralMonto')}
+                                    style={getInputStyle('precioGeneralMonto')}
+                                />
+                                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.6rem' }}>
+                                    * El PDF listará los ítems sin precio individual: sólo aparecerá este monto como total de la cotización. El precio por ítem y el % Ganancia/Otros quedan sin efecto mientras esta opción esté activa.
+                                </p>
+                            </div>
+                        ) : (
+                        <>
+                        <div className="grid-3-col" style={{ alignItems: 'flex-end', marginTop: '0.9rem' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.2rem', color: '#1e293b' }}>% Ganancia Global</label>
                                 {renderRemoteCursorLabel('globalProfitPercentage')}
@@ -563,273 +810,99 @@ export default function QuotationEditor() {
                         <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.75rem' }}>
                             * Esto actualizará los porcentajes y recalculará el Precio U. de cada ítem basado en su Costo Base.
                         </p>
+                        </>
+                        )}
+                    </section>
                     </div>
 
-                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Ítems</h3>
-                    {data.items && data.items.map((item, index) => (
-                        <div key={index} className="card-editor" style={{ marginBottom: '0.5rem', padding: '0.8rem' }}>
-                            {/* Item header with index and action buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: item.isExpanded === false ? '0' : '0.5rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Ítem #{index + 1}
-                                    </span>
-                                    {item.isExpanded === false && (
-                                        <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500', marginLeft: '0.5rem' }}>
-                                            - {item.description || 'Sin título'} <strong style={{ color: '#22c55e' }}>(S/ {Number(item.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</strong>
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    {/* Chevron Collapse/Expand */}
-                                    <button
-                                        onClick={() => toggleItemExpanded(index)}
-                                        title={item.isExpanded !== false ? "Contraer" : "Expandir"}
-                                        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        {item.isExpanded !== false ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                        )}
-                                    </button>
-                                    {/* Move Up button */}
-                                    <button
-                                        onClick={() => moveItemUp(index)}
-                                        title="Subir ítem"
-                                        disabled={index === 0}
-                                        style={{ background: index === 0 ? 'transparent' : '#f1f5f9', border: 'none', color: index === 0 ? '#cbd5e1' : '#475569', cursor: index === 0 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (index !== 0) e.currentTarget.style.background = '#e2e8f0'; }}
-                                        onMouseOut={(e) => { if (index !== 0) e.currentTarget.style.background = '#f1f5f9'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                                    </button>
-                                    {/* Move Down button */}
-                                    <button
-                                        onClick={() => moveItemDown(index)}
-                                        title="Bajar ítem"
-                                        disabled={index === data.items.length - 1}
-                                        style={{ background: index === data.items.length - 1 ? 'transparent' : '#f1f5f9', border: 'none', color: index === data.items.length - 1 ? '#cbd5e1' : '#475569', cursor: index === data.items.length - 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#e2e8f0'; }}
-                                        onMouseOut={(e) => { if (index !== data.items.length - 1) e.currentTarget.style.background = '#f1f5f9'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-                                    </button>
-                                    {/* Sub-items button */}
-                                    <button
-                                        onClick={() => setSubItemsModalData({ index, subItems: item.subItems || [] })}
-                                        title="Sub-ítems (Cálculo interno)"
-                                        style={{ background: '#fef3c7', border: 'none', color: '#d97706', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#fde68a'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = '#fef3c7'}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                    </button>
-                                    {/* Duplicate button */}
-                                    <button
-                                        onClick={() => duplicateItem(index)}
-                                        title="Duplicar ítem"
-                                        style={{ background: '#e0f2fe', border: 'none', color: '#0369a1', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = '#bae6fd'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = '#e0f2fe'}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                    </button>
-                                    {/* Delete button */}
-                                    <button
-                                        onClick={() => removeItem(index)}
-                                        title="Eliminar ítem"
-                                        disabled={data.items.length <= 1}
-                                        style={{ background: data.items.length <= 1 ? '#f1f5f9' : '#fee2e2', border: 'none', color: data.items.length <= 1 ? '#cbd5e1' : '#dc2626', cursor: data.items.length <= 1 ? 'not-allowed' : 'pointer', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onMouseOver={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fecaca'; }}
-                                        onMouseOut={(e) => { if (data.items.length > 1) e.currentTarget.style.background = '#fee2e2'; }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            {item.isExpanded !== false && (
-                                <div className="item-grid-container">
-                                <div style={{ gridColumn: 'span 5', position: 'relative' }}>
-                                    {renderRemoteCursorLabel(`item_${index}_description`)}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <input
-                                            placeholder="Título del ítem"
-                                            style={getInputStyle(`item_${index}_description`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc', fontWeight: 'bold' })}
-                                            value={item.description}
-                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                            onFocus={() => handleFocus(`item_${index}_description`)}
-                                            onBlur={() => handleBlur(`item_${index}_description`)}
-                                        />
-                                        <textarea
-                                            placeholder="Descripción detallada (puedes usar: • para viñetas, **texto** para negrita, enters para nuevas líneas)"
-                                            style={{ ...getInputStyle(`item_${index}_details`, { width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #94a3b8', minHeight: '50px' }), fontSize: '0.8rem', resize: 'vertical' }}
-                                            value={item.details || ''}
-                                            onChange={(e) => handleItemChange(index, 'details', e.target.value)}
-                                            onFocus={() => handleFocus(`item_${index}_details`)}
-                                            onBlur={() => handleBlur(`item_${index}_details`)}
-                                        />
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
-                                            <span>💡 Usa <b>•</b> para viñetas, <b>**texto**</b> para negrita, <b>Enter</b> para nuevas líneas</span>
-                                        </div>
 
-                                        {/* Image upload */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                                            {item.imageUrl ? (
-                                                <>
-                                                    <img
-                                                        src={item.imageUrl}
-                                                        alt="Imagen del ítem"
-                                                        style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
-                                                    />
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                        <label style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '600' }}>Imagen adjunta al ítem</label>
-                                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                            <label style={{ cursor: 'pointer', fontSize: '0.72rem', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: 5, padding: '0.25rem 0.6rem', fontWeight: '600' }}>
-                                                                Cambiar
-                                                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
-                                                            </label>
-                                                            <button onClick={() => removeItemImage(index, item.imageUrl)} style={{ fontSize: '0.72rem', color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 5, padding: '0.25rem 0.6rem', cursor: 'pointer', fontWeight: '600' }}>
-                                                                Quitar
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <label style={{
-                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                    cursor: uploadingItem[index] ? 'wait' : 'pointer',
-                                                    fontSize: '0.75rem', color: uploadingItem[index] ? '#94a3b8' : '#475569',
-                                                    background: '#f8fafc', border: '1.5px dashed #cbd5e1',
-                                                    borderRadius: 6, padding: '0.45rem 0.85rem', fontWeight: '600',
-                                                    transition: 'border-color 0.15s',
-                                                }}>
-                                                    {uploadingItem[index]
-                                                        ? <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Subiendo...</>
-                                                        : <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Añadir imagen</>
-                                                    }
-                                                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingItem[index]} onChange={(e) => e.target.files[0] && uploadItemImage(index, e.target.files[0])} />
-                                                </label>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__siguiente" onClick={() => setPaso(2)}>
+                            Continuar a Ítems →
+                        </button>
+                    </div>
+                    </>)}
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Cant.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_quantity`)}
-                                    <input
-                                        type="number"
-                                        style={getInputStyle(`item_${index}_quantity`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.quantity}
-                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                        onFocus={() => handleFocus(`item_${index}_quantity`)}
-                                        onBlur={() => handleBlur(`item_${index}_quantity`)}
-                                    />
-                                </div>
+                    {paso === 2 && (<>
+                    <ItemsEditor
+                        items={data.items || []}
+                        seleccionado={itemSeleccionado}
+                        onSeleccionar={setItemSeleccionado}
+                        onCambiar={handleItemChange}
+                        onAgregar={async () => { await addItem(); setItemSeleccionado((data.items || []).length); }}
+                        onEliminar={removeItem}
+                        onDuplicar={duplicateItem}
+                        onSubir={moveItemUp}
+                        onBajar={moveItemDown}
+                        onSubirImagen={uploadItemImage}
+                        onQuitarImagen={removeItemImage}
+                        onAbrirSubItems={(i) => setSubItemsModalData({ index: i, subItems: (data.items || [])[i]?.subItems || [] })}
+                        subiendoImagen={uploadingItem}
+                        getInputStyle={getInputStyle}
+                        onFocusCampo={handleFocus}
+                        onBlurCampo={handleBlur}
+                        usarPrecioGeneral={!!data.usarPrecioGeneral}
+                    />
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Costo Base</label>
-                                    {renderRemoteCursorLabel(`item_${index}_basePrice`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0.00"
-                                        style={getInputStyle(`item_${index}_basePrice`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.basePrice || ''}
-                                        onChange={(e) => {
-                                            const bp = parseFloat(e.target.value) || 0;
-                                            const profit = parseFloat(item.profitPercentage) || 0;
-                                            const others = parseFloat(item.otherCosts) || 0;
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
 
-                                            handleItemChange(index, 'basePrice', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_basePrice`)}
-                                        onBlur={() => handleBlur(`item_${index}_basePrice`)}
-                                    />
-                                </div>
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__anterior" onClick={() => setPaso(1)}>← Volver a Datos</button>
+                        <button type="button" className="pasos__siguiente" onClick={() => setPaso(3)}>Continuar a Cierre →</button>
+                    </div>
+                    </>)}
 
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>% Gan.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_profitPercentage`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        style={getInputStyle(`item_${index}_profitPercentage`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.profitPercentage || ''}
-                                        onChange={(e) => {
-                                            const profit = parseFloat(e.target.value) || 0;
-                                            const bp = parseFloat(item.basePrice || 0);
-                                            const others = parseFloat(item.otherCosts || 0);
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
-
-                                            handleItemChange(index, 'profitPercentage', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_profitPercentage`)}
-                                        onBlur={() => handleBlur(`item_${index}_profitPercentage`)}
-                                    />
-                                </div>
-
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>% Otros</label>
-                                    {renderRemoteCursorLabel(`item_${index}_otherCosts`)}
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        style={getInputStyle(`item_${index}_otherCosts`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' })}
-                                        value={item.otherCosts || ''}
-                                        onChange={(e) => {
-                                            const profit = parseFloat(item.profitPercentage || 0);
-                                            const bp = parseFloat(item.basePrice || 0);
-                                            const others = parseFloat(e.target.value) || 0;
-                                            const finalPrice = bp * (1 + (profit + others) / 100);
-
-                                            handleItemChange(index, 'otherCosts', e.target.value);
-                                            handleItemChange(index, 'price', finalPrice.toFixed(2));
-                                        }}
-                                        onFocus={() => handleFocus(`item_${index}_otherCosts`)}
-                                        onBlur={() => handleBlur(`item_${index}_otherCosts`)}
-                                    />
-                                </div>
-
-                                <div style={{ position: 'relative' }}>
-                                    <label style={{ fontSize: '0.7rem', color: '#334155', display: 'block', fontWeight: 'bold' }}>Precio U.</label>
-                                    {renderRemoteCursorLabel(`item_${index}_price`)}
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        style={getInputStyle(`item_${index}_price`, { width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #22c55e', backgroundColor: '#f0fdf4' })}
-                                        value={item.price}
-                                        onChange={(e) => handleItemChange(index, 'price', e.target.value)}
-                                        onFocus={() => handleFocus(`item_${index}_price`)}
-                                        onBlur={() => handleBlur(`item_${index}_price`)}
-                                    />
-                                </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                    <button onClick={addItem} className="btn" style={{ background: '#e5e7eb', color: '#374151', marginBottom: '1rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                        + Agregar Ítem
-                    </button>
-
+                    {paso === 3 && (<>
                     <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Notas / Condiciones</h3>
                     <div className="card-editor" style={{ position: 'relative' }}>
                         {renderRemoteCursorLabel('notes')}
-                        <textarea
-                            value={data.notes !== undefined ? data.notes : (data.generalConditions?.text || '')}
-                            onChange={(e) => handleChange('notes', e.target.value)}
+                        <RichTextEditor
+                            value={paraEditorVisual(
+                                data.notes !== undefined && data.notes !== null && data.notes !== '' ? data.notes : (selectedCompany?.conditions || '')
+                            )}
+                            onChange={(html) => handleChange('notes', html)}
                             onFocus={() => handleFocus('notes')}
                             onBlur={() => handleBlur('notes')}
-                            rows={6}
-                            style={getInputStyle('notes', { width: '100%', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' })}
-                            placeholder="Notas adicionales para esta cotización..."
+                            placeholder="Notas adicionales, condiciones, plazos de validez…"
+                            minHeight={150}
                         />
                     </div>
+
+                    <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem', marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        Términos de Garantía del Servicio
+                        <label className="switch-simple" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                            <input
+                                type="checkbox"
+                                checked={!!data.garantiaHabilitada}
+                                onChange={(e) => handleChange('garantiaHabilitada', e.target.checked)}
+                            />
+                            <span>Incluir en esta cotización</span>
+                        </label>
+                    </h3>
+                    {/* No todos los servicios llevan garantía (ej. una simple asesoría),
+                        así que esta sección va aparte de Notas y se activa por cotización
+                        según el tipo de servicio, no por configuración global. */}
+                    {data.garantiaHabilitada ? (
+                        <div className="card-editor" style={{ position: 'relative' }}>
+                            {renderRemoteCursorLabel('garantiaTexto')}
+                            <RichTextEditor
+                                value={paraEditorVisual(data.garantiaTexto)}
+                                onChange={(html) => handleChange('garantiaTexto', html)}
+                                onFocus={() => handleFocus('garantiaTexto')}
+                                onBlur={() => handleBlur('garantiaTexto')}
+                                placeholder="Ej: Cobertura de 6 meses en mano de obra y materiales. No incluye daños por mal uso, corte eléctrico o eventos de fuerza mayor…"
+                                minHeight={140}
+                            />
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                            Desactivada: esta cotización no mostrará una sección de garantía en el PDF. Actívala si el servicio la requiere.
+                        </p>
+                    )}
+
+                    <div className="pasos__pie">
+                        <button type="button" className="pasos__anterior" onClick={() => setPaso(2)}>← Volver a Ítems</button>
+                    </div>
+                    </>)}
 
                 </div>
 
@@ -866,7 +939,7 @@ export default function QuotationEditor() {
                             )}
                         </div>
                     </div>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', minHeight: 0 }}>
                         <PdfPreview dataForPdf={dataForPdf} />
                     </div>
                 </div>

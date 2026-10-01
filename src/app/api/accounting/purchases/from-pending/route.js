@@ -1,4 +1,5 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
+import { autorizarTenant, respuestaDeAuthError } from '@/lib/apiAuth';
 
 // POST /api/accounting/purchases/from-pending
 // Crea una entrada en purchases_ledger a partir de un material escaneado en Pendings.
@@ -8,8 +9,10 @@ import { firestore } from '@/lib/firebase-admin';
 // sin crear duplicado.
 export async function POST(req) {
     try {
-        const body = await req.json();
-        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl } = body;
+        const body = await req.json();        const empresaId = body.empresaId || new URL(req.url).searchParams.get('empresaId');
+        await autorizarTenant(req, empresaId);
+
+        const { companyProfileId, quotationId, materialId, materialTitle, ocrData, attachmentUrl, fundingSourceId, moneda, tipoCambio, totalCost, pendienteFactura, uploadedBy } = body;
 
         if (!companyProfileId) return Response.json({ error: 'companyProfileId requerido' }, { status: 400 });
         if (!ocrData)          return Response.json({ error: 'Sin datos OCR para registrar la compra' }, { status: 400 });
@@ -17,19 +20,72 @@ export async function POST(req) {
         const sourceKey = `pending:${quotationId}:${materialId}`;
 
         // Evitar duplicados
-        const existing = await firestore.collection('purchases_ledger')
+        const existing = await getTenantCollection(empresaId, 'purchases_ledger')
             .where('companyProfileId', '==', companyProfileId)
             .where('sourceKey', '==', sourceKey)
             .limit(1).get();
         if (!existing.empty) {
+            const doc = existing.docs[0];
+            const currentData = doc.data();
+            
+            const updates = {};
+            if (fundingSourceId !== undefined && currentData.fundingSourceId !== fundingSourceId) updates.fundingSourceId = fundingSourceId;
+            if (moneda !== undefined && currentData.moneda !== moneda) updates.moneda = moneda;
+            if (pendienteFactura !== undefined && currentData.pendienteFactura !== pendienteFactura) updates.pendienteFactura = pendienteFactura;
+            
+            const newTipoCambio = tipoCambio ? parseFloat(tipoCambio) : null;
+            if (tipoCambio !== undefined && currentData.tipoCambio !== newTipoCambio) updates.tipoCambio = newTipoCambio;
+            
+            const newTotal = totalCost !== undefined && totalCost !== null ? parseFloat(totalCost) : parseFloat(ocrData.amount || 0);
+            if (newTotal > 0 && newTotal !== currentData.total) {
+                updates.total = newTotal;
+                updates.baseImponible = Math.round((newTotal / 1.18) * 100) / 100;
+                updates.igv = Math.round((newTotal - updates.baseImponible) * 100) / 100;
+            }
+
+            // Update OCR and invoice data if provided
+            if (attachmentUrl && currentData.pdfUrl !== attachmentUrl) updates.pdfUrl = attachmentUrl;
+            if (ocrData.serie && currentData.serie !== ocrData.serie) updates.serie = ocrData.serie;
+            if (ocrData.numero && currentData.numero !== ocrData.numero) updates.numero = ocrData.numero;
+            
+            const newProveedorName = ocrData.razonSocial || materialTitle;
+            if (newProveedorName && currentData.proveedorName !== newProveedorName && newProveedorName !== 'Proveedor por completar') {
+                updates.proveedorName = newProveedorName;
+            }
+            if (ocrData.ruc && currentData.numeroDocProveedor !== ocrData.ruc) {
+                updates.numeroDocProveedor = ocrData.ruc;
+                updates.aceptaCreditoFiscal = true;
+            }
+            if (ocrData.fecha) {
+                const newFechaEmision = ocrData.fecha;
+                if (currentData.fechaEmision !== newFechaEmision) {
+                    updates.fechaEmision = newFechaEmision;
+                    const d = new Date(newFechaEmision);
+                    updates.period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                }
+            }
+            
+            // Re-evaluate needsReview
+            const isMissingData = !(updates.serie || currentData.serie) || !(updates.numero || currentData.numero) || !(updates.numeroDocProveedor || currentData.numeroDocProveedor);
+            if (currentData.needsReview !== isMissingData) {
+                updates.needsReview = isMissingData;
+            }
+
+            if (Object.keys(updates).length > 0) {
+                updates.updatedAt = new Date().toISOString();
+                await doc.ref.update(updates);
+            }
+
             return Response.json({
                 alreadyExists: true,
-                id: existing.docs[0].id,
-                ...existing.docs[0].data(),
+                updated: Object.keys(updates).length > 0,
+                id: doc.id,
+                ...currentData,
+                ...updates
             });
         }
 
-        const total = parseFloat(ocrData.amount) || 0;
+        const total = totalCost !== undefined && totalCost !== null ? parseFloat(totalCost) : (parseFloat(ocrData.amount) || 0);
         const base  = Math.round((total / 1.18) * 100) / 100;
         const igv   = Math.round((total - base) * 100) / 100;
 
@@ -51,8 +107,8 @@ export async function POST(req) {
             igv,
             noGravadas: 0, isc: 0, otrosTributos: 0,
             total,
-            moneda: 'PEN',
-            tipoCambio: null,
+            moneda: moneda || 'PEN',
+            tipoCambio: tipoCambio ? parseFloat(tipoCambio) : null,
             tipoGasto: 'MERCADERIA', // material → mercadería por defecto
             aceptaCreditoFiscal: !!ocrData.ruc, // sin RUC no tiene derecho a crédito
             anulado: false,
@@ -60,12 +116,15 @@ export async function POST(req) {
             sourceKey,
             sourceQuotationId: quotationId,
             sourceMaterialTitle: materialTitle || null,
+            fundingSourceId: fundingSourceId || '',
+            pendienteFactura: pendienteFactura || false,
             needsReview: !ocrData.serie || !ocrData.numero || !ocrData.ruc, // datos incompletos
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            uploadedBy: uploadedBy || null,
         };
 
-        const ref = await firestore.collection('purchases_ledger').add(data);
+        const ref = await getTenantCollection(empresaId, 'purchases_ledger').add(data);
 
         // Directorio de proveedores
         if (ocrData.ruc) {
@@ -79,6 +138,8 @@ export async function POST(req) {
 
         return Response.json({ id: ref.id, ...data });
     } catch (err) {
+        const authRes = respuestaDeAuthError(err);
+        if (authRes) return authRes;
         console.error('[purchases/from-pending] error:', err);
         return Response.json({ error: err.message }, { status: 500 });
     }

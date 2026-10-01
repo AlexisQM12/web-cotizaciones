@@ -6,6 +6,7 @@ import Icon from '@/components/icons/Icon';
 import { useAccountingConfig } from '@/hooks/useAccountingConfig';
 import { getCurrentDeclarationPeriod, formatPeriod, listAvailablePeriods } from '@/lib/accounting/taxCalendar';
 import { VOUCHER_TYPES, DOC_ID_TYPES } from '@/lib/accounting/sunatRules';
+import { authFetch } from '@/lib/authFetch';
 
 export default function Page() {
     return <Suspense fallback={<AccountingShell><p style={{ color: '#94a3b8' }}>Cargando...</p></AccountingShell>}><RegistroVentas /></Suspense>;
@@ -27,7 +28,7 @@ function RegistroVentas() {
     useEffect(() => {
         if (!companyProfileId || autoSelected) return;
         (async () => {
-            const r = await fetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
+            const r = await authFetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
             const data = await r.json();
             setSummary(data);
             if (data.latestWithData) {
@@ -42,13 +43,13 @@ function RegistroVentas() {
 
     const reloadSummary = async () => {
         if (!companyProfileId) return;
-        const r = await fetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
+        const r = await authFetch(`/api/accounting/periods-summary?companyProfileId=${companyProfileId}`);
         setSummary(await r.json());
     };
 
     const load = async () => {
         setLoading(true);
-        const r = await fetch(`/api/accounting/sales?companyProfileId=${companyProfileId}&period=${period}`);
+        const r = await authFetch(`/api/accounting/sales?companyProfileId=${companyProfileId}&period=${period}`);
         const data = await r.json();
         setSales(Array.isArray(data) ? data : []);
         setLoading(false);
@@ -57,7 +58,7 @@ function RegistroVentas() {
     const handleSave = async (entry) => {
         const method = entry.id ? 'PUT' : 'POST';
         const body   = entry.id ? entry : { ...entry, companyProfileId };
-        const r = await fetch('/api/accounting/sales', {
+        const r = await authFetch('/api/accounting/sales', {
             method, headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
@@ -72,7 +73,7 @@ function RegistroVentas() {
 
     const handleDelete = async (id) => {
         if (!confirm('¿Eliminar esta venta?')) return;
-        await fetch(`/api/accounting/sales?id=${id}`, { method: 'DELETE' });
+        await authFetch(`/api/accounting/sales?id=${id}`, { method: 'DELETE' });
         load();
     };
 
@@ -80,7 +81,7 @@ function RegistroVentas() {
         if (!confirm('Importará todas las cotizaciones COMPLETADAS al registro de ventas. ¿Continuar?')) return;
         setSyncing(true);
         try {
-            const r = await fetch('/api/accounting/ingest-quotations', {
+            const r = await authFetch('/api/accounting/ingest-quotations', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ companyProfileId }),
             });

@@ -1,4 +1,4 @@
-import { firestore } from '@/lib/firebase-admin';
+import { firestore, getTenantCollection, getTenantDoc } from '@/lib/firebase-admin';
 
 export async function GET(req) {
     try {
